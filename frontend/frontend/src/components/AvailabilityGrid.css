@@ -1,0 +1,84 @@
+/* src/components/AvailabilityGrid.css */
+
+/* Container around the table */
+.availability-container {
+  background-color: #ffffff;  /* white background */
+  border: 1px solid #ddd;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* Make the table horizontally scrollable on narrow screens */
+.table-responsive {
+  overflow-x: auto;
+}
+
+/* Header cells get the same light‐blue background as sidebar/topbar */
+.availability-table th {
+  background: linear-gradient(180deg, #e3f2ff 0%, #ffffff 100%);
+  border: 1px solid #0d6efd;  /* primary‐blue border */
+  color: #0d6efd;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+/* Leftmost “Geo–Shift” column stays pinned on scroll */
+.availability-table th:first-child,
+.availability-table td:first-child {
+  position: sticky;
+  left: 0;
+  background-color: #ffffff;
+  z-index: 5;
+  border-right: 1px solid #ddd;
+}
+
+/* Normal table cells */
+.availability-table td {
+  border: 1px solid #ddd;
+  vertical-align: top;
+  padding: 0.25rem;
+  min-width: 120px;
+}
+
+/* Each cell’s content is a vertical list of names, scrolling if too tall */
+.cell-content {
+  max-height: 120px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+/* Individual name in cell */
+.cell-name {
+  font-size: 0.85rem;
+  color: #333;
+}
+
+/* Geo–Shift label cell styling */
+.geo-shift-cell {
+  background-color: #f8f9fa;
+  font-size: 0.9rem;
+}
+
+/* Responsive tweaks: ensure columns don’t shrink below 100px */
+@media (max-width: 768px) {
+  .availability-table th,
+  .availability-table td {
+    min-width: 100px;
+    font-size: 0.75rem;
+  }
+}
+
+/* If needed, ensure the title tooltip wraps: */
+.cell-name.on-leave[title]:hover {
+  position: relative;
+}
+
+.cell-name.on-leave {
+  color: red;
+  font-weight: bold;
+}
+

@@ -1,0 +1,46 @@
+/* src/components/HomeLayout.css */
+
+/* ─── Container ─── */
+.home-layout {
+  min-height: 100vh;
+  background-color: #f0f2f5;
+}
+
+/* ─── Sidebar-Open vs Collapsed for main content ─── */
+.main-content.sidebar-open {
+  margin-left: 220px;            /* matches .sidebar--open */
+  transition: margin-left 0.2s ease-in-out;
+  width: calc(100% - 220px);
+}
+
+.main-content.sidebar-collapsed {
+  margin-left: 60px;             /* matches .sidebar--collapsed */
+  transition: margin-left 0.2s ease-in-out;
+  width: calc(100% - 60px);
+}
+
+/* ─── Top Bar Styling (light‐blue gradient matching sidebar) ─── */
+.top-bar {
+  background: linear-gradient(180deg, #e3f2ff 0%, #ffffff 100%);
+  border-bottom: 1px solid #0d6efd;   /* same primary‐blue border as sidebar */
+  padding: 0.75rem 1rem;
+  position: sticky;
+  top: 0;
+  z-index: 500;
+}
+
+/* ─── User Info / Logout Button ─── */
+.user-info span {
+  font-size: 0.9rem;
+  color: #0d6efd;             /* primary‐blue text to match theme */
+}
+
+.user-info button {
+  font-size: 0.85rem;
+}
+
+/* ─── Page Body (actual content area) ─── */
+.page-body {
+  background-color: #fff;
+  min-height: calc(100vh - 56px);
+}
