@@ -6,6 +6,15 @@ import HomeLayout from './components/HomeLayout';
 import Dashboard from './components/Dashboard';
 import SignInPage from './components/SignInPage';
 import SignUpPage from './components/SignUpPage';
+import AdminGeos from './components/AdminGeos';
+import AdminShifts from './components/AdminShifts';
+import AdminTeamMembers from './components/AdminTeamMembers';
+import AdminConfigurationItems from './components/AdminConfigurationItems';
+import AdminGeoShiftMappings from './components/AdminGeoShiftMappings';
+import AdminCiUserMappings from './components/AdminCiUserMappings';
+import AdminSchedules from './components/AdminSchedules';
+import AdminLeaves from './components/AdminLeaves';
+import AdminBreaks from './components/AdminBreaks';
 
 export default function App() {
   return (
@@ -25,6 +34,15 @@ export default function App() {
           }
         >
           <Route index element={<Dashboard />} />
+          <Route path="geos" element={<AdminGeos />} />
+          <Route path="shifts" element={<AdminShifts />} />
+          <Route path="team-members" element={<AdminTeamMembers />} />
+          <Route path="configuration-items" element={<AdminConfigurationItems />} />
+          <Route path="geo-shift-mappings" element={<AdminGeoShiftMappings />} />
+          <Route path="ci-user-mappings" element={<AdminCiUserMappings />} />
+          <Route path="schedules" element={<AdminSchedules />} />
+          <Route path="leaves" element={<AdminLeaves />} />
+          <Route path="breaks" element={<AdminBreaks />} />
           {/* …other nested routes… */}
         </Route>
       </Routes>
