@@ -6,6 +6,7 @@ import './AvailabilityGrid.css';
 export default function AvailabilityGrid({
   records,     // flat array of { fullName, geoName, shiftName, date, … }
   onLeaveSet,  // Set of strings: "geo–shift||YYYY-MM-DD||fullName"
+  onBreakSet,  // Set of strings: "geo–shift||YYYY-MM-DD||fullName"
   zone,        // IANA timezone string for formatting only
   viewMode,    // "week" or "day"
   startDate    // "YYYY-MM-DD"
@@ -78,11 +79,12 @@ export default function AvailabilityGrid({
                           // 3b) Build the exact key to check if they are on leave
                           const leaveKey = `${geoShift}||${date}||${fullName}`;
                           const isOnLeave = onLeaveSet.has(leaveKey);
+                          const isOnBreak = onBreakSet.has(leaveKey);
 
                           return (
                             <div
                               key={fullName}
-                              className={`cell-name${isOnLeave ? ' on-leave' : ''}`}
+                              className={`cell-name${isOnLeave ? ' on-leave' : ''}${!isOnLeave && isOnBreak ? ' on-break' : ''}`}
                             >
                               {fullName}
                             </div>
