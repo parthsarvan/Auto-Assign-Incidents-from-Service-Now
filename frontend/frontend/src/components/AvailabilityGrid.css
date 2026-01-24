@@ -82,3 +82,7 @@
   font-weight: bold;
 }
 
+.cell-name.on-break {
+  color: #d67c00;
+  font-weight: bold;
+}
