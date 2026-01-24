@@ -80,11 +80,16 @@ export default function AvailabilityGrid({
                           const leaveKey = `${geoShift}||${date}||${fullName}`;
                           const isOnLeave = onLeaveSet.has(leaveKey);
                           const isOnBreak = onBreakSet.has(leaveKey);
+                          const availabilityClass = isOnLeave
+                            ? ' on-leave'
+                            : isOnBreak
+                            ? ' on-break'
+                            : ' on-available';
 
                           return (
                             <div
                               key={fullName}
-                              className={`cell-name${isOnLeave ? ' on-leave' : ''}${!isOnLeave && isOnBreak ? ' on-break' : ''}`}
+                              className={`cell-name${availabilityClass}`}
                             >
                               {fullName}
                             </div>

@@ -17,6 +17,7 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
     { label: 'CI User Mapping', path: '/ci-user-mappings' },
     { label: 'Leaves', path: '/leaves' },
     { label: 'Break', path: '/breaks' },
+    { label: 'User Access', path: '/user-access' },
     // add more items as needed…
   ];
 

@@ -21,6 +21,25 @@ export default function AdminLeaves() {
     return new Date(value).toISOString();
   };
 
+  const formatDuration = (start, end) => {
+    if (!start || !end) return '-';
+    const startUtc = DateTime.fromISO(start, { zone: 'utc' });
+    const endUtc = DateTime.fromISO(end, { zone: 'utc' });
+    if (!startUtc.isValid || !endUtc.isValid) return '-';
+    const minutes = Math.max(0, Math.round(endUtc.diff(startUtc, 'minutes').minutes));
+    const totalHours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    if (minutes < 60) {
+      return `${minutes} min`;
+    }
+    if (totalHours < 24) {
+      return `${totalHours}h ${remainingMinutes}m`;
+    }
+    const totalDays = Math.floor(totalHours / 24);
+    const remainingHours = totalHours % 24;
+    return `${totalDays}d ${remainingHours}h`;
+  };
+
   const loadData = async () => {
     try {
       const [leaveData, memberData] = await Promise.all([
@@ -135,6 +154,7 @@ export default function AdminLeaves() {
               <th>Team Member</th>
               <th>Start (Local)</th>
               <th>End (Local)</th>
+              <th>Duration</th>
               <th>Reason</th>
               <th style={{ width: '120px' }}>Actions</th>
             </tr>
@@ -148,6 +168,7 @@ export default function AdminLeaves() {
                 </td>
                 <td>{formatUtcToLocal(leave.startTs)}</td>
                 <td>{formatUtcToLocal(leave.endTs)}</td>
+                <td>{formatDuration(leave.startTs, leave.endTs)}</td>
                 <td>{leave.reason || '-'}</td>
                 <td>
                   <button
@@ -161,7 +182,7 @@ export default function AdminLeaves() {
             ))}
             {leaves.length === 0 && (
               <tr>
-                <td colSpan="6" className="text-center">No leaves yet.</td>
+                <td colSpan="7" className="text-center">No leaves yet.</td>
               </tr>
             )}
           </tbody>

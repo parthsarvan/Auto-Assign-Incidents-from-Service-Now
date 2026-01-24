@@ -83,6 +83,11 @@
 }
 
 .cell-name.on-break {
-  color: #d67c00;
+  color: #d4a100;
+  font-weight: bold;
+}
+
+.cell-name.on-available {
+  color: #1b7f3a;
   font-weight: bold;
 }

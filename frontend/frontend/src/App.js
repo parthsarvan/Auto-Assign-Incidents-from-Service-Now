@@ -15,6 +15,7 @@ import AdminCiUserMappings from './components/AdminCiUserMappings';
 import AdminSchedules from './components/AdminSchedules';
 import AdminLeaves from './components/AdminLeaves';
 import AdminBreaks from './components/AdminBreaks';
+import AdminUserAccess from './components/AdminUserAccess';
 
 export default function App() {
   return (
@@ -43,6 +44,7 @@ export default function App() {
           <Route path="schedules" element={<AdminSchedules />} />
           <Route path="leaves" element={<AdminLeaves />} />
           <Route path="breaks" element={<AdminBreaks />} />
+          <Route path="user-access" element={<AdminUserAccess />} />
           {/* …other nested routes… */}
         </Route>
       </Routes>

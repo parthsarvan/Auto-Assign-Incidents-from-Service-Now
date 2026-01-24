@@ -135,3 +135,13 @@ export async function createBreak(payload) {
 export async function deleteBreak(id) {
   return api.delete(`/breaks/${id}`, withAuth());
 }
+
+export async function fetchUsers() {
+  const response = await api.get('/users', withAuth());
+  return response.data;
+}
+
+export async function updateUserRole(id, role) {
+  const response = await api.put(`/users/${id}/role`, { role }, withAuth());
+  return response.data;
+}
