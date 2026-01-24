@@ -5,6 +5,7 @@ import axios from 'axios';
 
 import AvailabilityGrid from './AvailabilityGrid';
 import LeaveList from './LeaveList';
+import BreakList from './BreakList';
 
 export default function Dashboard() {
   // ── 1) Timezone & View State ─────────────────────────────────────────────
@@ -29,8 +30,14 @@ export default function Dashboard() {
   // Flat leaves: [ { fullName, geoName, shiftName, date, startTs, endTs, reason }, … ]
   const [leaveRecords, setLeaveRecords] = useState([]);
 
+  // Flat breaks: [ { fullName, geoName, shiftName, date, startTs, endTs, reason }, … ]
+  const [breakRecords, setBreakRecords] = useState([]);
+
   // A Set of composite keys "geo–shift||YYYY-MM-DD||fullName" for anyone on leave
   const [onLeaveSet, setOnLeaveSet] = useState(new Set());
+
+  // A Set of composite keys "geo–shift||YYYY-MM-DD||fullName" for anyone on break
+  const [onBreakSet, setOnBreakSet] = useState(new Set());
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -93,16 +100,46 @@ export default function Dashboard() {
           leaveKeySet.add(key);
         });
         setOnLeaveSet(leaveKeySet);
+
+        // 3d) Fetch “on‐break” records from the backend
+        const breakResp = await axios.get(
+          'http://localhost:8080/api/break/next',
+          {
+            params: { startDate, days: dayCount },
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+
+        const breakFlat = breakResp.data.map((rec) => {
+          const utcDate = DateTime.fromISO(rec.startTs, { zone: 'utc' }).toISODate();
+          return {
+            fullName: rec.fullName,
+            geoName: rec.geoName,
+            shiftName: rec.shiftName,
+            date: utcDate,
+            startTs: rec.startTs,
+            endTs: rec.endTs,
+            reason: rec.reason,
+          };
+        });
+        setBreakRecords(breakFlat);
+
+        const breakKeySet = new Set();
+        breakFlat.forEach((r) => {
+          const key = `${r.geoName}–${r.shiftName}||${r.date}||${r.fullName}`;
+          breakKeySet.add(key);
+        });
+        setOnBreakSet(breakKeySet);
       } catch (err) {
         console.error('Error loading data:', err);
-        setError('Failed to load availability/leave. Please try again.');
+        setError('Failed to load availability, leave, or break data. Please try again.');
       } finally {
         setLoading(false);
       }
     }
 
     loadAllData();
-  }, [startDate, viewMode, zone]);
+  }, [startDate, viewMode, zone, dayCount]);
 
   // ── 4) Handlers for Next/Prev & Toggle View Mode ──────────────────────────
 
@@ -177,6 +214,7 @@ export default function Dashboard() {
         <AvailabilityGrid
           records={availabilityRecords}
           onLeaveSet={onLeaveSet}
+          onBreakSet={onBreakSet}
           zone={zone}
           viewMode={viewMode}
           startDate={startDate}
@@ -187,8 +225,15 @@ export default function Dashboard() {
       {/* ─────────────── Leave List Table ─────────────────────────────────────── */}
       {!loading && !error && leaveRecords.length > 0 && (
         <div className="mt-5">
-          <h4>On Leave / Break</h4>
+          <h4>On Leave</h4>
           <LeaveList data={leaveRecords} zone={zone} />
+        </div>
+      )}
+
+      {!loading && !error && breakRecords.length > 0 && (
+        <div className="mt-5">
+          <h4>On Break</h4>
+          <BreakList data={breakRecords} zone={zone} />
         </div>
       )}
     </div>
