@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { DateTime } from 'luxon';
 import { createLeave, deleteLeave, fetchLeaves, fetchTeamMembers } from '../services/admin';
 
 export default function AdminLeaves() {
@@ -9,6 +10,16 @@ export default function AdminLeaves() {
   const [endTs, setEndTs] = useState('');
   const [reason, setReason] = useState('');
   const [error, setError] = useState('');
+
+  const formatUtcToLocal = (isoStr) =>
+    DateTime.fromISO(isoStr, { zone: 'utc' })
+      .setZone(DateTime.local().zoneName)
+      .toFormat('ccc, LLL dd, yyyy hh:mm a');
+
+  const toUtcISOString = (value) => {
+    if (!value) return '';
+    return new Date(value).toISOString();
+  };
 
   const loadData = async () => {
     try {
@@ -31,7 +42,12 @@ export default function AdminLeaves() {
     e.preventDefault();
     setError('');
     try {
-      await createLeave({ teamMemberId, startTs, endTs, reason });
+      await createLeave({
+        teamMemberId,
+        startTs: toUtcISOString(startTs),
+        endTs: toUtcISOString(endTs),
+        reason,
+      });
       setTeamMemberId('');
       setStartTs('');
       setEndTs('');
@@ -71,7 +87,7 @@ export default function AdminLeaves() {
             </select>
           </div>
           <div className="col-md-3">
-            <label className="form-label">Start (UTC)</label>
+            <label className="form-label">Start (Local)</label>
             <input
               type="datetime-local"
               className="form-control"
@@ -81,7 +97,7 @@ export default function AdminLeaves() {
             />
           </div>
           <div className="col-md-3">
-            <label className="form-label">End (UTC)</label>
+            <label className="form-label">End (Local)</label>
             <input
               type="datetime-local"
               className="form-control"
@@ -111,8 +127,8 @@ export default function AdminLeaves() {
             <tr>
               <th>ID</th>
               <th>Team Member</th>
-              <th>Start (UTC)</th>
-              <th>End (UTC)</th>
+              <th>Start (Local)</th>
+              <th>End (Local)</th>
               <th>Reason</th>
               <th style={{ width: '120px' }}>Actions</th>
             </tr>
@@ -124,8 +140,8 @@ export default function AdminLeaves() {
                 <td>
                   {leave.teamMember?.f_name} {leave.teamMember?.l_name}
                 </td>
-                <td>{leave.startTs}</td>
-                <td>{leave.endTs}</td>
+                <td>{formatUtcToLocal(leave.startTs)}</td>
+                <td>{formatUtcToLocal(leave.endTs)}</td>
                 <td>{leave.reason || '-'}</td>
                 <td>
                   <button

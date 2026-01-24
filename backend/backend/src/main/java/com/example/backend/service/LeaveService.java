@@ -53,7 +53,7 @@ public class LeaveService {
             "  AND " +
             "  l.start_ts <= :tsUpper " +
             "  AND " +
-            "  tms.date = (l.start_ts AT TIME ZONE 'UTC')::date";
+            "  (l.start_ts AT TIME ZONE 'UTC')::date BETWEEN tms.start_date AND tms.end_date";
 
         Query query = entityManager.createNativeQuery(sql)
             .setParameter("tsLower", tsLower)

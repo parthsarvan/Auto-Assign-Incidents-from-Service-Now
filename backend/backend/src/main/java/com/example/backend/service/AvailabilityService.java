@@ -36,14 +36,16 @@ public class AvailabilityService {
             "SELECT " +
             "  g.name AS geo_name, " +
             "  s.name AS shift_name, " +
-            "  tms.date AS schedule_date, " +
+            "  gs.date_value AS schedule_date, " +
             "  CONCAT(tm.f_name, ' ', tm.l_name) AS full_name " +
             "FROM team_member_schedule tms " +
             "JOIN team_member tm        ON tm.tm_id = tms.tm_id " +
             "JOIN geo g                 ON tms.g_id = g.g_id " +
             "JOIN shift s               ON tms.s_id = s.s_id " +
             "JOIN geo_shift_mapping gsm ON tms.g_id = gsm.g_id AND tms.s_id = gsm.s_id " +
-            "WHERE tms.date BETWEEN :startDate AND :endDate";
+            "JOIN LATERAL generate_series(tms.start_date, tms.end_date, interval '1 day') " +
+            "  AS gs(date_value) ON true " +
+            "WHERE gs.date_value BETWEEN :startDate AND :endDate";
 
         Query query = entityManager.createNativeQuery(sql)
             .setParameter("startDate", sqlStart)

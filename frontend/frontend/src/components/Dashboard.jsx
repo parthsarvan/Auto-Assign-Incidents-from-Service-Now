@@ -139,7 +139,7 @@ export default function Dashboard() {
     }
 
     loadAllData();
-  }, [startDate, viewMode, zone]);
+  }, [startDate, viewMode, zone, dayCount]);
 
   // ── 4) Handlers for Next/Prev & Toggle View Mode ──────────────────────────
 

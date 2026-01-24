@@ -26,16 +26,20 @@ public class TeamMemberSchedule {
     @JoinColumn(name = "s_id")
     private Shift shift;
 
-    @Column(nullable = false)
-    private LocalDate date;
+    @Column(name = "start_date", nullable = false)
+    private LocalDate startDate;
+
+    @Column(name = "end_date", nullable = false)
+    private LocalDate endDate;
 
     public TeamMemberSchedule() {}
 
-    public TeamMemberSchedule(TeamMember teamMember, Geo geo, Shift shift, LocalDate date) {
+    public TeamMemberSchedule(TeamMember teamMember, Geo geo, Shift shift, LocalDate startDate, LocalDate endDate) {
         this.teamMember = teamMember;
         this.geo = geo;
         this.shift = shift;
-        this.date = date;
+        this.startDate = startDate;
+        this.endDate = endDate;
     }
 
     public Long getTms_id() {
@@ -70,11 +74,19 @@ public class TeamMemberSchedule {
         this.shift = shift;
     }
 
-    public LocalDate getDate() {
-        return date;
+    public LocalDate getStartDate() {
+        return startDate;
     }
 
-    public void setDate(LocalDate date) {
-        this.date = date;
+    public void setStartDate(LocalDate startDate) {
+        this.startDate = startDate;
+    }
+
+    public LocalDate getEndDate() {
+        return endDate;
+    }
+
+    public void setEndDate(LocalDate endDate) {
+        this.endDate = endDate;
     }
 }

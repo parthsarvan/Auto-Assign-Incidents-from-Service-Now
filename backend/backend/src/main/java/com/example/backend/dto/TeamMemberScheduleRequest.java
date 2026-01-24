@@ -6,7 +6,8 @@ public class TeamMemberScheduleRequest {
     private Long teamMemberId;
     private Long geoId;
     private Long shiftId;
-    private LocalDate date;
+    private LocalDate startDate;
+    private LocalDate endDate;
 
     public Long getTeamMemberId() {
         return teamMemberId;
@@ -32,11 +33,19 @@ public class TeamMemberScheduleRequest {
         this.shiftId = shiftId;
     }
 
-    public LocalDate getDate() {
-        return date;
+    public LocalDate getStartDate() {
+        return startDate;
     }
 
-    public void setDate(LocalDate date) {
-        this.date = date;
+    public void setStartDate(LocalDate startDate) {
+        this.startDate = startDate;
+    }
+
+    public LocalDate getEndDate() {
+        return endDate;
+    }
+
+    public void setEndDate(LocalDate endDate) {
+        this.endDate = endDate;
     }
 }

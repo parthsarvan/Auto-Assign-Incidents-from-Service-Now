@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { DateTime } from 'luxon';
 import { createBreak, deleteBreak, fetchBreaks, fetchTeamMembers } from '../services/admin';
 
 export default function AdminBreaks() {
@@ -9,6 +10,16 @@ export default function AdminBreaks() {
   const [endTs, setEndTs] = useState('');
   const [reason, setReason] = useState('');
   const [error, setError] = useState('');
+
+  const formatUtcToLocal = (isoStr) =>
+    DateTime.fromISO(isoStr, { zone: 'utc' })
+      .setZone(DateTime.local().zoneName)
+      .toFormat('ccc, LLL dd, yyyy hh:mm a');
+
+  const toUtcISOString = (value) => {
+    if (!value) return '';
+    return new Date(value).toISOString();
+  };
 
   const loadData = async () => {
     try {
@@ -31,7 +42,12 @@ export default function AdminBreaks() {
     e.preventDefault();
     setError('');
     try {
-      await createBreak({ teamMemberId, startTs, endTs, reason });
+      await createBreak({
+        teamMemberId,
+        startTs: toUtcISOString(startTs),
+        endTs: toUtcISOString(endTs),
+        reason,
+      });
       setTeamMemberId('');
       setStartTs('');
       setEndTs('');
@@ -71,7 +87,7 @@ export default function AdminBreaks() {
             </select>
           </div>
           <div className="col-md-3">
-            <label className="form-label">Start (UTC)</label>
+            <label className="form-label">Start (Local)</label>
             <input
               type="datetime-local"
               className="form-control"
@@ -81,7 +97,7 @@ export default function AdminBreaks() {
             />
           </div>
           <div className="col-md-3">
-            <label className="form-label">End (UTC)</label>
+            <label className="form-label">End (Local)</label>
             <input
               type="datetime-local"
               className="form-control"
@@ -111,8 +127,8 @@ export default function AdminBreaks() {
             <tr>
               <th>ID</th>
               <th>Team Member</th>
-              <th>Start (UTC)</th>
-              <th>End (UTC)</th>
+              <th>Start (Local)</th>
+              <th>End (Local)</th>
               <th>Reason</th>
               <th style={{ width: '120px' }}>Actions</th>
             </tr>
@@ -124,8 +140,8 @@ export default function AdminBreaks() {
                 <td>
                   {entry.teamMember?.f_name} {entry.teamMember?.l_name}
                 </td>
-                <td>{entry.startTs}</td>
-                <td>{entry.endTs}</td>
+                <td>{formatUtcToLocal(entry.startTs)}</td>
+                <td>{formatUtcToLocal(entry.endTs)}</td>
                 <td>{entry.reason || '-'}</td>
                 <td>
                   <button

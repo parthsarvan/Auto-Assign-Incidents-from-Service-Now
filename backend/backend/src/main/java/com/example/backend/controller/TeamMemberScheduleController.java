@@ -50,7 +50,13 @@ public class TeamMemberScheduleController {
             return ResponseEntity.badRequest().body("Invalid team member, geo, or shift id");
         }
 
-        TeamMemberSchedule schedule = new TeamMemberSchedule(tm, geo, shift, request.getDate());
+        TeamMemberSchedule schedule = new TeamMemberSchedule(
+            tm,
+            geo,
+            shift,
+            request.getStartDate(),
+            request.getEndDate()
+        );
         return ResponseEntity.ok(scheduleRepository.save(schedule));
     }
 

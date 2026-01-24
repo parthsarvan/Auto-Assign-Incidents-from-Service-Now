@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { DateTime } from 'luxon';
 import {
   createSchedule,
   deleteSchedule,
@@ -16,7 +17,8 @@ export default function AdminSchedules() {
   const [teamMemberId, setTeamMemberId] = useState('');
   const [geoId, setGeoId] = useState('');
   const [shiftId, setShiftId] = useState('');
-  const [date, setDate] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [error, setError] = useState('');
 
   const loadData = async () => {
@@ -44,15 +46,24 @@ export default function AdminSchedules() {
     e.preventDefault();
     setError('');
     try {
-      await createSchedule({ teamMemberId, geoId, shiftId, date });
+      await createSchedule({ teamMemberId, geoId, shiftId, startDate, endDate });
       setTeamMemberId('');
       setGeoId('');
       setShiftId('');
-      setDate('');
+      setStartDate('');
+      setEndDate('');
       loadData();
     } catch (err) {
       setError('Failed to create schedule.');
     }
+  };
+
+  const formatDurationDays = (start, end) => {
+    if (!start || !end) return '-';
+    const startDt = DateTime.fromISO(start);
+    const endDt = DateTime.fromISO(end);
+    const diffDays = Math.floor(endDt.diff(startDt, 'days').days) + 1;
+    return diffDays > 0 ? `${diffDays} day${diffDays > 1 ? 's' : ''}` : '-';
   };
 
   const handleDelete = async (id) => {
@@ -112,12 +123,22 @@ export default function AdminSchedules() {
             </select>
           </div>
           <div className="col-md-3">
-            <label className="form-label">Date</label>
+            <label className="form-label">Start Date</label>
             <input
               type="date"
               className="form-control"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              required
+            />
+          </div>
+          <div className="col-md-3">
+            <label className="form-label">End Date</label>
+            <input
+              type="date"
+              className="form-control"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
               required
             />
           </div>
@@ -135,7 +156,9 @@ export default function AdminSchedules() {
               <th>Team Member</th>
               <th>Geo</th>
               <th>Shift</th>
-              <th>Date</th>
+              <th>Start Date</th>
+              <th>End Date</th>
+              <th>Duration</th>
               <th style={{ width: '120px' }}>Actions</th>
             </tr>
           </thead>
@@ -146,7 +169,9 @@ export default function AdminSchedules() {
                 <td>{schedule.teamMember?.f_name} {schedule.teamMember?.l_name}</td>
                 <td>{schedule.geo?.name}</td>
                 <td>{schedule.shift?.name}</td>
-                <td>{schedule.date}</td>
+                <td>{schedule.startDate}</td>
+                <td>{schedule.endDate}</td>
+                <td>{formatDurationDays(schedule.startDate, schedule.endDate)}</td>
                 <td>
                   <button
                     className="btn btn-outline-danger btn-sm"
@@ -159,7 +184,7 @@ export default function AdminSchedules() {
             ))}
             {schedules.length === 0 && (
               <tr>
-                <td colSpan="6" className="text-center">No schedules yet.</td>
+                <td colSpan="8" className="text-center">No schedules yet.</td>
               </tr>
             )}
           </tbody>
