@@ -27,6 +27,16 @@ public class ShiftController {
         return shiftRepository.save(shift);
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<Shift> update(@PathVariable Long id, @RequestBody Shift shift) {
+        return shiftRepository.findById(id)
+            .map(existing -> {
+                existing.setName(shift.getName());
+                return ResponseEntity.ok(shiftRepository.save(existing));
+            })
+            .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         if (!shiftRepository.existsById(id)) {

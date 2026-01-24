@@ -60,6 +60,31 @@ public class TeamMemberScheduleController {
         return ResponseEntity.ok(scheduleRepository.save(schedule));
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<?> update(
+        @PathVariable Long id,
+        @RequestBody TeamMemberScheduleRequest request
+    ) {
+        TeamMember tm = teamMemberRepository.findById(request.getTeamMemberId()).orElse(null);
+        Geo geo = geoRepository.findById(request.getGeoId()).orElse(null);
+        Shift shift = shiftRepository.findById(request.getShiftId()).orElse(null);
+
+        if (tm == null || geo == null || shift == null) {
+            return ResponseEntity.badRequest().body("Invalid team member, geo, or shift id");
+        }
+
+        return scheduleRepository.findById(id)
+            .map(existing -> {
+                existing.setTeamMember(tm);
+                existing.setGeo(geo);
+                existing.setShift(shift);
+                existing.setStartDate(request.getStartDate());
+                existing.setEndDate(request.getEndDate());
+                return ResponseEntity.ok(scheduleRepository.save(existing));
+            })
+            .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         if (!scheduleRepository.existsById(id)) {

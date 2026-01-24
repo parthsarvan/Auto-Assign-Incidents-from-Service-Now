@@ -48,6 +48,28 @@ public class CiUserMappingController {
         return ResponseEntity.ok(mappingRepository.save(mapping));
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<?> update(
+        @PathVariable Long id,
+        @RequestBody CiUserMappingRequest request
+    ) {
+        ConfigurationItem ci = configurationItemRepository.findById(request.getConfigurationItemId()).orElse(null);
+        TeamMember tm = teamMemberRepository.findById(request.getTeamMemberId()).orElse(null);
+
+        if (ci == null || tm == null) {
+            return ResponseEntity.badRequest().body("Invalid configuration item or team member id");
+        }
+
+        return mappingRepository.findById(id)
+            .map(existing -> {
+                existing.setConfigurationItem(ci);
+                existing.setTeamMember(tm);
+                existing.setSortOrder(request.getSortOrder());
+                return ResponseEntity.ok(mappingRepository.save(existing));
+            })
+            .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         if (!mappingRepository.existsById(id)) {

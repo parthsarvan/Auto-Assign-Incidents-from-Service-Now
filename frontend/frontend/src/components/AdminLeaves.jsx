@@ -1,6 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { DateTime } from 'luxon';
-import { createLeave, deleteLeave, fetchLeaves, fetchTeamMembers } from '../services/admin';
+import {
+  createLeave,
+  deleteLeave,
+  fetchLeaves,
+  fetchTeamMembers,
+  updateLeave,
+} from '../services/admin';
+import { getCurrentUser } from '../services/auth';
 
 export default function AdminLeaves() {
   const [leaves, setLeaves] = useState([]);
@@ -9,7 +16,9 @@ export default function AdminLeaves() {
   const [startTs, setStartTs] = useState('');
   const [endTs, setEndTs] = useState('');
   const [reason, setReason] = useState('');
+  const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState('');
+  const isAdmin = getCurrentUser()?.role === 'Admin';
 
   const formatUtcToLocal = (isoStr) =>
     DateTime.fromISO(isoStr, { zone: 'utc' })
@@ -20,6 +29,11 @@ export default function AdminLeaves() {
     if (!value) return '';
     return new Date(value).toISOString();
   };
+
+  const formatUtcForInput = (isoStr) =>
+    DateTime.fromISO(isoStr, { zone: 'utc' })
+      .setZone(DateTime.local().zoneName)
+      .toFormat("yyyy-MM-dd'T'HH:mm");
 
   const formatDuration = (start, end) => {
     if (!start || !end) return '-';
@@ -61,6 +75,24 @@ export default function AdminLeaves() {
     e.preventDefault();
     setError('');
     try {
+      if (editingId) {
+        if (!window.confirm('Update this leave entry?')) {
+          return;
+        }
+        await updateLeave(editingId, {
+          teamMemberId,
+          startTs: toUtcISOString(startTs),
+          endTs: toUtcISOString(endTs),
+          reason,
+        });
+        setEditingId(null);
+        setTeamMemberId('');
+        setStartTs('');
+        setEndTs('');
+        setReason('');
+        loadData();
+        return;
+      }
       if (!window.confirm('Add this leave entry?')) {
         return;
       }
@@ -88,13 +120,30 @@ export default function AdminLeaves() {
     loadData();
   };
 
+  const handleEdit = (leave) => {
+    setEditingId(leave.leave_id);
+    setTeamMemberId(leave.teamMember?.tm_id || '');
+    setStartTs(formatUtcForInput(leave.startTs));
+    setEndTs(formatUtcForInput(leave.endTs));
+    setReason(leave.reason || '');
+  };
+
+  const handleCancel = () => {
+    setEditingId(null);
+    setTeamMemberId('');
+    setStartTs('');
+    setEndTs('');
+    setReason('');
+  };
+
   return (
     <div className="container">
       <h4 className="mb-3">Manage Leaves</h4>
       {error && <div className="alert alert-danger">{error}</div>}
 
-      <div className="card p-3 mb-4">
-        <form className="row g-3" onSubmit={handleSubmit}>
+      {isAdmin ? (
+        <div className="card p-3 mb-4">
+          <form className="row g-3" onSubmit={handleSubmit}>
           <div className="col-md-3">
             <label className="form-label">Team Member</label>
             <select
@@ -140,11 +189,21 @@ export default function AdminLeaves() {
               onChange={(e) => setReason(e.target.value)}
             />
           </div>
-          <div className="col-12">
-            <button type="submit" className="btn btn-primary">Add Leave</button>
-          </div>
-        </form>
-      </div>
+            <div className="col-12 d-flex gap-2">
+              <button type="submit" className="btn btn-primary">
+                {editingId ? 'Update Leave' : 'Add Leave'}
+              </button>
+              {editingId && (
+                <button type="button" className="btn btn-outline-secondary" onClick={handleCancel}>
+                  Cancel
+                </button>
+              )}
+            </div>
+          </form>
+        </div>
+      ) : (
+        <div className="alert alert-info">Read-only access. Contact an admin to make changes.</div>
+      )}
 
       <div className="table-responsive">
         <table className="table table-bordered">
@@ -156,7 +215,7 @@ export default function AdminLeaves() {
               <th>End (Local)</th>
               <th>Duration</th>
               <th>Reason</th>
-              <th style={{ width: '120px' }}>Actions</th>
+              {isAdmin && <th style={{ width: '180px' }}>Actions</th>}
             </tr>
           </thead>
           <tbody>
@@ -170,19 +229,27 @@ export default function AdminLeaves() {
                 <td>{formatUtcToLocal(leave.endTs)}</td>
                 <td>{formatDuration(leave.startTs, leave.endTs)}</td>
                 <td>{leave.reason || '-'}</td>
-                <td>
-                  <button
-                    className="btn btn-outline-danger btn-sm"
-                    onClick={() => handleDelete(leave.leave_id)}
-                  >
-                    Delete
-                  </button>
-                </td>
+                {isAdmin && (
+                  <td className="d-flex gap-2">
+                    <button
+                      className="btn btn-outline-primary btn-sm"
+                      onClick={() => handleEdit(leave)}
+                    >
+                      Update
+                    </button>
+                    <button
+                      className="btn btn-outline-danger btn-sm"
+                      onClick={() => handleDelete(leave.leave_id)}
+                    >
+                      Delete
+                    </button>
+                  </td>
+                )}
               </tr>
             ))}
             {leaves.length === 0 && (
               <tr>
-                <td colSpan="7" className="text-center">No leaves yet.</td>
+                <td colSpan={isAdmin ? 7 : 6} className="text-center">No leaves yet.</td>
               </tr>
             )}
           </tbody>

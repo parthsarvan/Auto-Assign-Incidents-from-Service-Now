@@ -27,6 +27,20 @@ public class ConfigurationItemController {
         return configurationItemRepository.save(configurationItem);
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<ConfigurationItem> update(
+        @PathVariable Long id,
+        @RequestBody ConfigurationItem configurationItem
+    ) {
+        return configurationItemRepository.findById(id)
+            .map(existing -> {
+                existing.setName(configurationItem.getName());
+                existing.setDescription(configurationItem.getDescription());
+                return ResponseEntity.ok(configurationItemRepository.save(existing));
+            })
+            .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         if (!configurationItemRepository.existsById(id)) {

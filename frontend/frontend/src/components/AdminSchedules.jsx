@@ -7,7 +7,9 @@ import {
   fetchSchedules,
   fetchShifts,
   fetchTeamMembers,
+  updateSchedule,
 } from '../services/admin';
+import { getCurrentUser } from '../services/auth';
 
 export default function AdminSchedules() {
   const [schedules, setSchedules] = useState([]);
@@ -19,7 +21,9 @@ export default function AdminSchedules() {
   const [shiftId, setShiftId] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState('');
+  const isAdmin = getCurrentUser()?.role === 'Admin';
 
   const loadData = async () => {
     try {
@@ -78,6 +82,28 @@ export default function AdminSchedules() {
     e.preventDefault();
     setError('');
     try {
+      if (editingId) {
+        if (!window.confirm('Update this schedule?')) {
+          return;
+        }
+        if (!geoId) {
+          setError('Selected team member does not have a geo assigned.');
+          return;
+        }
+        if (!shiftId) {
+          setError('Please select a shift before saving.');
+          return;
+        }
+        await updateSchedule(editingId, { teamMemberId, geoId, shiftId, startDate, endDate });
+        setEditingId(null);
+        setTeamMemberId('');
+        setGeoId('');
+        setShiftId('');
+        setStartDate('');
+        setEndDate('');
+        loadData();
+        return;
+      }
       if (!window.confirm('Add this schedule?')) {
         return;
       }
@@ -117,13 +143,32 @@ export default function AdminSchedules() {
     loadData();
   };
 
+  const handleEdit = (schedule) => {
+    setEditingId(schedule.tms_id);
+    setTeamMemberId(schedule.teamMember?.tm_id || '');
+    setGeoId(schedule.geo?.g_id || '');
+    setShiftId(schedule.shift?.s_id || '');
+    setStartDate(schedule.startDate || '');
+    setEndDate(schedule.endDate || '');
+  };
+
+  const handleCancel = () => {
+    setEditingId(null);
+    setTeamMemberId('');
+    setGeoId('');
+    setShiftId('');
+    setStartDate('');
+    setEndDate('');
+  };
+
   return (
     <div className="container">
       <h4 className="mb-3">Manage Shift Schedules</h4>
       {error && <div className="alert alert-danger">{error}</div>}
 
-      <div className="card p-3 mb-4">
-        <form className="row g-3" onSubmit={handleSubmit}>
+      {isAdmin ? (
+        <div className="card p-3 mb-4">
+          <form className="row g-3" onSubmit={handleSubmit}>
           <div className="col-md-3">
             <label className="form-label">Team Member</label>
             <select
@@ -208,11 +253,21 @@ export default function AdminSchedules() {
               required
             />
           </div>
-          <div className="col-12">
-            <button type="submit" className="btn btn-primary">Add Schedule</button>
-          </div>
-        </form>
-      </div>
+            <div className="col-12 d-flex gap-2">
+              <button type="submit" className="btn btn-primary">
+                {editingId ? 'Update Schedule' : 'Add Schedule'}
+              </button>
+              {editingId && (
+                <button type="button" className="btn btn-outline-secondary" onClick={handleCancel}>
+                  Cancel
+                </button>
+              )}
+            </div>
+          </form>
+        </div>
+      ) : (
+        <div className="alert alert-info">Read-only access. Contact an admin to make changes.</div>
+      )}
 
       <div className="table-responsive">
         <table className="table table-bordered">
@@ -225,7 +280,7 @@ export default function AdminSchedules() {
               <th>Start Date</th>
               <th>End Date</th>
               <th>Duration</th>
-              <th style={{ width: '120px' }}>Actions</th>
+              {isAdmin && <th style={{ width: '180px' }}>Actions</th>}
             </tr>
           </thead>
           <tbody>
@@ -238,19 +293,27 @@ export default function AdminSchedules() {
                 <td>{schedule.startDate}</td>
                 <td>{schedule.endDate}</td>
                 <td>{formatDurationDays(schedule.startDate, schedule.endDate)}</td>
-                <td>
-                  <button
-                    className="btn btn-outline-danger btn-sm"
-                    onClick={() => handleDelete(schedule.tms_id)}
-                  >
-                    Delete
-                  </button>
-                </td>
+                {isAdmin && (
+                  <td className="d-flex gap-2">
+                    <button
+                      className="btn btn-outline-primary btn-sm"
+                      onClick={() => handleEdit(schedule)}
+                    >
+                      Update
+                    </button>
+                    <button
+                      className="btn btn-outline-danger btn-sm"
+                      onClick={() => handleDelete(schedule.tms_id)}
+                    >
+                      Delete
+                    </button>
+                  </td>
+                )}
               </tr>
             ))}
             {schedules.length === 0 && (
               <tr>
-                <td colSpan="8" className="text-center">No schedules yet.</td>
+                <td colSpan={isAdmin ? 8 : 7} className="text-center">No schedules yet.</td>
               </tr>
             )}
           </tbody>

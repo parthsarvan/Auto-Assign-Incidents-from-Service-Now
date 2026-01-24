@@ -20,6 +20,11 @@ export async function createGeo(payload) {
   return response.data;
 }
 
+export async function updateGeo(id, payload) {
+  const response = await api.put(`/geos/${id}`, payload, withAuth());
+  return response.data;
+}
+
 export async function deleteGeo(id) {
   return api.delete(`/geos/${id}`, withAuth());
 }
@@ -31,6 +36,11 @@ export async function fetchShifts() {
 
 export async function createShift(payload) {
   const response = await api.post('/shifts', payload, withAuth());
+  return response.data;
+}
+
+export async function updateShift(id, payload) {
+  const response = await api.put(`/shifts/${id}`, payload, withAuth());
   return response.data;
 }
 
@@ -48,6 +58,11 @@ export async function createTeamMember(payload) {
   return response.data;
 }
 
+export async function updateTeamMember(id, payload) {
+  const response = await api.put(`/team-members/${id}`, payload, withAuth());
+  return response.data;
+}
+
 export async function deleteTeamMember(id) {
   return api.delete(`/team-members/${id}`, withAuth());
 }
@@ -59,6 +74,11 @@ export async function fetchConfigurationItems() {
 
 export async function createConfigurationItem(payload) {
   const response = await api.post('/configuration-items', payload, withAuth());
+  return response.data;
+}
+
+export async function updateConfigurationItem(id, payload) {
+  const response = await api.put(`/configuration-items/${id}`, payload, withAuth());
   return response.data;
 }
 
@@ -76,6 +96,11 @@ export async function createGeoShiftMapping(payload) {
   return response.data;
 }
 
+export async function updateGeoShiftMapping(id, payload) {
+  const response = await api.put(`/geo-shift-mappings/${id}`, payload, withAuth());
+  return response.data;
+}
+
 export async function deleteGeoShiftMapping(id) {
   return api.delete(`/geo-shift-mappings/${id}`, withAuth());
 }
@@ -87,6 +112,11 @@ export async function fetchCiUserMappings() {
 
 export async function createCiUserMapping(payload) {
   const response = await api.post('/ci-user-mappings', payload, withAuth());
+  return response.data;
+}
+
+export async function updateCiUserMapping(id, payload) {
+  const response = await api.put(`/ci-user-mappings/${id}`, payload, withAuth());
   return response.data;
 }
 
@@ -104,6 +134,11 @@ export async function createSchedule(payload) {
   return response.data;
 }
 
+export async function updateSchedule(id, payload) {
+  const response = await api.put(`/team-member-schedules/${id}`, payload, withAuth());
+  return response.data;
+}
+
 export async function deleteSchedule(id) {
   return api.delete(`/team-member-schedules/${id}`, withAuth());
 }
@@ -118,6 +153,11 @@ export async function createLeave(payload) {
   return response.data;
 }
 
+export async function updateLeave(id, payload) {
+  const response = await api.put(`/leaves/${id}`, payload, withAuth());
+  return response.data;
+}
+
 export async function deleteLeave(id) {
   return api.delete(`/leaves/${id}`, withAuth());
 }
@@ -129,6 +169,11 @@ export async function fetchBreaks() {
 
 export async function createBreak(payload) {
   const response = await api.post('/breaks', payload, withAuth());
+  return response.data;
+}
+
+export async function updateBreak(id, payload) {
+  const response = await api.put(`/breaks/${id}`, payload, withAuth());
   return response.data;
 }
 

@@ -41,6 +41,27 @@ public class BreakAdminController {
         return ResponseEntity.ok(breakEntryRepository.save(entry));
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<?> update(
+        @PathVariable Long id,
+        @RequestBody BreakEntryRequest request
+    ) {
+        TeamMember tm = teamMemberRepository.findById(request.getTeamMemberId()).orElse(null);
+        if (tm == null) {
+            return ResponseEntity.badRequest().body("Invalid team member id");
+        }
+
+        return breakEntryRepository.findById(id)
+            .map(entry -> {
+                entry.setTeamMember(tm);
+                entry.setStartTs(request.getStartTs());
+                entry.setEndTs(request.getEndTs());
+                entry.setReason(request.getReason());
+                return ResponseEntity.ok(breakEntryRepository.save(entry));
+            })
+            .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         if (!breakEntryRepository.existsById(id)) {

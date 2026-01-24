@@ -48,6 +48,27 @@ public class GeoShiftMappingController {
         return ResponseEntity.ok(mappingRepository.save(mapping));
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<?> update(
+        @PathVariable Long id,
+        @RequestBody GeoShiftMappingRequest request
+    ) {
+        Geo geo = geoRepository.findById(request.getGeoId()).orElse(null);
+        Shift shift = shiftRepository.findById(request.getShiftId()).orElse(null);
+
+        if (geo == null || shift == null) {
+            return ResponseEntity.badRequest().body("Invalid geo or shift id");
+        }
+
+        return mappingRepository.findById(id)
+            .map(existing -> {
+                existing.setGeo(geo);
+                existing.setShift(shift);
+                return ResponseEntity.ok(mappingRepository.save(existing));
+            })
+            .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         if (!mappingRepository.existsById(id)) {
