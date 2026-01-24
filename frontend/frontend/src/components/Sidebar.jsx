@@ -8,9 +8,15 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
 
   const menuItems = [
     { label: 'Dashboard', path: '/' },
-    { label: 'Configuration Items', path: '/ci-mapping' },
-    { label: 'Schedule', path: '/schedule' },
-    { label: 'Leave', path: '/leave' },
+    { label: 'Geos', path: '/geos' },
+    { label: 'Shifts', path: '/shifts' },
+    { label: 'Team Members', path: '/team-members' },
+    { label: 'Configuration Items', path: '/configuration-items' },
+    { label: 'Geo-Shift Mapping', path: '/geo-shift-mappings' },
+    { label: 'CI-User Mapping', path: '/ci-user-mappings' },
+    { label: 'Schedules', path: '/schedules' },
+    { label: 'Leaves', path: '/leaves' },
+    { label: 'Breaks', path: '/breaks' },
     // add more items as needed…
   ];
 
