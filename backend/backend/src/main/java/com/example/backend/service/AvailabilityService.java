@@ -78,6 +78,9 @@ public class AvailabilityService {
         if (value instanceof java.sql.Timestamp) {
             return ((java.sql.Timestamp) value).toLocalDateTime().toLocalDate();
         }
+        if (value instanceof java.time.Instant) {
+            return ((java.time.Instant) value).atZone(java.time.ZoneOffset.UTC).toLocalDate();
+        }
         if (value instanceof java.time.LocalDate) {
             return (LocalDate) value;
         }
