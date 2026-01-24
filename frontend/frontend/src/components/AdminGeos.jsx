@@ -23,6 +23,9 @@ export default function AdminGeos() {
     e.preventDefault();
     setError('');
     try {
+      if (!window.confirm('Add this geo?')) {
+        return;
+      }
       await createGeo({ name });
       setName('');
       loadGeos();
@@ -32,6 +35,9 @@ export default function AdminGeos() {
   };
 
   const handleDelete = async (id) => {
+    if (!window.confirm('Delete this geo?')) {
+      return;
+    }
     await deleteGeo(id);
     loadGeos();
   };

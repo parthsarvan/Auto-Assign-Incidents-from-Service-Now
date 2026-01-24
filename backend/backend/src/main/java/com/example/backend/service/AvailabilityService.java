@@ -58,17 +58,29 @@ public class AvailabilityService {
         for (Object[] row : rows) {
             // row[0] = geo_name (String)
             // row[1] = shift_name (String)
-            // row[2] = schedule_date (java.sql.Date)
+            // row[2] = schedule_date (java.sql.Timestamp or java.sql.Date)
             // row[3] = full_name (String)
             String geoName   = (String) row[0];
             String shiftName = (String) row[1];
-            Date   dateSql   = (Date) row[2];
             String fullName  = (String) row[3];
 
-            LocalDate dateLocal = dateSql.toLocalDate();
+            LocalDate dateLocal = convertToLocalDate(row[2]);
             result.add(new AvailabilityRecord(geoName, shiftName, dateLocal, fullName));
         }
 
         return result;
+    }
+
+    private LocalDate convertToLocalDate(Object value) {
+        if (value instanceof Date) {
+            return ((Date) value).toLocalDate();
+        }
+        if (value instanceof java.sql.Timestamp) {
+            return ((java.sql.Timestamp) value).toLocalDateTime().toLocalDate();
+        }
+        if (value instanceof java.time.LocalDate) {
+            return (LocalDate) value;
+        }
+        throw new IllegalArgumentException("Unable to convert date value: " + value);
     }
 }

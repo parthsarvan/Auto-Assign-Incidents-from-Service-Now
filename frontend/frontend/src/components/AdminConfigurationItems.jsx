@@ -24,6 +24,9 @@ export default function AdminConfigurationItems() {
     e.preventDefault();
     setError('');
     try {
+      if (!window.confirm('Add this configuration item?')) {
+        return;
+      }
       await createConfigurationItem({ name, description });
       setName('');
       setDescription('');
@@ -34,6 +37,9 @@ export default function AdminConfigurationItems() {
   };
 
   const handleDelete = async (id) => {
+    if (!window.confirm('Delete this configuration item?')) {
+      return;
+    }
     await deleteConfigurationItem(id);
     loadItems();
   };

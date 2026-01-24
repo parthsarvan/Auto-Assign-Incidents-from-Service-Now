@@ -23,6 +23,9 @@ export default function AdminShifts() {
     e.preventDefault();
     setError('');
     try {
+      if (!window.confirm('Add this shift?')) {
+        return;
+      }
       await createShift({ name });
       setName('');
       loadShifts();
@@ -32,6 +35,9 @@ export default function AdminShifts() {
   };
 
   const handleDelete = async (id) => {
+    if (!window.confirm('Delete this shift?')) {
+      return;
+    }
     await deleteShift(id);
     loadShifts();
   };

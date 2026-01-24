@@ -24,6 +24,9 @@ export default function AdminTeamMembers() {
     e.preventDefault();
     setError('');
     try {
+      if (!window.confirm('Add this team member?')) {
+        return;
+      }
       await createTeamMember({ f_name: firstName, l_name: lastName });
       setFirstName('');
       setLastName('');
@@ -34,6 +37,9 @@ export default function AdminTeamMembers() {
   };
 
   const handleDelete = async (id) => {
+    if (!window.confirm('Delete this team member?')) {
+      return;
+    }
     await deleteTeamMember(id);
     loadTeamMembers();
   };

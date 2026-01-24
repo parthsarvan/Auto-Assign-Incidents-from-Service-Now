@@ -42,6 +42,9 @@ export default function AdminLeaves() {
     e.preventDefault();
     setError('');
     try {
+      if (!window.confirm('Add this leave entry?')) {
+        return;
+      }
       await createLeave({
         teamMemberId,
         startTs: toUtcISOString(startTs),
@@ -59,6 +62,9 @@ export default function AdminLeaves() {
   };
 
   const handleDelete = async (id) => {
+    if (!window.confirm('Delete this leave entry?')) {
+      return;
+    }
     await deleteLeave(id);
     loadData();
   };

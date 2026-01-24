@@ -42,6 +42,9 @@ export default function AdminBreaks() {
     e.preventDefault();
     setError('');
     try {
+      if (!window.confirm('Add this break entry?')) {
+        return;
+      }
       await createBreak({
         teamMemberId,
         startTs: toUtcISOString(startTs),
@@ -59,6 +62,9 @@ export default function AdminBreaks() {
   };
 
   const handleDelete = async (id) => {
+    if (!window.confirm('Delete this break entry?')) {
+      return;
+    }
     await deleteBreak(id);
     loadData();
   };

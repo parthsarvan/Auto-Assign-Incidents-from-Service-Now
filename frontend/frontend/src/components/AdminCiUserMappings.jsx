@@ -39,6 +39,9 @@ export default function AdminCiUserMappings() {
     e.preventDefault();
     setError('');
     try {
+      if (!window.confirm('Add this CI-user mapping?')) {
+        return;
+      }
       await createCiUserMapping({
         configurationItemId,
         teamMemberId,
@@ -54,6 +57,9 @@ export default function AdminCiUserMappings() {
   };
 
   const handleDelete = async (id) => {
+    if (!window.confirm('Delete this CI-user mapping?')) {
+      return;
+    }
     await deleteCiUserMapping(id);
     loadData();
   };

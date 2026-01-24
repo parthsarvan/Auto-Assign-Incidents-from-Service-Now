@@ -38,6 +38,9 @@ export default function AdminGeoShiftMappings() {
     e.preventDefault();
     setError('');
     try {
+      if (!window.confirm('Add this geo/shift mapping?')) {
+        return;
+      }
       await createGeoShiftMapping({ geoId, shiftId });
       setGeoId('');
       setShiftId('');
@@ -48,6 +51,9 @@ export default function AdminGeoShiftMappings() {
   };
 
   const handleDelete = async (id) => {
+    if (!window.confirm('Delete this geo/shift mapping?')) {
+      return;
+    }
     await deleteGeoShiftMapping(id);
     loadData();
   };

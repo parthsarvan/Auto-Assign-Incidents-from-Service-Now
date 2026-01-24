@@ -46,6 +46,9 @@ export default function AdminSchedules() {
     e.preventDefault();
     setError('');
     try {
+      if (!window.confirm('Add this schedule?')) {
+        return;
+      }
       await createSchedule({ teamMemberId, geoId, shiftId, startDate, endDate });
       setTeamMemberId('');
       setGeoId('');
@@ -67,6 +70,9 @@ export default function AdminSchedules() {
   };
 
   const handleDelete = async (id) => {
+    if (!window.confirm('Delete this schedule?')) {
+      return;
+    }
     await deleteSchedule(id);
     loadData();
   };
