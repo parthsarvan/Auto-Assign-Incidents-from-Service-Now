@@ -1,16 +1,22 @@
 import React, { useEffect, useState } from 'react';
-import { createTeamMember, deleteTeamMember, fetchTeamMembers } from '../services/admin';
+import { createTeamMember, deleteTeamMember, fetchGeos, fetchTeamMembers } from '../services/admin';
 
 export default function AdminTeamMembers() {
   const [teamMembers, setTeamMembers] = useState([]);
+  const [geos, setGeos] = useState([]);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [geoId, setGeoId] = useState('');
   const [error, setError] = useState('');
 
   const loadTeamMembers = async () => {
     try {
-      const data = await fetchTeamMembers();
+      const [data, geoData] = await Promise.all([
+        fetchTeamMembers(),
+        fetchGeos(),
+      ]);
       setTeamMembers(data);
+      setGeos(geoData);
     } catch (err) {
       setError('Failed to load team members.');
     }
@@ -27,9 +33,10 @@ export default function AdminTeamMembers() {
       if (!window.confirm('Add this team member?')) {
         return;
       }
-      await createTeamMember({ f_name: firstName, l_name: lastName });
+      await createTeamMember({ f_name: firstName, l_name: lastName, geoId });
       setFirstName('');
       setLastName('');
+      setGeoId('');
       loadTeamMembers();
     } catch (err) {
       setError('Failed to create team member.');
@@ -71,6 +78,22 @@ export default function AdminTeamMembers() {
               required
             />
           </div>
+          <div className="col-md-2">
+            <label className="form-label">Geo</label>
+            <select
+              className="form-select"
+              value={geoId}
+              onChange={(e) => setGeoId(e.target.value)}
+              required
+            >
+              <option value="">Select Geo</option>
+              {geos.map((geo) => (
+                <option key={geo.g_id} value={geo.g_id}>
+                  {geo.name}
+                </option>
+              ))}
+            </select>
+          </div>
           <div className="col-12">
             <button type="submit" className="btn btn-primary">Add Team Member</button>
           </div>
@@ -84,6 +107,7 @@ export default function AdminTeamMembers() {
               <th>ID</th>
               <th>First Name</th>
               <th>Last Name</th>
+              <th>Geo</th>
               <th style={{ width: '120px' }}>Actions</th>
             </tr>
           </thead>
@@ -93,6 +117,7 @@ export default function AdminTeamMembers() {
                 <td>{member.tm_id}</td>
                 <td>{member.f_name}</td>
                 <td>{member.l_name}</td>
+                <td>{member.geo?.name || '-'}</td>
                 <td>
                   <button
                     className="btn btn-outline-danger btn-sm"
@@ -105,7 +130,7 @@ export default function AdminTeamMembers() {
             ))}
             {teamMembers.length === 0 && (
               <tr>
-                <td colSpan="4" className="text-center">No team members yet.</td>
+                <td colSpan="5" className="text-center">No team members yet.</td>
               </tr>
             )}
           </tbody>

@@ -18,11 +18,16 @@ public class TeamMember {
     @Column(nullable = false)
     private String l_name;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "g_id")
+    private Geo geo;
+
     public TeamMember() {}
 
-    public TeamMember(String f_name, String l_name) {
+    public TeamMember(String f_name, String l_name, Geo geo) {
         this.f_name = f_name;
         this.l_name = l_name;
+        this.geo = geo;
     }
 
     public Long getTm_id() {
@@ -47,5 +52,13 @@ public class TeamMember {
 
     public void setL_name(String l_name) {
         this.l_name = l_name;
+    }
+
+    public Geo getGeo() {
+        return geo;
+    }
+
+    public void setGeo(Geo geo) {
+        this.geo = geo;
     }
 }

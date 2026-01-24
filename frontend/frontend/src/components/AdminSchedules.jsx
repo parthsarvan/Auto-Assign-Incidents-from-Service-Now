@@ -3,7 +3,7 @@ import { DateTime } from 'luxon';
 import {
   createSchedule,
   deleteSchedule,
-  fetchGeos,
+  fetchGeoShiftMappings,
   fetchSchedules,
   fetchShifts,
   fetchTeamMembers,
@@ -12,8 +12,8 @@ import {
 export default function AdminSchedules() {
   const [schedules, setSchedules] = useState([]);
   const [members, setMembers] = useState([]);
-  const [geos, setGeos] = useState([]);
   const [shifts, setShifts] = useState([]);
+  const [geoShiftMappings, setGeoShiftMappings] = useState([]);
   const [teamMemberId, setTeamMemberId] = useState('');
   const [geoId, setGeoId] = useState('');
   const [shiftId, setShiftId] = useState('');
@@ -23,16 +23,16 @@ export default function AdminSchedules() {
 
   const loadData = async () => {
     try {
-      const [scheduleData, memberData, geoData, shiftData] = await Promise.all([
+      const [scheduleData, memberData, shiftData, geoShiftData] = await Promise.all([
         fetchSchedules(),
         fetchTeamMembers(),
-        fetchGeos(),
         fetchShifts(),
+        fetchGeoShiftMappings(),
       ]);
       setSchedules(scheduleData);
       setMembers(memberData);
-      setGeos(geoData);
       setShifts(shiftData);
+      setGeoShiftMappings(geoShiftData);
     } catch (err) {
       setError('Failed to load schedules.');
     }
@@ -42,11 +42,51 @@ export default function AdminSchedules() {
     loadData();
   }, []);
 
+  useEffect(() => {
+    const member = members.find((m) => String(m.tm_id) === String(teamMemberId));
+    const memberGeoId = member?.geo?.g_id ? String(member.geo.g_id) : '';
+    if (geoId !== memberGeoId) {
+      setGeoId(memberGeoId);
+    }
+
+    if (!memberGeoId) {
+      if (shiftId !== '') {
+        setShiftId('');
+      }
+      return;
+    }
+
+    const allowedShiftIds = geoShiftMappings
+      .filter((mapping) => String(mapping.geo?.g_id) === String(memberGeoId))
+      .map((mapping) => String(mapping.shift?.s_id));
+
+    const uniqueShiftIds = Array.from(new Set(allowedShiftIds));
+    if (uniqueShiftIds.length === 1) {
+      if (shiftId !== uniqueShiftIds[0]) {
+        setShiftId(uniqueShiftIds[0]);
+      }
+    } else if (uniqueShiftIds.length > 1) {
+      if (!uniqueShiftIds.includes(String(shiftId))) {
+        setShiftId('');
+      }
+    } else if (shiftId !== '') {
+      setShiftId('');
+    }
+  }, [teamMemberId, members, geoShiftMappings, shiftId, geoId]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     try {
       if (!window.confirm('Add this schedule?')) {
+        return;
+      }
+      if (!geoId) {
+        setError('Selected team member does not have a geo assigned.');
+        return;
+      }
+      if (!shiftId) {
+        setError('Please select a shift before saving.');
         return;
       }
       await createSchedule({ teamMemberId, geoId, shiftId, startDate, endDate });
@@ -102,31 +142,51 @@ export default function AdminSchedules() {
           </div>
           <div className="col-md-3">
             <label className="form-label">Geo</label>
-            <select
-              className="form-select"
-              value={geoId}
-              onChange={(e) => setGeoId(e.target.value)}
-              required
-            >
-              <option value="">Select Geo</option>
-              {geos.map((geo) => (
-                <option key={geo.g_id} value={geo.g_id}>{geo.name}</option>
-              ))}
-            </select>
+            <input
+              type="text"
+              className="form-control"
+              value={members.find((m) => String(m.tm_id) === String(teamMemberId))?.geo?.name || ''}
+              readOnly
+            />
           </div>
           <div className="col-md-3">
             <label className="form-label">Shift</label>
-            <select
-              className="form-select"
-              value={shiftId}
-              onChange={(e) => setShiftId(e.target.value)}
-              required
-            >
-              <option value="">Select Shift</option>
-              {shifts.map((shift) => (
-                <option key={shift.s_id} value={shift.s_id}>{shift.name}</option>
-              ))}
-            </select>
+            {(() => {
+              const allowedShiftIds = geoShiftMappings
+                .filter((mapping) => String(mapping.geo?.g_id) === String(geoId))
+                .map((mapping) => String(mapping.shift?.s_id));
+              const uniqueShiftIds = Array.from(new Set(allowedShiftIds));
+              if (uniqueShiftIds.length <= 1) {
+                const shiftName = shifts.find(
+                  (shift) => String(shift.s_id) === String(uniqueShiftIds[0])
+                )?.name;
+                return (
+                  <input
+                    type="text"
+                    className="form-control"
+                    value={shiftName || ''}
+                    readOnly
+                  />
+                );
+              }
+
+              const allowedShifts = shifts.filter((shift) =>
+                uniqueShiftIds.includes(String(shift.s_id))
+              );
+              return (
+                <select
+                  className="form-select"
+                  value={shiftId}
+                  onChange={(e) => setShiftId(e.target.value)}
+                  required
+                >
+                  <option value="">Select Shift</option>
+                  {allowedShifts.map((shift) => (
+                    <option key={shift.s_id} value={shift.s_id}>{shift.name}</option>
+                  ))}
+                </select>
+              );
+            })()}
           </div>
           <div className="col-md-3">
             <label className="form-label">Start Date</label>
