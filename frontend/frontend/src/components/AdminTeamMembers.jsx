@@ -3,8 +3,6 @@ import {
   createTeamMember,
   deleteTeamMember,
   fetchGeos,
-  fetchGeoShiftMappings,
-  fetchShifts,
   fetchTeamMembers,
   updateTeamMember,
 } from '../services/admin';
@@ -13,29 +11,22 @@ import { getCurrentUser } from '../services/auth';
 export default function AdminTeamMembers() {
   const [teamMembers, setTeamMembers] = useState([]);
   const [geos, setGeos] = useState([]);
-  const [shifts, setShifts] = useState([]);
-  const [geoShiftMappings, setGeoShiftMappings] = useState([]);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [geoId, setGeoId] = useState('');
-  const [shiftId, setShiftId] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState('');
   const isAdmin = getCurrentUser()?.role === 'Admin';
 
   const loadTeamMembers = async () => {
     try {
-      const [data, geoData, shiftData, geoShiftData] = await Promise.all([
+      const [data, geoData] = await Promise.all([
         fetchTeamMembers(),
         fetchGeos(),
-        fetchShifts(),
-        fetchGeoShiftMappings(),
       ]);
       setTeamMembers(data);
       setGeos(geoData);
-      setShifts(shiftData);
-      setGeoShiftMappings(geoShiftData);
     } catch (err) {
       setError('Failed to load team members.');
     }
@@ -44,28 +35,6 @@ export default function AdminTeamMembers() {
   useEffect(() => {
     loadTeamMembers();
   }, []);
-
-  useEffect(() => {
-    if (!geoId) {
-      setShiftId('');
-      return;
-    }
-
-    const allowedShiftIds = geoShiftMappings
-      .filter((mapping) => String(mapping.geo?.g_id) === String(geoId))
-      .map((mapping) => String(mapping.shift?.s_id));
-
-    const uniqueShiftIds = Array.from(new Set(allowedShiftIds));
-    if (uniqueShiftIds.length === 1) {
-      setShiftId(uniqueShiftIds[0]);
-    } else if (uniqueShiftIds.length > 1) {
-      if (!uniqueShiftIds.includes(String(shiftId))) {
-        setShiftId('');
-      }
-    } else {
-      setShiftId('');
-    }
-  }, [geoId, geoShiftMappings, shiftId]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -79,23 +48,17 @@ export default function AdminTeamMembers() {
           setError('Please select a geo.');
           return;
         }
-        if (!shiftId) {
-          setError('Please select a shift.');
-          return;
-        }
         await updateTeamMember(editingId, {
           f_name: firstName,
           l_name: lastName,
           email,
           geoId,
-          shiftId,
         });
         setEditingId(null);
         setFirstName('');
         setLastName('');
         setEmail('');
         setGeoId('');
-        setShiftId('');
         loadTeamMembers();
         return;
       }
@@ -106,22 +69,16 @@ export default function AdminTeamMembers() {
         setError('Please select a geo.');
         return;
       }
-      if (!shiftId) {
-        setError('Please select a shift.');
-        return;
-      }
       await createTeamMember({
         f_name: firstName,
         l_name: lastName,
         email,
         geoId,
-        shiftId,
       });
       setFirstName('');
       setLastName('');
       setEmail('');
       setGeoId('');
-      setShiftId('');
       loadTeamMembers();
     } catch (err) {
       setError('Failed to create team member.');
@@ -142,7 +99,6 @@ export default function AdminTeamMembers() {
     setLastName(member.l_name || '');
     setEmail(member.email || '');
     setGeoId(member.geo?.g_id || '');
-    setShiftId(member.shift?.s_id || '');
   };
 
   const handleCancel = () => {
@@ -151,7 +107,6 @@ export default function AdminTeamMembers() {
     setLastName('');
     setEmail('');
     setGeoId('');
-    setShiftId('');
   };
 
   return (
@@ -208,46 +163,7 @@ export default function AdminTeamMembers() {
               ))}
             </select>
           </div>
-          <div className="col-md-2">
-            <label className="form-label">Shift</label>
-            {(() => {
-              const allowedShiftIds = geoShiftMappings
-                .filter((mapping) => String(mapping.geo?.g_id) === String(geoId))
-                .map((mapping) => String(mapping.shift?.s_id));
-              const uniqueShiftIds = Array.from(new Set(allowedShiftIds));
-              if (uniqueShiftIds.length <= 1) {
-                const shiftName = shifts.find(
-                  (shift) => String(shift.s_id) === String(uniqueShiftIds[0])
-                )?.name;
-                return (
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={shiftName || ''}
-                    readOnly
-                  />
-                );
-              }
-
-              const allowedShifts = shifts.filter((shift) =>
-                uniqueShiftIds.includes(String(shift.s_id))
-              );
-              return (
-                <select
-                  className="form-select"
-                  value={shiftId}
-                  onChange={(e) => setShiftId(e.target.value)}
-                  required
-                >
-                  <option value="">Select Shift</option>
-                  {allowedShifts.map((shift) => (
-                    <option key={shift.s_id} value={shift.s_id}>{shift.name}</option>
-                  ))}
-                </select>
-              );
-            })()}
-          </div>
-            <div className="col-12 d-flex gap-2">
+          <div className="col-12 d-flex gap-2">
               <button type="submit" className="btn btn-primary">
                 {editingId ? 'Update Team Member' : 'Add Team Member'}
               </button>
@@ -272,7 +188,6 @@ export default function AdminTeamMembers() {
               <th>Last Name</th>
               <th>Email</th>
               <th>Geo</th>
-              <th>Shift</th>
               {isAdmin && <th style={{ width: '180px' }}>Actions</th>}
             </tr>
           </thead>
@@ -284,7 +199,6 @@ export default function AdminTeamMembers() {
                 <td>{member.l_name}</td>
                 <td>{member.email || '-'}</td>
                 <td>{member.geo?.name || '-'}</td>
-                <td>{member.shift?.name || '-'}</td>
                 {isAdmin && (
                   <td className="d-flex gap-2">
                     <button
@@ -305,7 +219,7 @@ export default function AdminTeamMembers() {
             ))}
             {teamMembers.length === 0 && (
               <tr>
-                <td colSpan={isAdmin ? 7 : 6} className="text-center">No team members yet.</td>
+                <td colSpan={isAdmin ? 6 : 5} className="text-center">No team members yet.</td>
               </tr>
             )}
           </tbody>

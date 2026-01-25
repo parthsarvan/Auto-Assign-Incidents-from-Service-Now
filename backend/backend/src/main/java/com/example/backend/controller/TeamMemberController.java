@@ -2,10 +2,8 @@ package com.example.backend.controller;
 
 import com.example.backend.dto.TeamMemberRequest;
 import com.example.backend.entity.Geo;
-import com.example.backend.entity.Shift;
 import com.example.backend.entity.TeamMember;
 import com.example.backend.repository.GeoRepository;
-import com.example.backend.repository.ShiftRepository;
 import com.example.backend.repository.TeamMemberRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -19,16 +17,13 @@ public class TeamMemberController {
 
     private final TeamMemberRepository teamMemberRepository;
     private final GeoRepository geoRepository;
-    private final ShiftRepository shiftRepository;
 
     public TeamMemberController(
         TeamMemberRepository teamMemberRepository,
-        GeoRepository geoRepository,
-        ShiftRepository shiftRepository
+        GeoRepository geoRepository
     ) {
         this.teamMemberRepository = teamMemberRepository;
         this.geoRepository = geoRepository;
-        this.shiftRepository = shiftRepository;
     }
 
     @GetMapping
@@ -41,9 +36,6 @@ public class TeamMemberController {
         if (request.getGeoId() == null) {
             return ResponseEntity.badRequest().body("Geo is required for team members.");
         }
-        if (request.getShiftId() == null) {
-            return ResponseEntity.badRequest().body("Shift is required for team members.");
-        }
         if (request.getEmail() == null || request.getEmail().isBlank()) {
             return ResponseEntity.badRequest().body("Email is required for team members.");
         }
@@ -51,16 +43,11 @@ public class TeamMemberController {
         if (geo.isEmpty()) {
             return ResponseEntity.badRequest().body("Invalid geo ID.");
         }
-        Optional<Shift> shift = shiftRepository.findById(request.getShiftId());
-        if (shift.isEmpty()) {
-            return ResponseEntity.badRequest().body("Invalid shift ID.");
-        }
         TeamMember teamMember = new TeamMember(
             request.getF_name(),
             request.getL_name(),
             request.getEmail(),
-            geo.get(),
-            shift.get()
+            geo.get()
         );
         return ResponseEntity.ok(teamMemberRepository.save(teamMember));
     }
@@ -73,19 +60,12 @@ public class TeamMemberController {
         if (request.getGeoId() == null) {
             return ResponseEntity.badRequest().body("Geo is required for team members.");
         }
-        if (request.getShiftId() == null) {
-            return ResponseEntity.badRequest().body("Shift is required for team members.");
-        }
         if (request.getEmail() == null || request.getEmail().isBlank()) {
             return ResponseEntity.badRequest().body("Email is required for team members.");
         }
         Optional<Geo> geo = geoRepository.findById(request.getGeoId());
         if (geo.isEmpty()) {
             return ResponseEntity.badRequest().body("Invalid geo ID.");
-        }
-        Optional<Shift> shift = shiftRepository.findById(request.getShiftId());
-        if (shift.isEmpty()) {
-            return ResponseEntity.badRequest().body("Invalid shift ID.");
         }
 
         return teamMemberRepository.findById(id)
@@ -94,7 +74,6 @@ public class TeamMemberController {
                 member.setL_name(request.getL_name());
                 member.setEmail(request.getEmail());
                 member.setGeo(geo.get());
-                member.setShift(shift.get());
                 return ResponseEntity.ok(teamMemberRepository.save(member));
             })
             .orElseGet(() -> ResponseEntity.notFound().build());

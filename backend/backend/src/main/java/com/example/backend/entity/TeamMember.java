@@ -25,18 +25,13 @@ public class TeamMember {
     @JoinColumn(name = "g_id")
     private Geo geo;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "s_id")
-    private Shift shift;
-
     public TeamMember() {}
 
-    public TeamMember(String f_name, String l_name, String email, Geo geo, Shift shift) {
+    public TeamMember(String f_name, String l_name, String email, Geo geo) {
         this.f_name = f_name;
         this.l_name = l_name;
         this.email = email;
         this.geo = geo;
-        this.shift = shift;
     }
 
     public Long getTm_id() {
@@ -79,11 +74,4 @@ public class TeamMember {
         this.geo = geo;
     }
 
-    public Shift getShift() {
-        return shift;
-    }
-
-    public void setShift(Shift shift) {
-        this.shift = shift;
-    }
 }

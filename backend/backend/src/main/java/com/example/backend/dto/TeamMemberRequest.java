@@ -5,7 +5,6 @@ public class TeamMemberRequest {
     private String l_name;
     private String email;
     private Long geoId;
-    private Long shiftId;
 
     public String getF_name() {
         return f_name;
@@ -37,13 +36,5 @@ public class TeamMemberRequest {
 
     public void setGeoId(Long geoId) {
         this.geoId = geoId;
-    }
-
-    public Long getShiftId() {
-        return shiftId;
-    }
-
-    public void setShiftId(Long shiftId) {
-        this.shiftId = shiftId;
     }
 }
