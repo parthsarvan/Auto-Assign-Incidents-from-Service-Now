@@ -64,6 +64,12 @@ public class ServiceNowOAuthService {
     }
 
     private ServiceNowOAuthTokenResponse requestToken() {
+        if (isBlank(clientId) || isBlank(clientSecret) || isBlank(username) || isBlank(password)) {
+            throw new IllegalStateException(
+                    "ServiceNow OAuth requires client id/secret and username/password. "
+                            + "Provide SERVICENOW_CLIENT_ID, SERVICENOW_CLIENT_SECRET, "
+                            + "SERVICENOW_USERNAME, and SERVICENOW_PASSWORD.");
+        }
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 
@@ -81,5 +87,9 @@ public class ServiceNowOAuthService {
             logger.error("Failed to request ServiceNow OAuth token: {}", ex.getMessage());
             throw ex;
         }
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
     }
 }

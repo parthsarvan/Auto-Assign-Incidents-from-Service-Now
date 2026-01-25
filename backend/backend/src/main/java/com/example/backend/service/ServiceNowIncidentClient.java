@@ -22,23 +22,22 @@ public class ServiceNowIncidentClient {
     private static final String INCIDENT_FIELDS = "sys_id,number,short_description,state,assigned_to,cmdb_ci";
 
     private final RestTemplate restTemplate;
-    private final ServiceNowOAuthService oAuthService;
+    private final ServiceNowAuthHeaderProvider authHeaderProvider;
     private final String instanceUrl;
     private final String ciSysId;
 
     public ServiceNowIncidentClient(
             RestTemplate restTemplate,
-            ServiceNowOAuthService oAuthService,
+            ServiceNowAuthHeaderProvider authHeaderProvider,
             @Value("${servicenow.instance-url}") String instanceUrl,
             @Value("${servicenow.incident.ci-sys-id}") String ciSysId) {
         this.restTemplate = restTemplate;
-        this.oAuthService = oAuthService;
+        this.authHeaderProvider = authHeaderProvider;
         this.instanceUrl = instanceUrl;
         this.ciSysId = ciSysId;
     }
 
     public List<ServiceNowIncident> fetchUnassignedIncidents() {
-        String token = oAuthService.getAccessToken();
         String query = String.format("cmdb_ci=%s^assigned_toISEMPTY^stateNOT IN6,7", ciSysId);
         String url = UriComponentsBuilder.fromHttpUrl(instanceUrl)
                 .path("/api/now/table/incident")
@@ -47,9 +46,7 @@ public class ServiceNowIncidentClient {
                 .queryParam("sysparm_limit", "100")
                 .toUriString();
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(token);
-        headers.set("Accept", "application/json");
+        HttpHeaders headers = authHeaderProvider.buildHeaders();
 
         HttpEntity<Void> request = new HttpEntity<>(headers);
         try {
