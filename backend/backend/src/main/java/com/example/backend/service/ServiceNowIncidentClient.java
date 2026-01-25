@@ -2,6 +2,8 @@ package com.example.backend.service;
 
 import com.example.backend.dto.ServiceNowIncident;
 import com.example.backend.dto.ServiceNowIncidentResponse;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Collections;
 import java.util.List;
 import org.slf4j.Logger;
@@ -12,6 +14,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -23,16 +26,19 @@ public class ServiceNowIncidentClient {
 
     private final RestTemplate restTemplate;
     private final ServiceNowAuthHeaderProvider authHeaderProvider;
+    private final ObjectMapper objectMapper;
     private final String instanceUrl;
     private final String ciSysId;
 
     public ServiceNowIncidentClient(
             RestTemplate restTemplate,
             ServiceNowAuthHeaderProvider authHeaderProvider,
+            ObjectMapper objectMapper,
             @Value("${servicenow.instance-url}") String instanceUrl,
             @Value("${servicenow.incident.ci-sys-id}") String ciSysId) {
         this.restTemplate = restTemplate;
         this.authHeaderProvider = authHeaderProvider;
+        this.objectMapper = objectMapper;
         this.instanceUrl = instanceUrl;
         this.ciSysId = ciSysId;
     }
@@ -50,18 +56,38 @@ public class ServiceNowIncidentClient {
 
         HttpEntity<Void> request = new HttpEntity<>(headers);
         try {
-            ResponseEntity<ServiceNowIncidentResponse> response = restTemplate.exchange(
+            ResponseEntity<String> response = restTemplate.exchange(
                     url,
                     HttpMethod.GET,
                     request,
-                    ServiceNowIncidentResponse.class);
-            List<ServiceNowIncident> incidents =
-                    response.getBody() != null ? response.getBody().getResult() : Collections.emptyList();
+                    String.class);
+            ServiceNowIncidentResponse payload = parseIncidentResponse(response.getBody());
+            List<ServiceNowIncident> incidents = payload != null && payload.getResult() != null
+                    ? payload.getResult()
+                    : Collections.emptyList();
             logIncidents(incidents);
             return incidents;
+        } catch (HttpStatusCodeException ex) {
+            logger.error(
+                    "Failed to fetch ServiceNow incidents: status={} body={}",
+                    ex.getStatusCode(),
+                    ex.getResponseBodyAsString());
+            throw ex;
         } catch (RestClientException ex) {
             logger.error("Failed to fetch ServiceNow incidents: {}", ex.getMessage());
             throw ex;
+        }
+    }
+
+    private ServiceNowIncidentResponse parseIncidentResponse(String body) {
+        if (body == null || body.isBlank()) {
+            return null;
+        }
+        try {
+            return objectMapper.readValue(body, ServiceNowIncidentResponse.class);
+        } catch (JsonProcessingException ex) {
+            logger.error("Failed to parse ServiceNow incident response body: {}", body);
+            throw new IllegalStateException("Unable to parse ServiceNow incident response.", ex);
         }
     }
 

@@ -1,6 +1,7 @@
 package com.example.backend.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ServiceNowIncident {
@@ -8,7 +9,9 @@ public class ServiceNowIncident {
     private String number;
     private String short_description;
     private String state;
+    @JsonDeserialize(using = ServiceNowReferenceDeserializer.class)
     private ServiceNowReference assigned_to;
+    @JsonDeserialize(using = ServiceNowReferenceDeserializer.class)
     private ServiceNowReference cmdb_ci;
 
     public String getSys_id() {
