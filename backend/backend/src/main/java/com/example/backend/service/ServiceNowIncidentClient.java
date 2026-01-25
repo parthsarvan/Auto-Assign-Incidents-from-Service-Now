@@ -29,6 +29,7 @@ public class ServiceNowIncidentClient {
     private final ServiceNowAuthHeaderProvider authHeaderProvider;
     private final ObjectMapper objectMapper;
     private final String instanceUrl;
+    private final List<String> ciNames;
     private final String ciSysId;
 
     public ServiceNowIncidentClient(
@@ -36,16 +37,18 @@ public class ServiceNowIncidentClient {
             ServiceNowAuthHeaderProvider authHeaderProvider,
             ObjectMapper objectMapper,
             @Value("${servicenow.instance-url}") String instanceUrl,
+            @Value("${servicenow.incident.ci-names:}") String ciNames,
             @Value("${servicenow.incident.ci-sys-id}") String ciSysId) {
         this.restTemplate = restTemplate;
         this.authHeaderProvider = authHeaderProvider;
         this.objectMapper = objectMapper;
         this.instanceUrl = instanceUrl;
+        this.ciNames = splitCiNames(ciNames);
         this.ciSysId = ciSysId;
     }
 
     public List<ServiceNowIncident> fetchUnassignedIncidents() {
-        String query = String.format("cmdb_ci=%s^assigned_toISEMPTY^stateNOT IN6,7", ciSysId);
+        String query = buildQuery();
         String url = UriComponentsBuilder.fromHttpUrl(instanceUrl)
                 .path("/api/now/table/incident")
                 .queryParam("sysparm_query", query)
@@ -91,6 +94,24 @@ public class ServiceNowIncidentClient {
             logger.error("Failed to parse ServiceNow incident response body: {}", body);
             throw new IllegalStateException("Unable to parse ServiceNow incident response.", ex);
         }
+    }
+
+    private String buildQuery() {
+        if (!ciNames.isEmpty()) {
+            String joinedNames = String.join(",", ciNames);
+            return String.format("cmdb_ci.nameIN%s^assigned_toISEMPTY^stateNOT IN6,7", joinedNames);
+        }
+        return String.format("cmdb_ci=%s^assigned_toISEMPTY^stateNOT IN6,7", ciSysId);
+    }
+
+    private List<String> splitCiNames(String ciNames) {
+        if (ciNames == null || ciNames.isBlank()) {
+            return Collections.emptyList();
+        }
+        return List.of(ciNames.split(",")).stream()
+                .map(String::trim)
+                .filter(name -> !name.isEmpty())
+                .toList();
     }
 
     private void logIncidents(List<ServiceNowIncident> incidents) {
