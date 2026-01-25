@@ -50,10 +50,22 @@ public class ServiceNowLogService {
 
     private ServiceNowIncidentSummary toSummary(ServiceNowIncident incident) {
         return new ServiceNowIncidentSummary(
-                incident.getSys_id(),
                 incident.getNumber(),
-                incident.getShort_description(),
-                incident.getState());
+                incident.getSys_created_on(),
+                resolveDisplayValue(incident.getCmdb_ci()),
+                incident.getPriority(),
+                resolveDisplayValue(incident.getCaller_id()),
+                incident.getShort_description());
+    }
+
+    private String resolveDisplayValue(ServiceNowReference reference) {
+        if (reference == null) {
+            return null;
+        }
+        if (reference.getDisplayValue() != null && !reference.getDisplayValue().isBlank()) {
+            return reference.getDisplayValue();
+        }
+        return reference.getValue();
     }
 
     private void addLog(ServiceNowRunLog log) {

@@ -8,11 +8,15 @@ public class ServiceNowIncident {
     private String sys_id;
     private String number;
     private String short_description;
+    private String sys_created_on;
     private String state;
+    private String priority;
     @JsonDeserialize(using = ServiceNowReferenceDeserializer.class)
     private ServiceNowReference assigned_to;
     @JsonDeserialize(using = ServiceNowReferenceDeserializer.class)
     private ServiceNowReference cmdb_ci;
+    @JsonDeserialize(using = ServiceNowReferenceDeserializer.class)
+    private ServiceNowReference caller_id;
 
     public String getSys_id() {
         return sys_id;
@@ -38,12 +42,28 @@ public class ServiceNowIncident {
         this.short_description = short_description;
     }
 
+    public String getSys_created_on() {
+        return sys_created_on;
+    }
+
+    public void setSys_created_on(String sys_created_on) {
+        this.sys_created_on = sys_created_on;
+    }
+
     public String getState() {
         return state;
     }
 
     public void setState(String state) {
         this.state = state;
+    }
+
+    public String getPriority() {
+        return priority;
+    }
+
+    public void setPriority(String priority) {
+        this.priority = priority;
     }
 
     public ServiceNowReference getAssigned_to() {
@@ -60,5 +80,13 @@ public class ServiceNowIncident {
 
     public void setCmdb_ci(ServiceNowReference cmdb_ci) {
         this.cmdb_ci = cmdb_ci;
+    }
+
+    public ServiceNowReference getCaller_id() {
+        return caller_id;
+    }
+
+    public void setCaller_id(ServiceNowReference caller_id) {
+        this.caller_id = caller_id;
     }
 }

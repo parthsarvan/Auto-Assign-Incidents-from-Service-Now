@@ -89,18 +89,26 @@ export default function Logs() {
                     <thead>
                       <tr>
                         <th>Incident</th>
-                        <th>State</th>
+                        <th>Created (Local)</th>
+                        <th>Configuration Item</th>
+                        <th>Priority</th>
+                        <th>Caller</th>
                         <th>Description</th>
-                        <th>Sys ID</th>
                       </tr>
                     </thead>
                     <tbody>
                       {log.incidents.map((incident) => (
-                        <tr key={incident.sysId}>
+                        <tr key={`${incident.number}-${incident.createdOn}`}>
                           <td>{incident.number}</td>
-                          <td>{incident.state}</td>
+                          <td>
+                            {incident.createdOn
+                              ? new Date(incident.createdOn).toLocaleString()
+                              : '-'}
+                          </td>
+                          <td>{incident.configurationItem || '-'}</td>
+                          <td>{incident.priority || '-'}</td>
+                          <td>{incident.caller || '-'}</td>
                           <td>{incident.shortDescription}</td>
-                          <td className="text-muted">{incident.sysId}</td>
                         </tr>
                       ))}
                     </tbody>

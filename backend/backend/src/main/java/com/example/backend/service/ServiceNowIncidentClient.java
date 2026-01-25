@@ -22,7 +22,8 @@ import org.springframework.web.util.UriComponentsBuilder;
 @Service
 public class ServiceNowIncidentClient {
     private static final Logger logger = LoggerFactory.getLogger(ServiceNowIncidentClient.class);
-    private static final String INCIDENT_FIELDS = "sys_id,number,short_description,state,assigned_to,cmdb_ci";
+    private static final String INCIDENT_FIELDS =
+            "sys_id,number,short_description,sys_created_on,state,priority,assigned_to,cmdb_ci,caller_id";
 
     private final RestTemplate restTemplate;
     private final ServiceNowAuthHeaderProvider authHeaderProvider;
@@ -49,6 +50,7 @@ public class ServiceNowIncidentClient {
                 .path("/api/now/table/incident")
                 .queryParam("sysparm_query", query)
                 .queryParam("sysparm_fields", INCIDENT_FIELDS)
+                .queryParam("sysparm_display_value", "true")
                 .queryParam("sysparm_limit", "100")
                 .toUriString();
 
