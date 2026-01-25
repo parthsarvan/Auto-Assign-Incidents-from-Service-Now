@@ -1,0 +1,11 @@
+.logs-page .card-title {
+  font-size: 1.1rem;
+}
+
+.logs-page .badge {
+  font-size: 0.85rem;
+}
+
+.logs-page table td {
+  vertical-align: middle;
+}
