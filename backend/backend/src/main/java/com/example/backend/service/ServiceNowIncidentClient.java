@@ -30,6 +30,7 @@ public class ServiceNowIncidentClient {
     private final ObjectMapper objectMapper;
     private final String instanceUrl;
     private final List<String> ciNames;
+    private final List<String> ciSysIds;
     private final String ciSysId;
 
     public ServiceNowIncidentClient(
@@ -38,17 +39,20 @@ public class ServiceNowIncidentClient {
             ObjectMapper objectMapper,
             @Value("${servicenow.instance-url}") String instanceUrl,
             @Value("${servicenow.incident.ci-names:}") String ciNames,
+            @Value("${servicenow.incident.ci-sys-ids:}") String ciSysIds,
             @Value("${servicenow.incident.ci-sys-id}") String ciSysId) {
         this.restTemplate = restTemplate;
         this.authHeaderProvider = authHeaderProvider;
         this.objectMapper = objectMapper;
         this.instanceUrl = instanceUrl;
         this.ciNames = splitCiNames(ciNames);
+        this.ciSysIds = splitCiNames(ciSysIds);
         this.ciSysId = ciSysId;
     }
 
     public List<ServiceNowIncident> fetchUnassignedIncidents() {
         String query = buildQuery();
+        logger.info("ServiceNow incident query: {}", query);
         String url = UriComponentsBuilder.fromHttpUrl(instanceUrl)
                 .path("/api/now/table/incident")
                 .queryParam("sysparm_query", query)
@@ -97,6 +101,10 @@ public class ServiceNowIncidentClient {
     }
 
     private String buildQuery() {
+        if (!ciSysIds.isEmpty()) {
+            String joinedIds = String.join(",", ciSysIds);
+            return String.format("cmdb_ciIN%s^assigned_toISEMPTY^stateNOT IN6,7", joinedIds);
+        }
         if (!ciNames.isEmpty()) {
             String joinedNames = String.join(",", ciNames);
             return String.format("cmdb_ci.nameIN%s^assigned_toISEMPTY^stateNOT IN6,7", joinedNames);
