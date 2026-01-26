@@ -16,17 +16,14 @@ public class ServiceNowIncidentAssigner {
     private final ServiceNowIncidentClient incidentClient;
     private final IncidentAssignmentService assignmentService;
     private final boolean assignmentEnabled;
-    private final boolean assignByEmail;
 
     public ServiceNowIncidentAssigner(
             ServiceNowIncidentClient incidentClient,
             IncidentAssignmentService assignmentService,
-            @Value("${servicenow.assignment.enabled:false}") boolean assignmentEnabled,
-            @Value("${servicenow.assignment.use-email:true}") boolean assignByEmail) {
+            @Value("${servicenow.assignment.enabled:false}") boolean assignmentEnabled) {
         this.incidentClient = incidentClient;
         this.assignmentService = assignmentService;
         this.assignmentEnabled = assignmentEnabled;
-        this.assignByEmail = assignByEmail;
     }
 
     public int assignIncidents(List<ServiceNowIncident> incidents) {
@@ -52,10 +49,10 @@ public class ServiceNowIncidentAssigner {
             return false;
         }
         IncidentAssignmentSuggestion selected = suggestion.get();
-        if (assignByEmail) {
-            return incidentClient.assignIncidentByEmail(incident.getSys_id(), selected.getAssigneeEmail());
+        if (selected.getAssigneeSysId() == null || selected.getAssigneeSysId().isBlank()) {
+            logger.warn("Missing ServiceNow assignee sys_id for incident {}; skipping assignment.", incident.getSys_id());
+            return false;
         }
-        logger.warn("ServiceNow assignment mode is not supported; enable email assignment.");
-        return false;
+        return incidentClient.assignIncidentBySysId(incident.getSys_id(), selected.getAssigneeSysId());
     }
 }

@@ -120,6 +120,7 @@ public class IncidentAssignmentService {
         return Optional.of(new IncidentAssignmentSuggestion(
                 fullName,
                 chosenMember.getEmail(),
+                chosenMember.getSys_id(),
                 chosen.window().geoName(),
                 chosen.window().shiftName()));
     }

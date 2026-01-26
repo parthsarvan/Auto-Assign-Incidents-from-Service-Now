@@ -90,30 +90,30 @@ public class ServiceNowIncidentClient {
         }
     }
 
-    public boolean assignIncidentByEmail(String incidentSysId, String assigneeEmail) {
+    public boolean assignIncidentBySysId(String incidentSysId, String assigneeSysId) {
         if (incidentSysId == null || incidentSysId.isBlank()) {
             logger.warn("Cannot assign ServiceNow incident: missing sys_id.");
             return false;
         }
-        if (assigneeEmail == null || assigneeEmail.isBlank()) {
-            logger.warn("Cannot assign ServiceNow incident {}: missing assignee email.", incidentSysId);
+        if (assigneeSysId == null || assigneeSysId.isBlank()) {
+            logger.warn("Cannot assign ServiceNow incident {}: missing assignee sys_id.", incidentSysId);
             return false;
         }
 
         String url = UriComponentsBuilder.fromHttpUrl(instanceUrl)
                 .pathSegment("api", "now", "table", "incident", incidentSysId)
-                .queryParam("sysparm_input_display_value", "true")
+                .queryParam("sysparm_input_display_value", "false")
                 .queryParam("sysparm_exclude_reference_link", "true")
                 .toUriString();
 
         HttpHeaders headers = authHeaderProvider.buildHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<Map<String, String>> request =
-                new HttpEntity<>(Map.of("assigned_to", assigneeEmail), headers);
+                new HttpEntity<>(Map.of("assigned_to", assigneeSysId), headers);
 
         try {
             restTemplate.exchange(url, HttpMethod.PATCH, request, String.class);
-            logger.info("Assigned ServiceNow incident {} to {}.", incidentSysId, assigneeEmail);
+            logger.info("Assigned ServiceNow incident {} to sys_id {}.", incidentSysId, assigneeSysId);
             return true;
         } catch (HttpStatusCodeException ex) {
             logger.error(
