@@ -81,12 +81,12 @@ public class IncidentAssignmentService {
             return Optional.empty();
         }
 
-        List<CiUserMapping> eligible = new ArrayList<>();
-        List<CiUserMapping> fallbackEligible = new ArrayList<>();
+        List<Candidate> eligible = new ArrayList<>();
+        List<Candidate> fallbackEligible = new ArrayList<>();
         for (CiUserMapping mapping : sortedMappings(mappings)) {
             TeamMember member = mapping.getTeamMember();
-            ShiftMatch match = resolveShiftMatch(member, activeShifts, today);
-            if (match == ShiftMatch.NONE) {
+            MatchResult match = resolveShiftMatch(member, activeShifts, today);
+            if (match.matchType() == ShiftMatch.NONE) {
                 continue;
             }
             if (leaveEntryRepository.existsByTeamMemberAndStartTsLessThanEqualAndEndTsGreaterThanEqual(
@@ -97,10 +97,11 @@ public class IncidentAssignmentService {
                     member, now, now)) {
                 continue;
             }
-            if (match == ShiftMatch.EXACT) {
-                eligible.add(mapping);
+            Candidate candidate = new Candidate(mapping, match.window());
+            if (match.matchType() == ShiftMatch.EXACT) {
+                eligible.add(candidate);
             } else {
-                fallbackEligible.add(mapping);
+                fallbackEligible.add(candidate);
             }
         }
 
@@ -113,13 +114,14 @@ public class IncidentAssignmentService {
         }
 
         int index = selectRoundRobinIndex(configurationItem.get().getCi_id(), eligible.size());
-        TeamMember chosen = eligible.get(index).getTeamMember();
-        String fullName = String.format("%s %s", chosen.getF_name(), chosen.getL_name());
+        Candidate chosen = eligible.get(index);
+        TeamMember chosenMember = chosen.mapping().getTeamMember();
+        String fullName = String.format("%s %s", chosenMember.getF_name(), chosenMember.getL_name());
         return Optional.of(new IncidentAssignmentSuggestion(
                 fullName,
-                chosen.getEmail(),
-                activeShifts.get(0).geoName(),
-                activeShifts.get(0).shiftName()));
+                chosenMember.getEmail(),
+                chosen.window().geoName(),
+                chosen.window().shiftName()));
     }
 
     private List<CiUserMapping> sortedMappings(List<CiUserMapping> mappings) {
@@ -128,30 +130,38 @@ public class IncidentAssignmentService {
                 .toList();
     }
 
-    private ShiftMatch resolveShiftMatch(TeamMember member, List<ShiftWindow> activeShifts, LocalDate date) {
+    private MatchResult resolveShiftMatch(TeamMember member, List<ShiftWindow> activeShifts, LocalDate date) {
         List<TeamMemberSchedule> schedules = teamMemberScheduleRepository.findActiveSchedules(member, date);
         if (schedules.isEmpty()) {
-            return ShiftMatch.NONE;
+            return new MatchResult(ShiftMatch.NONE, null);
         }
         boolean geoMatch = false;
         boolean shiftMatch = false;
+        ShiftWindow fallbackWindow = null;
         for (TeamMemberSchedule schedule : schedules) {
             String geoName = schedule.getGeo().getName();
             String shiftName = schedule.getShift().getName();
             for (ShiftWindow window : activeShifts) {
                 if (window.geoName().equalsIgnoreCase(geoName)
                         && window.shiftName().equalsIgnoreCase(shiftName)) {
-                    return ShiftMatch.EXACT;
+                    return new MatchResult(ShiftMatch.EXACT, window);
                 }
                 if (window.geoName().equalsIgnoreCase(geoName)) {
                     geoMatch = true;
+                    fallbackWindow = window;
                 }
                 if (window.shiftName().equalsIgnoreCase(shiftName)) {
                     shiftMatch = true;
+                    if (fallbackWindow == null) {
+                        fallbackWindow = window;
+                    }
                 }
             }
         }
-        return (geoMatch || shiftMatch) ? ShiftMatch.PARTIAL : ShiftMatch.NONE;
+        if (geoMatch || shiftMatch) {
+            return new MatchResult(ShiftMatch.PARTIAL, fallbackWindow != null ? fallbackWindow : activeShifts.get(0));
+        }
+        return new MatchResult(ShiftMatch.NONE, null);
     }
 
     private List<ShiftWindow> resolveActiveShifts(LocalTime nowPt) {
@@ -190,6 +200,10 @@ public class IncidentAssignmentService {
             return !now.isBefore(start) || now.isBefore(end);
         }
     }
+
+    private record MatchResult(ShiftMatch matchType, ShiftWindow window) {}
+
+    private record Candidate(CiUserMapping mapping, ShiftWindow window) {}
 
     private enum ShiftMatch {
         NONE,
