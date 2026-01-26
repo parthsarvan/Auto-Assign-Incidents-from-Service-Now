@@ -14,10 +14,15 @@ public class ServiceNowIncidentPoller {
     private static final Logger logger = LoggerFactory.getLogger(ServiceNowIncidentPoller.class);
 
     private final ServiceNowIncidentClient incidentClient;
+    private final ServiceNowIncidentAssigner incidentAssigner;
     private final ServiceNowLogService logService;
 
-    public ServiceNowIncidentPoller(ServiceNowIncidentClient incidentClient, ServiceNowLogService logService) {
+    public ServiceNowIncidentPoller(
+            ServiceNowIncidentClient incidentClient,
+            ServiceNowIncidentAssigner incidentAssigner,
+            ServiceNowLogService logService) {
         this.incidentClient = incidentClient;
+        this.incidentAssigner = incidentAssigner;
         this.logService = logService;
     }
 
@@ -31,6 +36,10 @@ public class ServiceNowIncidentPoller {
     public void poll() {
         try {
             List<ServiceNowIncident> incidents = incidentClient.fetchUnassignedIncidents();
+            int assigned = incidentAssigner.assignIncidents(incidents);
+            if (assigned > 0) {
+                logger.info("ServiceNow assignment applied to {} incidents.", assigned);
+            }
             logService.recordPollSuccess(incidents);
         } catch (Exception ex) {
             logService.recordPollFailure(ex);

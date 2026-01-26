@@ -6,12 +6,14 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
@@ -85,6 +87,44 @@ public class ServiceNowIncidentClient {
         } catch (RestClientException ex) {
             logger.error("Failed to fetch ServiceNow incidents: {}", ex.getMessage());
             throw ex;
+        }
+    }
+
+    public boolean assignIncidentByEmail(String incidentSysId, String assigneeEmail) {
+        if (incidentSysId == null || incidentSysId.isBlank()) {
+            logger.warn("Cannot assign ServiceNow incident: missing sys_id.");
+            return false;
+        }
+        if (assigneeEmail == null || assigneeEmail.isBlank()) {
+            logger.warn("Cannot assign ServiceNow incident {}: missing assignee email.", incidentSysId);
+            return false;
+        }
+
+        String url = UriComponentsBuilder.fromHttpUrl(instanceUrl)
+                .pathSegment("api", "now", "table", "incident", incidentSysId)
+                .queryParam("sysparm_input_display_value", "true")
+                .queryParam("sysparm_exclude_reference_link", "true")
+                .toUriString();
+
+        HttpHeaders headers = authHeaderProvider.buildHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<Map<String, String>> request =
+                new HttpEntity<>(Map.of("assigned_to", assigneeEmail), headers);
+
+        try {
+            restTemplate.exchange(url, HttpMethod.PATCH, request, String.class);
+            logger.info("Assigned ServiceNow incident {} to {}.", incidentSysId, assigneeEmail);
+            return true;
+        } catch (HttpStatusCodeException ex) {
+            logger.error(
+                    "Failed to assign ServiceNow incident {}: status={} body={}",
+                    incidentSysId,
+                    ex.getStatusCode(),
+                    ex.getResponseBodyAsString());
+            return false;
+        } catch (RestClientException ex) {
+            logger.error("Failed to assign ServiceNow incident {}: {}", incidentSysId, ex.getMessage());
+            return false;
         }
     }
 
