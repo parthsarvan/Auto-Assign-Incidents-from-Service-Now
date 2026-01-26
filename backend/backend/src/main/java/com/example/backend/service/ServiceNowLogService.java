@@ -1,5 +1,6 @@
 package com.example.backend.service;
 
+import com.example.backend.dto.IncidentAssignmentSuggestion;
 import com.example.backend.dto.ServiceNowIncident;
 import com.example.backend.dto.ServiceNowIncidentSummary;
 import com.example.backend.dto.ServiceNowReference;
@@ -17,8 +18,12 @@ import org.springframework.stereotype.Service;
 public class ServiceNowLogService {
     private final List<ServiceNowRunLog> logs = new CopyOnWriteArrayList<>();
     private final int retention;
+    private final IncidentAssignmentService assignmentService;
 
-    public ServiceNowLogService(@Value("${servicenow.log.retention:100}") int retention) {
+    public ServiceNowLogService(
+            IncidentAssignmentService assignmentService,
+            @Value("${servicenow.log.retention:100}") int retention) {
+        this.assignmentService = assignmentService;
         this.retention = retention;
     }
 
@@ -50,13 +55,22 @@ public class ServiceNowLogService {
     }
 
     private ServiceNowIncidentSummary toSummary(ServiceNowIncident incident) {
-        return new ServiceNowIncidentSummary(
+        ServiceNowIncidentSummary summary = new ServiceNowIncidentSummary(
                 incident.getNumber(),
                 incident.getSys_created_on(),
                 resolveDisplayValue(incident.getCmdb_ci()),
                 incident.getPriority(),
                 resolveDisplayValue(incident.getCaller_id()),
                 incident.getShort_description());
+        assignmentService.suggestAssignee(incident).ifPresent(suggestion -> applySuggestion(summary, suggestion));
+        return summary;
+    }
+
+    private void applySuggestion(ServiceNowIncidentSummary summary, IncidentAssignmentSuggestion suggestion) {
+        summary.setSuggestedAssignee(suggestion.getAssigneeName());
+        summary.setSuggestedAssigneeEmail(suggestion.getAssigneeEmail());
+        summary.setSuggestedGeo(suggestion.getGeo());
+        summary.setSuggestedShift(suggestion.getShift());
     }
 
     private String resolveDisplayValue(ServiceNowReference reference) {

@@ -7,6 +7,10 @@ public class ServiceNowIncidentSummary {
     private String priority;
     private String caller;
     private String shortDescription;
+    private String suggestedAssignee;
+    private String suggestedAssigneeEmail;
+    private String suggestedGeo;
+    private String suggestedShift;
 
     public ServiceNowIncidentSummary() {}
 
@@ -71,5 +75,37 @@ public class ServiceNowIncidentSummary {
 
     public void setShortDescription(String shortDescription) {
         this.shortDescription = shortDescription;
+    }
+
+    public String getSuggestedAssignee() {
+        return suggestedAssignee;
+    }
+
+    public void setSuggestedAssignee(String suggestedAssignee) {
+        this.suggestedAssignee = suggestedAssignee;
+    }
+
+    public String getSuggestedAssigneeEmail() {
+        return suggestedAssigneeEmail;
+    }
+
+    public void setSuggestedAssigneeEmail(String suggestedAssigneeEmail) {
+        this.suggestedAssigneeEmail = suggestedAssigneeEmail;
+    }
+
+    public String getSuggestedGeo() {
+        return suggestedGeo;
+    }
+
+    public void setSuggestedGeo(String suggestedGeo) {
+        this.suggestedGeo = suggestedGeo;
+    }
+
+    public String getSuggestedShift() {
+        return suggestedShift;
+    }
+
+    public void setSuggestedShift(String suggestedShift) {
+        this.suggestedShift = suggestedShift;
     }
 }
