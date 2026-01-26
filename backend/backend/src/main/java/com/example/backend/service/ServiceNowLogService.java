@@ -1,6 +1,7 @@
 package com.example.backend.service;
 
 import com.example.backend.dto.IncidentAssignmentSuggestion;
+import com.example.backend.dto.ServiceNowAssignmentSelection;
 import com.example.backend.dto.ServiceNowIncident;
 import com.example.backend.dto.ServiceNowIncidentSummary;
 import com.example.backend.dto.ServiceNowReference;
@@ -38,6 +39,7 @@ public class ServiceNowLogService {
                 .map(this::toSummary)
                 .collect(Collectors.toList());
         log.setIncidents(summaries);
+        log.setAssignmentSelections(buildSelections(summaries));
         log.setIncidentCount(summaries.size());
         addLog(log);
     }
@@ -64,6 +66,18 @@ public class ServiceNowLogService {
                 incident.getShort_description());
         assignmentService.suggestAssignee(incident).ifPresent(suggestion -> applySuggestion(summary, suggestion));
         return summary;
+    }
+
+    private List<ServiceNowAssignmentSelection> buildSelections(List<ServiceNowIncidentSummary> summaries) {
+        return summaries.stream()
+                .filter(summary -> summary.getSuggestedAssignee() != null && !summary.getSuggestedAssignee().isBlank())
+                .map(summary -> new ServiceNowAssignmentSelection(
+                        summary.getNumber(),
+                        summary.getSuggestedAssignee(),
+                        summary.getSuggestedAssigneeEmail(),
+                        summary.getSuggestedGeo(),
+                        summary.getSuggestedShift()))
+                .collect(Collectors.toList());
     }
 
     private void applySuggestion(ServiceNowIncidentSummary summary, IncidentAssignmentSuggestion suggestion) {

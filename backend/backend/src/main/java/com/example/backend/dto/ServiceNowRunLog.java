@@ -11,6 +11,7 @@ public class ServiceNowRunLog {
     private String message;
     private int incidentCount;
     private List<ServiceNowIncidentSummary> incidents = new ArrayList<>();
+    private List<ServiceNowAssignmentSelection> assignmentSelections = new ArrayList<>();
 
     public ServiceNowRunLog() {}
 
@@ -67,5 +68,13 @@ public class ServiceNowRunLog {
 
     public void setIncidents(List<ServiceNowIncidentSummary> incidents) {
         this.incidents = incidents;
+    }
+
+    public List<ServiceNowAssignmentSelection> getAssignmentSelections() {
+        return assignmentSelections;
+    }
+
+    public void setAssignmentSelections(List<ServiceNowAssignmentSelection> assignmentSelections) {
+        this.assignmentSelections = assignmentSelections;
     }
 }

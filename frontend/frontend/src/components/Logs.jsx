@@ -83,6 +83,36 @@ export default function Logs() {
 
               {log.message && <p className="mt-3 mb-2">{log.message}</p>}
 
+              {log.assignmentSelections && log.assignmentSelections.length > 0 && (
+                <div className="selection-box mt-3">
+                  <div className="selection-box__title">Assignment Selections</div>
+                  <div className="selection-box__list">
+                    {log.assignmentSelections.map((selection, selectionIndex) => (
+                      <div
+                        className="selection-box__item"
+                        key={`${selection.incidentNumber}-${selectionIndex}`}
+                      >
+                        <div>
+                          <strong>Incident:</strong> {selection.incidentNumber || '-'}
+                        </div>
+                        <div>
+                          <strong>Team Member:</strong> {selection.assigneeName || '-'}
+                          {selection.assigneeEmail ? ` (${selection.assigneeEmail})` : ''}
+                        </div>
+                        <div className="selection-box__meta">
+                          <span>
+                            <strong>Geo:</strong> {selection.geo || '-'}
+                          </span>
+                          <span>
+                            <strong>Shift:</strong> {selection.shift || '-'}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {log.incidents && log.incidents.length > 0 && (
                 <div className="table-responsive">
                   <table className="table table-sm table-striped align-middle">
