@@ -1,9 +1,11 @@
 package com.example.backend.service;
 
 import com.example.backend.dto.IncidentAssignmentSuggestion;
+import com.example.backend.dto.ServiceNowAssignmentResult;
 import com.example.backend.dto.ServiceNowIncident;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -26,33 +28,39 @@ public class ServiceNowIncidentAssigner {
         this.assignmentEnabled = assignmentEnabled;
     }
 
-    public int assignIncidents(List<ServiceNowIncident> incidents) {
+    public List<ServiceNowAssignmentResult> assignIncidents(List<ServiceNowIncident> incidents) {
         if (!assignmentEnabled) {
             logger.info("ServiceNow assignment disabled; skipping incident updates.");
-            return 0;
+            return List.of();
         }
         if (incidents == null || incidents.isEmpty()) {
-            return 0;
+            return List.of();
         }
-        int assignedCount = 0;
-        for (ServiceNowIncident incident : incidents) {
-            if (assignIncident(incident)) {
-                assignedCount++;
-            }
-        }
-        return assignedCount;
+        return incidents.stream()
+                .map(this::assignIncident)
+                .collect(Collectors.toList());
     }
 
-    private boolean assignIncident(ServiceNowIncident incident) {
+    private ServiceNowAssignmentResult assignIncident(ServiceNowIncident incident) {
         Optional<IncidentAssignmentSuggestion> suggestion = assignmentService.suggestAssignee(incident);
         if (suggestion.isEmpty()) {
-            return false;
+            return new ServiceNowAssignmentResult(
+                    incident.getNumber(), null, "SKIPPED", "No assignment suggestion available.");
         }
         IncidentAssignmentSuggestion selected = suggestion.get();
         if (selected.getAssigneeSysId() == null || selected.getAssigneeSysId().isBlank()) {
             logger.warn("Missing ServiceNow assignee sys_id for incident {}; skipping assignment.", incident.getSys_id());
-            return false;
+            return new ServiceNowAssignmentResult(
+                    incident.getNumber(),
+                    selected.getAssigneeName(),
+                    "FAILED",
+                    "Missing ServiceNow assignee sys_id.");
         }
-        return incidentClient.assignIncidentBySysId(incident.getSys_id(), selected.getAssigneeSysId());
+        boolean success = incidentClient.assignIncidentBySysId(incident.getSys_id(), selected.getAssigneeSysId());
+        return new ServiceNowAssignmentResult(
+                incident.getNumber(),
+                selected.getAssigneeName(),
+                success ? "SUCCESS" : "FAILED",
+                success ? "Assigned successfully." : "ServiceNow assignment failed.");
     }
 }

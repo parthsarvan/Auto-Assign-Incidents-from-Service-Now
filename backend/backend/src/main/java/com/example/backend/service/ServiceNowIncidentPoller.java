@@ -7,6 +7,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
+import com.example.backend.dto.ServiceNowAssignmentResult;
 import com.example.backend.dto.ServiceNowIncident;
 
 @Service
@@ -36,11 +37,14 @@ public class ServiceNowIncidentPoller {
     public void poll() {
         try {
             List<ServiceNowIncident> incidents = incidentClient.fetchUnassignedIncidents();
-            int assigned = incidentAssigner.assignIncidents(incidents);
-            if (assigned > 0) {
-                logger.info("ServiceNow assignment applied to {} incidents.", assigned);
+            List<ServiceNowAssignmentResult> results = incidentAssigner.assignIncidents(incidents);
+            long assignedCount = results.stream()
+                    .filter(result -> "SUCCESS".equals(result.getStatus()))
+                    .count();
+            if (assignedCount > 0) {
+                logger.info("ServiceNow assignment applied to {} incidents.", assignedCount);
             }
-            logService.recordPollSuccess(incidents);
+            logService.recordPollSuccess(incidents, results);
         } catch (Exception ex) {
             logService.recordPollFailure(ex);
         }

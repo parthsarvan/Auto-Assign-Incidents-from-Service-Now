@@ -12,6 +12,8 @@ public class ServiceNowRunLog {
     private int incidentCount;
     private List<ServiceNowIncidentSummary> incidents = new ArrayList<>();
     private List<ServiceNowAssignmentSelection> assignmentSelections = new ArrayList<>();
+    private List<ServiceNowAssignmentResult> assignmentResults = new ArrayList<>();
+    private String assignmentConfirmation;
 
     public ServiceNowRunLog() {}
 
@@ -76,5 +78,21 @@ public class ServiceNowRunLog {
 
     public void setAssignmentSelections(List<ServiceNowAssignmentSelection> assignmentSelections) {
         this.assignmentSelections = assignmentSelections;
+    }
+
+    public List<ServiceNowAssignmentResult> getAssignmentResults() {
+        return assignmentResults;
+    }
+
+    public void setAssignmentResults(List<ServiceNowAssignmentResult> assignmentResults) {
+        this.assignmentResults = assignmentResults;
+    }
+
+    public String getAssignmentConfirmation() {
+        return assignmentConfirmation;
+    }
+
+    public void setAssignmentConfirmation(String assignmentConfirmation) {
+        this.assignmentConfirmation = assignmentConfirmation;
     }
 }

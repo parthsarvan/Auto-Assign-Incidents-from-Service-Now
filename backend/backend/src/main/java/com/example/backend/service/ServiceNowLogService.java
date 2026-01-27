@@ -4,6 +4,7 @@ import com.example.backend.dto.IncidentAssignmentSuggestion;
 import com.example.backend.dto.ServiceNowAssignmentSelection;
 import com.example.backend.dto.ServiceNowIncident;
 import com.example.backend.dto.ServiceNowIncidentSummary;
+import com.example.backend.dto.ServiceNowAssignmentResult;
 import com.example.backend.dto.ServiceNowReference;
 import com.example.backend.dto.ServiceNowRunLog;
 import java.time.Instant;
@@ -33,13 +34,17 @@ public class ServiceNowLogService {
         addLog(log);
     }
 
-    public void recordPollSuccess(List<ServiceNowIncident> incidents) {
+    public void recordPollSuccess(List<ServiceNowIncident> incidents, List<ServiceNowAssignmentResult> results) {
         ServiceNowRunLog log = new ServiceNowRunLog(Instant.now(), "POLL", "OK", "Fetched incidents from ServiceNow.");
         List<ServiceNowIncidentSummary> summaries = incidents.stream()
                 .map(this::toSummary)
                 .collect(Collectors.toList());
         log.setIncidents(summaries);
         log.setAssignmentSelections(buildSelections(summaries));
+        List<ServiceNowAssignmentResult> assignmentResults =
+                results != null ? results : List.of();
+        log.setAssignmentResults(assignmentResults);
+        log.setAssignmentConfirmation(buildConfirmationMessage(assignmentResults));
         log.setIncidentCount(summaries.size());
         addLog(log);
     }
@@ -85,6 +90,26 @@ public class ServiceNowLogService {
         summary.setSuggestedAssigneeEmail(suggestion.getAssigneeEmail());
         summary.setSuggestedGeo(suggestion.getGeo());
         summary.setSuggestedShift(suggestion.getShift());
+    }
+
+    private String buildConfirmationMessage(List<ServiceNowAssignmentResult> results) {
+        if (results == null || results.isEmpty()) {
+            return "Nothing to assign.";
+        }
+        long successCount = results.stream()
+                .filter(result -> "SUCCESS".equals(result.getStatus()))
+                .count();
+        long failureCount = results.stream()
+                .filter(result -> "FAILED".equals(result.getStatus()))
+                .count();
+        long skippedCount = results.stream()
+                .filter(result -> "SKIPPED".equals(result.getStatus()))
+                .count();
+        return String.format(
+                "Assignments completed: %d success, %d failed, %d skipped.",
+                successCount,
+                failureCount,
+                skippedCount);
     }
 
     private String resolveDisplayValue(ServiceNowReference reference) {

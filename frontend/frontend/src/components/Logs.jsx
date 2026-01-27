@@ -113,6 +113,40 @@ export default function Logs() {
                 </div>
               )}
 
+              {log.assignmentConfirmation && (
+                <div className="selection-box mt-3">
+                  <div className="selection-box__title">Confirmation</div>
+                  <div className="selection-box__item">
+                    {log.assignmentConfirmation}
+                  </div>
+                  {log.assignmentResults && log.assignmentResults.length > 0 && (
+                    <div className="selection-box__list">
+                      {log.assignmentResults.map((result, resultIndex) => (
+                        <div
+                          className="selection-box__item"
+                          key={`${result.incidentNumber}-${resultIndex}`}
+                        >
+                          <div>
+                            <strong>Incident:</strong> {result.incidentNumber || '-'}
+                          </div>
+                          <div>
+                            <strong>Team Member:</strong> {result.assigneeName || '-'}
+                          </div>
+                          <div className="selection-box__meta">
+                            <span>
+                              <strong>Status:</strong> {result.status || '-'}
+                            </span>
+                            <span>
+                              <strong>Message:</strong> {result.message || '-'}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {log.incidents && log.incidents.length > 0 && (
                 <div className="table-responsive">
                   <table className="table table-sm table-striped align-middle">
