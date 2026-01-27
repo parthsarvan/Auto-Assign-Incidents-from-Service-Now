@@ -141,15 +141,16 @@ public class ServiceNowIncidentClient {
     }
 
     private String buildQuery() {
+        String baseFilter = "assigned_toISEMPTY^assigned_to=NULL^stateNOT IN6,7";
         if (!ciSysIds.isEmpty()) {
             String joinedIds = String.join(",", ciSysIds);
-            return String.format("cmdb_ciIN%s^assigned_toISEMPTY^stateNOT IN6,7", joinedIds);
+            return String.format("cmdb_ciIN%s^%s", joinedIds, baseFilter);
         }
         if (!ciNames.isEmpty()) {
             String joinedNames = String.join(",", ciNames);
-            return String.format("cmdb_ci.nameIN%s^assigned_toISEMPTY^stateNOT IN6,7", joinedNames);
+            return String.format("cmdb_ci.nameIN%s^%s", joinedNames, baseFilter);
         }
-        return String.format("cmdb_ci=%s^assigned_toISEMPTY^stateNOT IN6,7", ciSysId);
+        return String.format("cmdb_ci=%s^%s", ciSysId, baseFilter);
     }
 
     private List<String> splitCiNames(String ciNames) {
