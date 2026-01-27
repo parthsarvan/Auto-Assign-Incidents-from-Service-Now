@@ -76,6 +76,9 @@ public class ServiceNowIncidentClient {
             List<ServiceNowIncident> incidents = payload != null && payload.getResult() != null
                     ? payload.getResult()
                     : Collections.emptyList();
+            incidents = incidents.stream()
+                    .filter(this::isUnassigned)
+                    .toList();
             logIncidents(incidents);
             return incidents;
         } catch (HttpStatusCodeException ex) {
@@ -141,7 +144,8 @@ public class ServiceNowIncidentClient {
     }
 
     private String buildQuery() {
-        String baseFilter = "assigned_toISEMPTY^assigned_to=NULL^stateNOT IN6,7";
+        String baseFilter =
+                "assigned_toISEMPTY^assigned_to=NULL^assigned_to=^assigned_to.sys_idISEMPTY^stateNOT IN6,7";
         if (!ciSysIds.isEmpty()) {
             String joinedIds = String.join(",", ciSysIds);
             return String.format("cmdb_ciIN%s^%s", joinedIds, baseFilter);
@@ -175,5 +179,14 @@ public class ServiceNowIncidentClient {
                     cmdb,
                     incident.getAssigned_to() != null ? incident.getAssigned_to().getDisplayValue() : "unassigned");
         }
+    }
+
+    private boolean isUnassigned(ServiceNowIncident incident) {
+        if (incident == null || incident.getAssigned_to() == null) {
+            return true;
+        }
+        String value = incident.getAssigned_to().getValue();
+        String display = incident.getAssigned_to().getDisplayValue();
+        return (value == null || value.isBlank()) && (display == null || display.isBlank());
     }
 }
