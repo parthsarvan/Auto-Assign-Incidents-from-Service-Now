@@ -14,6 +14,7 @@ export default function AdminTeamMembers() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
+  const [sysId, setSysId] = useState('');
   const [geoId, setGeoId] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState('');
@@ -52,12 +53,14 @@ export default function AdminTeamMembers() {
           f_name: firstName,
           l_name: lastName,
           email,
+          sys_id: sysId,
           geoId,
         });
         setEditingId(null);
         setFirstName('');
         setLastName('');
         setEmail('');
+        setSysId('');
         setGeoId('');
         loadTeamMembers();
         return;
@@ -73,11 +76,13 @@ export default function AdminTeamMembers() {
         f_name: firstName,
         l_name: lastName,
         email,
+        sys_id: sysId,
         geoId,
       });
       setFirstName('');
       setLastName('');
       setEmail('');
+      setSysId('');
       setGeoId('');
       loadTeamMembers();
     } catch (err) {
@@ -98,6 +103,7 @@ export default function AdminTeamMembers() {
     setFirstName(member.f_name || '');
     setLastName(member.l_name || '');
     setEmail(member.email || '');
+    setSysId(member.sys_id || '');
     setGeoId(member.geo?.g_id || '');
   };
 
@@ -106,6 +112,7 @@ export default function AdminTeamMembers() {
     setFirstName('');
     setLastName('');
     setEmail('');
+    setSysId('');
     setGeoId('');
   };
 
@@ -145,6 +152,16 @@ export default function AdminTeamMembers() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+            />
+          </div>
+          <div className="col-md-4">
+            <label className="form-label">ServiceNow User Sys ID</label>
+            <input
+              type="text"
+              className="form-control"
+              value={sysId}
+              onChange={(e) => setSysId(e.target.value)}
+              placeholder="Optional"
             />
           </div>
           <div className="col-md-2">

@@ -21,6 +21,9 @@ public class TeamMember {
     @Column(nullable = false, unique = true)
     private String email;
 
+    @Column
+    private String sys_id;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "g_id")
     private Geo geo;
@@ -64,6 +67,14 @@ public class TeamMember {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public String getSys_id() {
+        return sys_id;
+    }
+
+    public void setSys_id(String sys_id) {
+        this.sys_id = sys_id;
     }
 
     public Geo getGeo() {
