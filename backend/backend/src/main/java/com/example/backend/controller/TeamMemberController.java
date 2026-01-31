@@ -49,6 +49,8 @@ public class TeamMemberController {
             request.getEmail(),
             geo.get()
         );
+        teamMember.setPhone(request.getPhone());
+        teamMember.setSys_id(request.getSys_id());
         return ResponseEntity.ok(teamMemberRepository.save(teamMember));
     }
 
@@ -73,6 +75,8 @@ public class TeamMemberController {
                 member.setF_name(request.getF_name());
                 member.setL_name(request.getL_name());
                 member.setEmail(request.getEmail());
+                member.setPhone(request.getPhone());
+                member.setSys_id(request.getSys_id());
                 member.setGeo(geo.get());
                 return ResponseEntity.ok(teamMemberRepository.save(member));
             })
