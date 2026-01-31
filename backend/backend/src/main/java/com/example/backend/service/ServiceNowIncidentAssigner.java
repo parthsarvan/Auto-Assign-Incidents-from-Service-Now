@@ -17,14 +17,17 @@ public class ServiceNowIncidentAssigner {
 
     private final ServiceNowIncidentClient incidentClient;
     private final IncidentAssignmentService assignmentService;
+    private final SmsService smsService;
     private final boolean assignmentEnabled;
 
     public ServiceNowIncidentAssigner(
             ServiceNowIncidentClient incidentClient,
             IncidentAssignmentService assignmentService,
+            SmsService smsService,
             @Value("${servicenow.assignment.enabled:false}") boolean assignmentEnabled) {
         this.incidentClient = incidentClient;
         this.assignmentService = assignmentService;
+        this.smsService = smsService;
         this.assignmentEnabled = assignmentEnabled;
     }
 
@@ -57,10 +60,27 @@ public class ServiceNowIncidentAssigner {
                     "Missing ServiceNow assignee sys_id.");
         }
         boolean success = incidentClient.assignIncidentBySysId(incident.getSys_id(), selected.getAssigneeSysId());
+        if (success) {
+            sendAssignmentSms(selected, incident);
+        }
         return new ServiceNowAssignmentResult(
                 incident.getNumber(),
                 selected.getAssigneeName(),
                 success ? "SUCCESS" : "FAILED",
                 success ? "Assigned successfully." : "ServiceNow assignment failed.");
+    }
+
+    private void sendAssignmentSms(IncidentAssignmentSuggestion suggestion, ServiceNowIncident incident) {
+        String phone = suggestion.getAssigneePhone();
+        if (phone == null || phone.isBlank()) {
+            return;
+        }
+        String message = String.format(
+                "ServiceNow incident assigned: %s | CI: %s | Priority: %s | %s",
+                incident.getNumber(),
+                incident.getCmdb_ci() != null ? incident.getCmdb_ci().getDisplayValue() : "N/A",
+                incident.getPriority() != null ? incident.getPriority() : "N/A",
+                incident.getShort_description() != null ? incident.getShort_description() : "");
+        smsService.sendSms(phone, message);
     }
 }

@@ -4,6 +4,7 @@ public class TeamMemberRequest {
     private String f_name;
     private String l_name;
     private String email;
+    private String phone;
     private String sys_id;
     private Long geoId;
 
@@ -29,6 +30,14 @@ public class TeamMemberRequest {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
     }
 
     public String getSys_id() {

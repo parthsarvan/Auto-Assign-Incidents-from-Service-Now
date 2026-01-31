@@ -121,6 +121,7 @@ public class IncidentAssignmentService {
                 fullName,
                 chosenMember.getEmail(),
                 chosenMember.getSys_id(),
+                chosenMember.getPhone(),
                 chosen.window().geoName(),
                 chosen.window().shiftName()));
     }

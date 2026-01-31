@@ -14,6 +14,7 @@ export default function AdminTeamMembers() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [sysId, setSysId] = useState('');
   const [geoId, setGeoId] = useState('');
   const [editingId, setEditingId] = useState(null);
@@ -53,6 +54,7 @@ export default function AdminTeamMembers() {
           f_name: firstName,
           l_name: lastName,
           email,
+          phone,
           sys_id: sysId,
           geoId,
         });
@@ -60,6 +62,7 @@ export default function AdminTeamMembers() {
         setFirstName('');
         setLastName('');
         setEmail('');
+        setPhone('');
         setSysId('');
         setGeoId('');
         loadTeamMembers();
@@ -76,12 +79,14 @@ export default function AdminTeamMembers() {
         f_name: firstName,
         l_name: lastName,
         email,
+        phone,
         sys_id: sysId,
         geoId,
       });
       setFirstName('');
       setLastName('');
       setEmail('');
+      setPhone('');
       setSysId('');
       setGeoId('');
       loadTeamMembers();
@@ -103,6 +108,7 @@ export default function AdminTeamMembers() {
     setFirstName(member.f_name || '');
     setLastName(member.l_name || '');
     setEmail(member.email || '');
+    setPhone(member.phone || '');
     setSysId(member.sys_id || '');
     setGeoId(member.geo?.g_id || '');
   };
@@ -112,6 +118,7 @@ export default function AdminTeamMembers() {
     setFirstName('');
     setLastName('');
     setEmail('');
+    setPhone('');
     setSysId('');
     setGeoId('');
   };
@@ -152,6 +159,16 @@ export default function AdminTeamMembers() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+            />
+          </div>
+          <div className="col-md-4">
+            <label className="form-label">Phone</label>
+            <input
+              type="tel"
+              className="form-control"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="Optional"
             />
           </div>
           <div className="col-md-4">
@@ -204,6 +221,7 @@ export default function AdminTeamMembers() {
               <th>First Name</th>
               <th>Last Name</th>
               <th>Email</th>
+              <th>Phone</th>
               <th>Geo</th>
               {isAdmin && <th style={{ width: '180px' }}>Actions</th>}
             </tr>
@@ -215,6 +233,7 @@ export default function AdminTeamMembers() {
                 <td>{member.f_name}</td>
                 <td>{member.l_name}</td>
                 <td>{member.email || '-'}</td>
+                <td>{member.phone || '-'}</td>
                 <td>{member.geo?.name || '-'}</td>
                 {isAdmin && (
                   <td className="d-flex gap-2">
@@ -236,7 +255,7 @@ export default function AdminTeamMembers() {
             ))}
             {teamMembers.length === 0 && (
               <tr>
-                <td colSpan={isAdmin ? 6 : 5} className="text-center">No team members yet.</td>
+                <td colSpan={isAdmin ? 7 : 6} className="text-center">No team members yet.</td>
               </tr>
             )}
           </tbody>

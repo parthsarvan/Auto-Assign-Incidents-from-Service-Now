@@ -4,16 +4,23 @@ public class IncidentAssignmentSuggestion {
     private String assigneeName;
     private String assigneeEmail;
     private String assigneeSysId;
+    private String assigneePhone;
     private String geo;
     private String shift;
 
     public IncidentAssignmentSuggestion() {}
 
     public IncidentAssignmentSuggestion(
-            String assigneeName, String assigneeEmail, String assigneeSysId, String geo, String shift) {
+            String assigneeName,
+            String assigneeEmail,
+            String assigneeSysId,
+            String assigneePhone,
+            String geo,
+            String shift) {
         this.assigneeName = assigneeName;
         this.assigneeEmail = assigneeEmail;
         this.assigneeSysId = assigneeSysId;
+        this.assigneePhone = assigneePhone;
         this.geo = geo;
         this.shift = shift;
     }
@@ -40,6 +47,14 @@ public class IncidentAssignmentSuggestion {
 
     public void setAssigneeSysId(String assigneeSysId) {
         this.assigneeSysId = assigneeSysId;
+    }
+
+    public String getAssigneePhone() {
+        return assigneePhone;
+    }
+
+    public void setAssigneePhone(String assigneePhone) {
+        this.assigneePhone = assigneePhone;
     }
 
     public String getGeo() {
