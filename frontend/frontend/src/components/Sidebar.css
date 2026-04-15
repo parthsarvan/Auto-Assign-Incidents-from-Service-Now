@@ -6,88 +6,91 @@
   top: 0;
   left: 0;
   height: 100vh;
-  /* Light blue gradient background */
-  background: linear-gradient(180deg, #e3f2ff 0%, #ffffff 100%);
-  border-right: 1px solid #0d6efd; /* primary-blue border */
-  transition: width 0.2s ease-in-out;
+  background:
+    linear-gradient(180deg, rgba(12, 29, 61, 0.98) 0%, rgba(18, 48, 98, 0.96) 100%);
+  border-right: 1px solid rgba(116, 149, 207, 0.18);
+  transition: width 0.24s ease-in-out;
   z-index: 1000;
   overflow-x: hidden;
+  box-shadow: 20px 0 50px rgba(9, 23, 49, 0.18);
 }
 
 /* Expanded (open) sidebar width */
 .sidebar--open {
-  width: 220px; /* slightly wider to accommodate longer text */
+  width: 240px;
 }
 
 /* Collapsed sidebar width (just enough for the hamburger) */
 .sidebar--collapsed {
-  width: 60px;
+  width: 84px;
 }
 
-/* ------------ Expanded Header Styles ------------ */
 .sidebar__header {
-  background-color: #0d6efd; /* Bootstrap primary blue */
   color: #fff;
-  height: 56px;
-  border-bottom: 1px solid #0a58ca; /* darker blue border */
-  padding: 0 0.5rem;
+  min-height: 78px;
+  border-bottom: 1px solid rgba(140, 177, 241, 0.14);
+  padding: 1rem 1rem 0.85rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
-/* “Menu” title inside header */
 .sidebar__header h5 {
   margin: 0;
-  font-size: 1rem;
-  font-weight: 500;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
-/* Collapse button in expanded header */
+.sidebar__eyebrow {
+  color: rgba(206, 221, 248, 0.68);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  margin-bottom: 0.3rem;
+}
+
 .sidebar__toggle {
-  background-color: rgba(255, 255, 255, 0.15);
-  border: none;
+  background-color: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   color: #fff;
   font-size: 1rem;
   line-height: 1;
-  padding: 0.25rem 0.5rem;
-  border-radius: 0.25rem;
+  padding: 0.45rem 0.65rem;
+  border-radius: 12px;
 }
 
 .sidebar__toggle:hover {
-  background-color: rgba(255, 255, 255, 0.25);
+  background-color: rgba(255, 255, 255, 0.16);
 }
 
-/* ------------ Collapsed Header Styles ------------ */
 .sidebar__header-collapsed {
-  background-color: #0d6efd;
-  height: 56px;
-  border-bottom: 1px solid #0a58ca;
+  min-height: 78px;
+  border-bottom: 1px solid rgba(140, 177, 241, 0.14);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-/* Hamburger (expand) button when collapsed */
 .sidebar__toggle-collapsed {
-  background-color: #ffffff;
-  border: 1px solid #0d6efd;
-  color: #0d6efd;
+  background-color: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #ffffff;
   font-size: 1.25rem;
   line-height: 1;
-  padding: 0.25rem 0.5rem;
-  border-radius: 0.25rem;
+  padding: 0.5rem 0.7rem;
+  border-radius: 12px;
 }
 
 .sidebar__toggle-collapsed:hover {
-  background-color: #e3f2ff;
+  background-color: rgba(255, 255, 255, 0.16);
 }
 
-/* ------------ Menu List (Expanded) ------------ */
 .sidebar__menu {
   margin: 0;
-  padding: 0;
-  margin-top: 0.5rem;
+  padding: 0.85rem 0.8rem 1.1rem;
+  margin-top: 0.2rem;
 }
 
 .sidebar__menu li {
@@ -95,48 +98,44 @@
 }
 
 .sidebar__menu li a {
-  color: #0d6efd; /* primary blue text */
+  color: rgba(224, 235, 255, 0.82);
   display: block;
-  padding: 0.5rem 1rem;
-  font-size: 0.95rem;
-  border-radius: 0.25rem;
-  transition: background-color 0.15s ease-in-out;
+  padding: 0.72rem 0.95rem;
+  font-size: 0.93rem;
+  font-weight: 600;
+  border-radius: 14px;
+  transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out, transform 0.15s ease-in-out;
   text-decoration: none;
+  margin-bottom: 0.25rem;
 }
 
 .sidebar__menu li a:hover {
-  background-color: #cfe2ff; /* very light blue on hover */
-  color: #0a58ca; /* darker blue on hover */
+  background-color: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  transform: translateX(2px);
 }
 
-/* Active menu item */
 .sidebar__menu li.active a {
-  background-color: #0d6efd; /* solid primary blue */
-  color: #fff;               /* white text */
-  font-weight: 500;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.16) 0%, rgba(116, 169, 255, 0.18) 100%);
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: inset 0 0 0 1px rgba(138, 183, 255, 0.2);
 }
 
-/* ------------ Utility to hide scrollbars (if content overflows) ------------ */
 .sidebar::-webkit-scrollbar {
   width: 6px;
 }
 
 .sidebar::-webkit-scrollbar-track {
-  background: #e3f2ff;
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .sidebar::-webkit-scrollbar-thumb {
-  background-color: #0d6efd;
+  background-color: rgba(255, 255, 255, 0.22);
   border-radius: 3px;
 }
 
-/* ------------ Ensure toggle icons are centered ------------ */
-.sidebar__toggle,
-.sidebar__toggle-collapsed {
-  cursor: pointer;
-}
-
-/* ------------ Media Queries (Optional) for responsiveness ------------ */
 @media (max-width: 768px) {
   .sidebar--open {
     width: 180px;

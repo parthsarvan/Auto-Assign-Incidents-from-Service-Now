@@ -28,6 +28,14 @@ public class User {
     private Instant updated_at;
     private Long updated_by;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "current_org_id")
+    private Organization currentOrganization;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "current_team_id")
+    private Team currentTeam;
+
     // Constructors
     public User() { }
 
@@ -102,6 +110,22 @@ public class User {
 
     public void setUpdated_by(Long updated_by) {
         this.updated_by = updated_by;
+    }
+
+    public Organization getCurrentOrganization() {
+        return currentOrganization;
+    }
+
+    public void setCurrentOrganization(Organization currentOrganization) {
+        this.currentOrganization = currentOrganization;
+    }
+
+    public Team getCurrentTeam() {
+        return currentTeam;
+    }
+
+    public void setCurrentTeam(Team currentTeam) {
+        this.currentTeam = currentTeam;
     }
 
 }

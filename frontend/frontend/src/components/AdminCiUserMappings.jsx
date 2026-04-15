@@ -8,6 +8,9 @@ import {
   updateCiUserMapping,
 } from '../services/admin';
 import { getCurrentUser } from '../services/auth';
+import { canManageCurrentTeam } from '../services/permissions';
+import SetupAssistBanner from './SetupAssistBanner';
+import './AdminCrud.css';
 
 export default function AdminCiUserMappings() {
   const [mappings, setMappings] = useState([]);
@@ -18,7 +21,7 @@ export default function AdminCiUserMappings() {
   const [sortOrder, setSortOrder] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState('');
-  const isAdmin = getCurrentUser()?.role === 'Admin';
+  const canManageTeam = canManageCurrentTeam(getCurrentUser());
 
   const loadData = async () => {
     try {
@@ -99,13 +102,21 @@ export default function AdminCiUserMappings() {
   };
 
   return (
-    <div className="container">
-      <h4 className="mb-3">Manage CI-User Mappings</h4>
+    <div className="container admin-crud-page">
+      <SetupAssistBanner
+        title="Setup Step: CI-User Mappings"
+        helperText="Map each configuration item to the team members who can take ownership."
+      />
+      <div className="admin-crud-hero mb-4">
+        <div className="admin-crud-hero__eyebrow">Ownership Routing</div>
+        <h2 className="mb-1">Manage CI-User Mappings</h2>
+        <div className="text-muted">Connect each configuration item to the team members who can own it.</div>
+      </div>
       {error && <div className="alert alert-danger">{error}</div>}
 
-      {isAdmin ? (
-        <div className="card p-3 mb-4">
-          <form className="row g-3" onSubmit={handleSubmit}>
+      {canManageTeam ? (
+        <div className="card p-3 mb-4 admin-crud-card">
+          <form className="row g-3 admin-crud-form-grid" onSubmit={handleSubmit}>
             <div className="col-md-4">
               <label className="form-label">Configuration Item</label>
               <select
@@ -161,15 +172,17 @@ export default function AdminCiUserMappings() {
         <div className="alert alert-info">Read-only access. Contact an admin to make changes.</div>
       )}
 
-      <div className="table-responsive">
-        <table className="table table-bordered">
+      <div className="card admin-crud-card">
+        <div className="card-body">
+          <div className="table-responsive">
+        <table className="table table-bordered admin-crud-table">
           <thead className="table-light">
             <tr>
               <th>ID</th>
               <th>CI</th>
               <th>Team Member</th>
               <th>Sort Order</th>
-              {isAdmin && <th style={{ width: '180px' }}>Actions</th>}
+              {canManageTeam && <th style={{ width: '180px' }}>Actions</th>}
             </tr>
           </thead>
           <tbody>
@@ -181,7 +194,7 @@ export default function AdminCiUserMappings() {
                   {mapping.teamMember?.f_name} {mapping.teamMember?.l_name}
                 </td>
                 <td>{mapping.sortOrder ?? '-'}</td>
-                {isAdmin && (
+                {canManageTeam && (
                   <td className="d-flex gap-2">
                     <button
                       className="btn btn-outline-primary btn-sm"
@@ -201,11 +214,13 @@ export default function AdminCiUserMappings() {
             ))}
             {mappings.length === 0 && (
               <tr>
-                <td colSpan={isAdmin ? 5 : 4} className="text-center">No mappings yet.</td>
+                <td colSpan={canManageTeam ? 5 : 4} className="text-center">No mappings yet.</td>
               </tr>
             )}
           </tbody>
         </table>
+          </div>
+        </div>
       </div>
     </div>
   );

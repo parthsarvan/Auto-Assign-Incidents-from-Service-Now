@@ -2,6 +2,7 @@
 package com.example.backend.service;
 
 import com.example.backend.dto.AvailabilityRecord;
+import com.example.backend.entity.Team;
 import org.springframework.stereotype.Service;
 
 import jakarta.persistence.EntityManager;
@@ -19,6 +20,12 @@ import java.util.List;
 @Service
 public class AvailabilityService {
 
+    private final CurrentWorkspaceService currentWorkspaceService;
+
+    public AvailabilityService(CurrentWorkspaceService currentWorkspaceService) {
+        this.currentWorkspaceService = currentWorkspaceService;
+    }
+
     @PersistenceContext
     private EntityManager entityManager;
 
@@ -27,6 +34,7 @@ public class AvailabilityService {
      * Translates each row into an AvailabilityRecord DTO.
      */
     public List<AvailabilityRecord> getAvailability(LocalDate start, LocalDate end) {
+        Team team = currentWorkspaceService.getCurrentTeam();
         // Convert LocalDate to java.sql.Date
         Date sqlStart = Date.valueOf(start);
         Date sqlEnd   = Date.valueOf(end);
@@ -45,11 +53,15 @@ public class AvailabilityService {
             "JOIN geo_shift_mapping gsm ON tms.g_id = gsm.g_id AND tms.s_id = gsm.s_id " +
             "JOIN LATERAL generate_series(tms.start_date, tms.end_date, interval '1 day') " +
             "  AS gs(date_value) ON true " +
-            "WHERE gs.date_value BETWEEN :startDate AND :endDate";
+            "WHERE gs.date_value BETWEEN :startDate AND :endDate " +
+            "  AND tms.team_id = :teamId " +
+            "  AND tm.team_id = :teamId " +
+            "  AND gsm.team_id = :teamId";
 
         Query query = entityManager.createNativeQuery(sql)
             .setParameter("startDate", sqlStart)
-            .setParameter("endDate",   sqlEnd);
+            .setParameter("endDate",   sqlEnd)
+            .setParameter("teamId", team.getTeam_id());
 
         @SuppressWarnings("unchecked")
         List<Object[]> rows = (List<Object[]>) query.getResultList();

@@ -2,6 +2,9 @@ package com.example.backend.service;
 
 import com.example.backend.dto.ServiceNowIncident;
 import com.example.backend.dto.ServiceNowIncidentResponse;
+import com.example.backend.entity.ConfigurationItem;
+import com.example.backend.entity.Team;
+import com.example.backend.repository.ConfigurationItemRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Collections;
@@ -29,27 +32,24 @@ public class ServiceNowIncidentClient {
 
     private final RestTemplate restTemplate;
     private final ServiceNowAuthHeaderProvider authHeaderProvider;
+    private final ConfigurationItemRepository configurationItemRepository;
     private final ObjectMapper objectMapper;
     private final String instanceUrl;
-    private final List<String> ciNames;
-    private final List<String> ciSysIds;
-    private final String ciSysId;
+    private final CurrentWorkspaceService currentWorkspaceService;
 
     public ServiceNowIncidentClient(
             RestTemplate restTemplate,
             ServiceNowAuthHeaderProvider authHeaderProvider,
+            ConfigurationItemRepository configurationItemRepository,
             ObjectMapper objectMapper,
-            @Value("${servicenow.instance-url}") String instanceUrl,
-            @Value("${servicenow.incident.ci-names:}") String ciNames,
-            @Value("${servicenow.incident.ci-sys-ids:}") String ciSysIds,
-            @Value("${servicenow.incident.ci-sys-id}") String ciSysId) {
+            CurrentWorkspaceService currentWorkspaceService,
+            @Value("${servicenow.instance-url}") String instanceUrl) {
         this.restTemplate = restTemplate;
         this.authHeaderProvider = authHeaderProvider;
+        this.configurationItemRepository = configurationItemRepository;
         this.objectMapper = objectMapper;
+        this.currentWorkspaceService = currentWorkspaceService;
         this.instanceUrl = instanceUrl;
-        this.ciNames = splitCiNames(ciNames);
-        this.ciSysIds = splitCiNames(ciSysIds);
-        this.ciSysId = ciSysId;
     }
 
     public List<ServiceNowIncident> fetchUnassignedIncidents() {
@@ -144,27 +144,21 @@ public class ServiceNowIncidentClient {
     }
 
     private String buildQuery() {
+        Team team = currentWorkspaceService.getCurrentTeam();
+        List<String> ciSysIds = configurationItemRepository.findAllByTeamOrderByNameAsc(team).stream()
+                .map(ConfigurationItem::getServiceNowSysId)
+                .filter(this::hasText)
+                .map(String::trim)
+                .distinct()
+                .toList();
         String baseFilter =
                 "assigned_toISEMPTY^assigned_to=NULL^assigned_to=^assigned_to.sys_idISEMPTY^stateNOT IN6,7";
-        if (!ciSysIds.isEmpty()) {
-            String joinedIds = String.join(",", ciSysIds);
-            return String.format("cmdb_ciIN%s^%s", joinedIds, baseFilter);
+        if (ciSysIds.isEmpty()) {
+            logger.warn("No ServiceNow CI sys IDs found for current team; returning no incidents.");
+            return String.format("sys_idISEMPTY^%s", baseFilter);
         }
-        if (!ciNames.isEmpty()) {
-            String joinedNames = String.join(",", ciNames);
-            return String.format("cmdb_ci.nameIN%s^%s", joinedNames, baseFilter);
-        }
-        return String.format("cmdb_ci=%s^%s", ciSysId, baseFilter);
-    }
-
-    private List<String> splitCiNames(String ciNames) {
-        if (ciNames == null || ciNames.isBlank()) {
-            return Collections.emptyList();
-        }
-        return List.of(ciNames.split(",")).stream()
-                .map(String::trim)
-                .filter(name -> !name.isEmpty())
-                .toList();
+        String joinedIds = String.join(",", ciSysIds);
+        return String.format("cmdb_ciIN%s^%s", joinedIds, baseFilter);
     }
 
     private void logIncidents(List<ServiceNowIncident> incidents) {
@@ -188,5 +182,9 @@ public class ServiceNowIncidentClient {
         String value = incident.getAssigned_to().getValue();
         String display = incident.getAssigned_to().getDisplayValue();
         return (value == null || value.isBlank()) && (display == null || display.isBlank());
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 }

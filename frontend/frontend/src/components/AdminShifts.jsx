@@ -1,13 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { createShift, deleteShift, fetchShifts, updateShift } from '../services/admin';
 import { getCurrentUser } from '../services/auth';
+import { canManageCurrentTeam } from '../services/permissions';
+import SetupAssistBanner from './SetupAssistBanner';
+import './AdminCrud.css';
 
 export default function AdminShifts() {
   const [shifts, setShifts] = useState([]);
   const [name, setName] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState('');
-  const isAdmin = getCurrentUser()?.role === 'Admin';
+  const canManageTeam = canManageCurrentTeam(getCurrentUser());
 
   const loadShifts = async () => {
     try {
@@ -66,13 +69,21 @@ export default function AdminShifts() {
   };
 
   return (
-    <div className="container">
-      <h4 className="mb-3">Manage Shifts</h4>
+    <div className="container admin-crud-page">
+      <SetupAssistBanner
+        title="Setup Step: Shifts"
+        helperText="Define the shifts your team uses across supported geos."
+      />
+      <div className="admin-crud-hero mb-4">
+        <div className="admin-crud-hero__eyebrow">Coverage Windows</div>
+        <h2 className="mb-1">Manage Shifts</h2>
+        <div className="text-muted">Create the shift patterns that define how the team covers incidents.</div>
+      </div>
       {error && <div className="alert alert-danger">{error}</div>}
 
-      {isAdmin ? (
-        <div className="card p-3 mb-4">
-          <form className="row g-3" onSubmit={handleSubmit}>
+      {canManageTeam ? (
+        <div className="card p-3 mb-4 admin-crud-card">
+          <form className="row g-3 admin-crud-form-grid" onSubmit={handleSubmit}>
             <div className="col-md-6">
               <label className="form-label">Shift Name</label>
               <input
@@ -99,13 +110,15 @@ export default function AdminShifts() {
         <div className="alert alert-info">Read-only access. Contact an admin to make changes.</div>
       )}
 
-      <div className="table-responsive">
-        <table className="table table-bordered">
+      <div className="card admin-crud-card">
+        <div className="card-body">
+          <div className="table-responsive">
+        <table className="table table-bordered admin-crud-table">
           <thead className="table-light">
             <tr>
               <th>ID</th>
               <th>Name</th>
-              {isAdmin && <th style={{ width: '180px' }}>Actions</th>}
+              {canManageTeam && <th style={{ width: '180px' }}>Actions</th>}
             </tr>
           </thead>
           <tbody>
@@ -113,7 +126,7 @@ export default function AdminShifts() {
               <tr key={shift.s_id}>
                 <td>{shift.s_id}</td>
                 <td>{shift.name}</td>
-                {isAdmin && (
+                {canManageTeam && (
                   <td className="d-flex gap-2">
                     <button
                       className="btn btn-outline-primary btn-sm"
@@ -133,11 +146,13 @@ export default function AdminShifts() {
             ))}
             {shifts.length === 0 && (
               <tr>
-                <td colSpan={isAdmin ? 3 : 2} className="text-center">No shifts yet.</td>
+                <td colSpan={canManageTeam ? 3 : 2} className="text-center">No shifts yet.</td>
               </tr>
             )}
           </tbody>
         </table>
+          </div>
+        </div>
       </div>
     </div>
   );

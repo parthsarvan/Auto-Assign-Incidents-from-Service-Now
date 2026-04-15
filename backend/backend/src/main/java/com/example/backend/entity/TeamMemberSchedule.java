@@ -7,7 +7,7 @@ import java.time.LocalDate;
 
 @Entity
 @Table(name = "team_member_schedule")
-@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "team"})
 public class TeamMemberSchedule {
 
     @Id
@@ -25,6 +25,10 @@ public class TeamMemberSchedule {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "s_id")
     private Shift shift;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "team_id")
+    private Team team;
 
     @Column(name = "start_date", nullable = false)
     private LocalDate startDate;
@@ -72,6 +76,14 @@ public class TeamMemberSchedule {
 
     public void setShift(Shift shift) {
         this.shift = shift;
+    }
+
+    public Team getTeam() {
+        return team;
+    }
+
+    public void setTeam(Team team) {
+        this.team = team;
     }
 
     public LocalDate getStartDate() {

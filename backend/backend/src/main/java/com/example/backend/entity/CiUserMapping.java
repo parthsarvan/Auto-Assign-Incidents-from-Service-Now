@@ -4,8 +4,10 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "ci_user_mapping")
-@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+@Table(
+        name = "ci_user_mapping",
+        uniqueConstraints = @UniqueConstraint(columnNames = {"team_id", "ci_id", "tm_id"}))
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "team"})
 public class CiUserMapping {
 
     @Id
@@ -22,6 +24,10 @@ public class CiUserMapping {
 
     @Column(name = "sort_order")
     private Integer sortOrder;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "team_id")
+    private Team team;
 
     public CiUserMapping() {}
 
@@ -61,5 +67,13 @@ public class CiUserMapping {
 
     public void setSortOrder(Integer sortOrder) {
         this.sortOrder = sortOrder;
+    }
+
+    public Team getTeam() {
+        return team;
+    }
+
+    public void setTeam(Team team) {
+        this.team = team;
     }
 }

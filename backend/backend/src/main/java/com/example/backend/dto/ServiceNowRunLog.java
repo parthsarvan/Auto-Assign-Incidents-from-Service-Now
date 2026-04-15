@@ -6,6 +6,8 @@ import java.util.List;
 
 public class ServiceNowRunLog {
     private Instant timestamp;
+    private Long teamId;
+    private String teamName;
     private String type;
     private String status;
     private String message;
@@ -30,6 +32,22 @@ public class ServiceNowRunLog {
 
     public void setTimestamp(Instant timestamp) {
         this.timestamp = timestamp;
+    }
+
+    public Long getTeamId() {
+        return teamId;
+    }
+
+    public void setTeamId(Long teamId) {
+        this.teamId = teamId;
+    }
+
+    public String getTeamName() {
+        return teamName;
+    }
+
+    public void setTeamName(String teamName) {
+        this.teamName = teamName;
     }
 
     public String getType() {

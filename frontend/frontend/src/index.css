@@ -1,13 +1,179 @@
+:root {
+  --incteam-bg: #f4f7fb;
+  --incteam-surface: rgba(255, 255, 255, 0.92);
+  --incteam-surface-strong: #ffffff;
+  --incteam-border: #d8e1ec;
+  --incteam-border-strong: #bfd0e4;
+  --incteam-text: #10233d;
+  --incteam-muted: #5f7187;
+  --incteam-primary: #1859d1;
+  --incteam-primary-deep: #113a7a;
+  --incteam-success: #1f9d68;
+  --incteam-warning: #d48806;
+  --incteam-danger: #c74444;
+  --incteam-shadow: 0 24px 60px rgba(15, 31, 55, 0.08);
+  --incteam-radius: 18px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background:
+    radial-gradient(circle at top left, rgba(24, 89, 209, 0.08), transparent 26%),
+    linear-gradient(180deg, #f8fbff 0%, var(--incteam-bg) 100%);
+}
+
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  color: var(--incteam-text);
+  background: transparent;
+  font-family: "Avenir Next", "Segoe UI Variable Display", "Segoe UI", "Helvetica Neue", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
+a {
+  color: var(--incteam-primary);
+}
+
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+  font-family: "SFMono-Regular", "IBM Plex Mono", "Menlo", "Consolas", monospace;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.card {
+  border: 1px solid var(--incteam-border);
+  border-radius: var(--incteam-radius);
+  background: var(--incteam-surface);
+  box-shadow: var(--incteam-shadow);
+  overflow: hidden;
+}
+
+.card.border-0 {
+  border: 1px solid transparent !important;
+}
+
+.card[class*="border-"] {
+  border-width: 1px !important;
+}
+
+.card-body {
+  padding: 1.35rem 1.5rem;
+}
+
+.table {
+  --bs-table-bg: transparent;
+  --bs-table-border-color: rgba(191, 208, 228, 0.72);
+  color: var(--incteam-text);
+}
+
+.table thead th {
+  background: rgba(244, 247, 251, 0.95);
+  color: var(--incteam-primary-deep);
+  font-size: 0.79rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.table tbody td {
+  color: var(--incteam-text);
+}
+
+.table-light {
+  --bs-table-bg: rgba(244, 247, 251, 0.95);
+}
+
+.form-control,
+.form-select {
+  border: 1px solid var(--incteam-border);
+  border-radius: 12px;
+  padding: 0.75rem 0.9rem;
+  color: var(--incteam-text);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: inset 0 1px 2px rgba(15, 31, 55, 0.03);
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: rgba(24, 89, 209, 0.45);
+  box-shadow: 0 0 0 0.2rem rgba(24, 89, 209, 0.12);
+}
+
+.form-label {
+  color: var(--incteam-primary-deep);
+  font-size: 0.84rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.btn {
+  border-radius: 12px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  box-shadow: 0 8px 20px rgba(15, 31, 55, 0.08);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #1859d1 0%, #0f3f95 100%);
+  border-color: #0f3f95;
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+  background: linear-gradient(135deg, #174fb8 0%, #0d367f 100%);
+  border-color: #0d367f;
+}
+
+.btn-outline-primary {
+  color: var(--incteam-primary);
+  border-color: rgba(24, 89, 209, 0.28);
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.btn-outline-primary:hover,
+.btn-outline-primary:focus {
+  background: rgba(24, 89, 209, 0.08);
+  color: #103d92;
+  border-color: rgba(24, 89, 209, 0.4);
+}
+
+.btn-outline-secondary {
+  color: var(--incteam-muted);
+  border-color: rgba(95, 113, 135, 0.22);
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.btn-outline-danger {
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.badge {
+  border-radius: 999px;
+  padding: 0.5em 0.75em;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.alert {
+  border-radius: 16px;
+  border-width: 1px;
+  box-shadow: 0 16px 34px rgba(15, 31, 55, 0.06);
+}
+
+.text-muted,
+.small,
+.form-text {
+  color: var(--incteam-muted) !important;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: var(--incteam-primary-deep);
+  font-weight: 800;
+  letter-spacing: -0.02em;
 }

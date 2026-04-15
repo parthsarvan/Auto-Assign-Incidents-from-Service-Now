@@ -1,0 +1,49 @@
+.dashboard-page {
+  max-width: 1440px;
+}
+
+.dashboard-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 1.2rem;
+  flex-wrap: wrap;
+  padding: 1.55rem 1.75rem;
+  border-radius: 24px;
+  border: 1px solid #d8e1ec;
+  background:
+    radial-gradient(circle at top left, rgba(24, 89, 209, 0.12), transparent 24%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(248, 251, 255, 0.94) 100%);
+  box-shadow: 0 24px 60px rgba(15, 31, 55, 0.08);
+}
+
+.dashboard-hero__eyebrow,
+.dashboard-section__eyebrow {
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: #71829a;
+  margin-bottom: 0.5rem;
+}
+
+.dashboard-toolbar {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.dashboard-section__header {
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 768px) {
+  .dashboard-page {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  .dashboard-hero {
+    padding: 1.2rem 1.2rem;
+  }
+}

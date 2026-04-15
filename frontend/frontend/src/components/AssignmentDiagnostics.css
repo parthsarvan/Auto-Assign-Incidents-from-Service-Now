@@ -1,0 +1,32 @@
+.diagnostics-page {
+  max-width: 1440px;
+}
+
+.diagnostics-hero {
+  padding: 1.55rem 1.7rem;
+  border-radius: 24px;
+  border: 1px solid #d8e1ec;
+  background:
+    radial-gradient(circle at top right, rgba(24, 89, 209, 0.14), transparent 26%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 251, 255, 0.94) 100%);
+  box-shadow: 0 24px 60px rgba(15, 31, 55, 0.08);
+}
+
+.diagnostics-hero__eyebrow {
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: #71829a;
+  margin-bottom: 0.5rem;
+}
+
+.diagnostics-kpi .summary-kpi__value {
+  font-size: 2rem;
+}
+
+.diagnostics-incident-card,
+.diagnostics-suggestion-card {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 251, 255, 0.94) 100%);
+}

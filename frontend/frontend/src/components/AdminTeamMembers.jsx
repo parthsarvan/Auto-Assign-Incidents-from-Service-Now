@@ -7,6 +7,9 @@ import {
   updateTeamMember,
 } from '../services/admin';
 import { getCurrentUser } from '../services/auth';
+import { canManageCurrentTeam } from '../services/permissions';
+import SetupAssistBanner from './SetupAssistBanner';
+import './AdminCrud.css';
 
 export default function AdminTeamMembers() {
   const [teamMembers, setTeamMembers] = useState([]);
@@ -19,7 +22,7 @@ export default function AdminTeamMembers() {
   const [geoId, setGeoId] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState('');
-  const isAdmin = getCurrentUser()?.role === 'Admin';
+  const canManageTeam = canManageCurrentTeam(getCurrentUser());
 
   const loadTeamMembers = async () => {
     try {
@@ -50,6 +53,10 @@ export default function AdminTeamMembers() {
           setError('Please select a geo.');
           return;
         }
+        if (!sysId.trim()) {
+          setError('ServiceNow User Sys ID is required.');
+          return;
+        }
         await updateTeamMember(editingId, {
           f_name: firstName,
           l_name: lastName,
@@ -73,6 +80,10 @@ export default function AdminTeamMembers() {
       }
       if (!geoId) {
         setError('Please select a geo.');
+        return;
+      }
+      if (!sysId.trim()) {
+        setError('ServiceNow User Sys ID is required.');
         return;
       }
       await createTeamMember({
@@ -124,13 +135,21 @@ export default function AdminTeamMembers() {
   };
 
   return (
-    <div className="container">
-      <h4 className="mb-3">Manage Team Members</h4>
+    <div className="container admin-crud-page">
+      <SetupAssistBanner
+        title="Setup Step: Team Members"
+        helperText="Add the people on your team together with their ServiceNow user sys IDs."
+      />
+      <div className="admin-crud-hero mb-4">
+        <div className="admin-crud-hero__eyebrow">People Directory</div>
+        <h2 className="mb-1">Manage Team Members</h2>
+        <div className="text-muted">Maintain the team roster, geo ownership, and ServiceNow user identities.</div>
+      </div>
       {error && <div className="alert alert-danger">{error}</div>}
 
-      {isAdmin ? (
-        <div className="card p-3 mb-4">
-          <form className="row g-3" onSubmit={handleSubmit}>
+      {canManageTeam ? (
+        <div className="card p-3 mb-4 admin-crud-card">
+          <form className="row g-3 admin-crud-form-grid" onSubmit={handleSubmit}>
           <div className="col-md-5">
             <label className="form-label">First Name</label>
             <input
@@ -178,7 +197,7 @@ export default function AdminTeamMembers() {
               className="form-control"
               value={sysId}
               onChange={(e) => setSysId(e.target.value)}
-              placeholder="Optional"
+              required
             />
           </div>
           <div className="col-md-2">
@@ -213,8 +232,10 @@ export default function AdminTeamMembers() {
         <div className="alert alert-info">Read-only access. Contact an admin to make changes.</div>
       )}
 
-      <div className="table-responsive">
-        <table className="table table-bordered">
+      <div className="card admin-crud-card">
+        <div className="card-body">
+          <div className="table-responsive">
+        <table className="table table-bordered admin-crud-table">
           <thead className="table-light">
             <tr>
               <th>ID</th>
@@ -223,7 +244,7 @@ export default function AdminTeamMembers() {
               <th>Email</th>
               <th>Phone</th>
               <th>Geo</th>
-              {isAdmin && <th style={{ width: '180px' }}>Actions</th>}
+              {canManageTeam && <th style={{ width: '180px' }}>Actions</th>}
             </tr>
           </thead>
           <tbody>
@@ -235,7 +256,7 @@ export default function AdminTeamMembers() {
                 <td>{member.email || '-'}</td>
                 <td>{member.phone || '-'}</td>
                 <td>{member.geo?.name || '-'}</td>
-                {isAdmin && (
+                {canManageTeam && (
                   <td className="d-flex gap-2">
                     <button
                       className="btn btn-outline-primary btn-sm"
@@ -255,11 +276,13 @@ export default function AdminTeamMembers() {
             ))}
             {teamMembers.length === 0 && (
               <tr>
-                <td colSpan={isAdmin ? 7 : 6} className="text-center">No team members yet.</td>
+                <td colSpan={canManageTeam ? 7 : 6} className="text-center">No team members yet.</td>
               </tr>
             )}
           </tbody>
         </table>
+          </div>
+        </div>
       </div>
     </div>
   );

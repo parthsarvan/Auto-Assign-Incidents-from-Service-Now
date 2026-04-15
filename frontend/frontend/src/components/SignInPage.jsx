@@ -1,7 +1,8 @@
 // src/components/SignInPage.jsx
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { signIn } from '../services/auth';
+import { getCurrentUser, signIn } from '../services/auth';
+import { resolveLandingRoute } from '../services/permissions';
 
 export default function SignInPage() {
   const [username, setUsername] = useState('');
@@ -10,15 +11,29 @@ export default function SignInPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const from = location.state?.from?.pathname || '/'; // default redirect after login
+  const joinedViaInvite = Boolean(location.state?.joinedViaInvite);
+
+  useEffect(() => {
+    if (location.state?.username) {
+      setUsername(location.state.username);
+    }
+  }, [location.state]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     try {
       await signIn(username, password);
-      // On success, go to “from” (or home)
-      navigate(from, { replace: true });
+      const signedInUser = getCurrentUser();
+      if (joinedViaInvite) {
+        navigate('/welcome', { replace: true, state: { joinedViaInvite: true } });
+        return;
+      }
+      navigate(resolveLandingRoute(signedInUser, from), { replace: true });
     } catch (err) {
+      if (err.response?.status === 400) {
+        setError(String(err.response.data));
+      } else
       if (err.response && err.response.status === 404) {
         setError('User not found. Please sign up first.');
       } else if (err.response && err.response.status === 401) {
@@ -32,7 +47,10 @@ export default function SignInPage() {
   return (
     <div className="container vh-100 d-flex align-items-center justify-content-center">
       <div className="card p-4 shadow-sm" style={{ maxWidth: '400px', width: '100%' }}>
-        <h3 className="card-title text-center mb-3">Sign In</h3>
+        <h3 className="card-title text-center mb-2">Sign In to InciTeam</h3>
+        <p className="text-muted text-center small mb-3">
+          Sign in to access your organization and active team workspace.
+        </p>
         {error && <div className="alert alert-danger">{error}</div>}
         <form onSubmit={handleSubmit}>
           <div className="mb-3">
@@ -60,8 +78,8 @@ export default function SignInPage() {
           <button type="submit" className="btn btn-primary w-100">Sign In</button>
         </form>
         <div className="mt-3 text-center">
-          <span>New user? </span>
-          <Link to="/signup">Sign Up</Link>
+          <span>Joining for the first time? </span>
+          <Link to="/signup">Use an invite code</Link>
         </div>
       </div>
     </div>

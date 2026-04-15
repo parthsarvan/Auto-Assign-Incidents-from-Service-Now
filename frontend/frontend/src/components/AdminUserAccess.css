@@ -1,0 +1,9 @@
+.admin-user-access-page {
+  max-width: 1440px;
+}
+
+.admin-user-access-page .border.rounded {
+  border-radius: 14px !important;
+  border-color: #dde7f1 !important;
+  background: rgba(248, 251, 255, 0.8);
+}

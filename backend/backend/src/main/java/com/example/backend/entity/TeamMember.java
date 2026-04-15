@@ -4,8 +4,13 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "team_member")
-@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+@Table(
+        name = "team_member",
+        uniqueConstraints = {
+            @UniqueConstraint(columnNames = {"team_id", "email"}),
+            @UniqueConstraint(columnNames = {"team_id", "sys_id"})
+        })
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "team"})
 public class TeamMember {
 
     @Id
@@ -18,7 +23,7 @@ public class TeamMember {
     @Column(nullable = false)
     private String l_name;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private String email;
 
     @Column
@@ -30,6 +35,10 @@ public class TeamMember {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "g_id")
     private Geo geo;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "team_id")
+    private Team team;
 
     public TeamMember() {}
 
@@ -94,6 +103,14 @@ public class TeamMember {
 
     public void setGeo(Geo geo) {
         this.geo = geo;
+    }
+
+    public Team getTeam() {
+        return team;
+    }
+
+    public void setTeam(Team team) {
+        this.team = team;
     }
 
 }

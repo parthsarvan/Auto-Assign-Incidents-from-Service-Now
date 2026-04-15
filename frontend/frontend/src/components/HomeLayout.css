@@ -3,44 +3,126 @@
 /* ─── Container ─── */
 .home-layout {
   min-height: 100vh;
-  background-color: #f0f2f5;
+  background:
+    radial-gradient(circle at top left, rgba(24, 89, 209, 0.06), transparent 24%),
+    linear-gradient(180deg, #f8fbff 0%, #f4f7fb 100%);
 }
 
 /* ─── Sidebar-Open vs Collapsed for main content ─── */
 .main-content.sidebar-open {
-  margin-left: 220px;            /* matches .sidebar--open */
-  transition: margin-left 0.2s ease-in-out;
-  width: calc(100% - 220px);
+  margin-left: 240px;
+  transition: margin-left 0.24s ease-in-out;
+  width: calc(100% - 240px);
 }
 
 .main-content.sidebar-collapsed {
-  margin-left: 60px;             /* matches .sidebar--collapsed */
-  transition: margin-left 0.2s ease-in-out;
-  width: calc(100% - 60px);
+  margin-left: 84px;
+  transition: margin-left 0.24s ease-in-out;
+  width: calc(100% - 84px);
 }
 
-/* ─── Top Bar Styling (light‐blue gradient matching sidebar) ─── */
 .top-bar {
-  background: linear-gradient(180deg, #e3f2ff 0%, #ffffff 100%);
-  border-bottom: 1px solid #0d6efd;   /* same primary‐blue border as sidebar */
-  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(18px);
+  border-bottom: 1px solid rgba(191, 208, 228, 0.75);
+  padding: 1rem 1.5rem;
   position: sticky;
   top: 0;
   z-index: 500;
+  box-shadow: 0 12px 40px rgba(15, 31, 55, 0.05);
 }
 
-/* ─── User Info / Logout Button ─── */
-.user-info span {
-  font-size: 0.9rem;
-  color: #0d6efd;             /* primary‐blue text to match theme */
+.top-bar__brand h5 {
+  font-size: 1.35rem;
+  margin-top: 0.15rem;
 }
 
-.user-info button {
-  font-size: 0.85rem;
+.top-bar__eyebrow {
+  color: #6a7c90;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
 }
 
-/* ─── Page Body (actual content area) ─── */
+.top-bar__workspace {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.55rem 0.7rem 0.55rem 1rem;
+  border: 1px solid rgba(191, 208, 228, 0.78);
+  border-radius: 16px;
+  background: rgba(248, 251, 255, 0.9);
+}
+
+.top-bar__workspace-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #113a7a;
+  white-space: nowrap;
+}
+
+.top-bar__team-select {
+  min-width: 180px;
+  padding-top: 0.45rem;
+  padding-bottom: 0.45rem;
+}
+
+.top-bar__user {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.1rem;
+  font-size: 0.86rem;
+  color: #617287;
+}
+
+.top-bar__user strong {
+  color: #113a7a;
+}
+
 .page-body {
-  background-color: #fff;
+  background: transparent;
   min-height: calc(100vh - 56px);
+  padding: 1.5rem !important;
+}
+
+@media (max-width: 992px) {
+  .main-content.sidebar-open {
+    margin-left: 220px;
+    width: calc(100% - 220px);
+  }
+
+  .top-bar {
+    padding: 0.95rem 1rem;
+  }
+
+  .top-bar__workspace {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 768px) {
+  .main-content.sidebar-open,
+  .main-content.sidebar-collapsed {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .top-bar {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 1rem;
+  }
+
+  .user-info {
+    width: 100%;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .page-body {
+    padding: 1rem !important;
+  }
 }

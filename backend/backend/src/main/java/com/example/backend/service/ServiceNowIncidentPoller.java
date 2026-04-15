@@ -9,6 +9,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import com.example.backend.dto.ServiceNowAssignmentResult;
 import com.example.backend.dto.ServiceNowIncident;
+import com.example.backend.entity.Team;
+import com.example.backend.repository.TeamRepository;
 
 @Service
 public class ServiceNowIncidentPoller {
@@ -17,36 +19,49 @@ public class ServiceNowIncidentPoller {
     private final ServiceNowIncidentClient incidentClient;
     private final ServiceNowIncidentAssigner incidentAssigner;
     private final ServiceNowLogService logService;
+    private final TeamRepository teamRepository;
+    private final CurrentWorkspaceService currentWorkspaceService;
 
     public ServiceNowIncidentPoller(
             ServiceNowIncidentClient incidentClient,
             ServiceNowIncidentAssigner incidentAssigner,
-            ServiceNowLogService logService) {
+            ServiceNowLogService logService,
+            TeamRepository teamRepository,
+            CurrentWorkspaceService currentWorkspaceService) {
         this.incidentClient = incidentClient;
         this.incidentAssigner = incidentAssigner;
         this.logService = logService;
+        this.teamRepository = teamRepository;
+        this.currentWorkspaceService = currentWorkspaceService;
     }
 
     @EventListener(ApplicationReadyEvent.class)
     public void onStartup() {
-        logService.recordStartup();
+        for (Team team : teamRepository.findAll()) {
+            logService.recordStartup(team);
+        }
         logger.info("ServiceNow poller initialized.");
     }
 
     @Scheduled(fixedDelayString = "${servicenow.poll-interval-ms:300000}")
     public void poll() {
-        try {
-            List<ServiceNowIncident> incidents = incidentClient.fetchUnassignedIncidents();
-            List<ServiceNowAssignmentResult> results = incidentAssigner.assignIncidents(incidents);
-            long assignedCount = results.stream()
-                    .filter(result -> "SUCCESS".equals(result.getStatus()))
-                    .count();
-            if (assignedCount > 0) {
-                logger.info("ServiceNow assignment applied to {} incidents.", assignedCount);
-            }
-            logService.recordPollSuccess(incidents, results);
-        } catch (Exception ex) {
-            logService.recordPollFailure(ex);
+        for (Team team : teamRepository.findAll()) {
+            currentWorkspaceService.runInTeam(team, () -> {
+                try {
+                    List<ServiceNowIncident> incidents = incidentClient.fetchUnassignedIncidents();
+                    List<ServiceNowAssignmentResult> results = incidentAssigner.assignIncidents(incidents);
+                    long assignedCount = results.stream()
+                            .filter(result -> "SUCCESS".equals(result.getStatus()))
+                            .count();
+                    if (assignedCount > 0) {
+                        logger.info("ServiceNow assignment applied to {} incidents for team {}.", assignedCount, team.getName());
+                    }
+                    logService.recordPollSuccess(team, incidents, results);
+                } catch (Exception ex) {
+                    logger.error("ServiceNow polling failed for team {}: {}", team.getName(), ex.getMessage());
+                    logService.recordPollFailure(team, ex);
+                }
+            });
         }
     }
 }

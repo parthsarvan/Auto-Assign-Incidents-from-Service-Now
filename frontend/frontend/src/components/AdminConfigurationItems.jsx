@@ -6,14 +6,18 @@ import {
   updateConfigurationItem,
 } from '../services/admin';
 import { getCurrentUser } from '../services/auth';
+import { canManageCurrentTeam } from '../services/permissions';
+import SetupAssistBanner from './SetupAssistBanner';
+import './AdminCrud.css';
 
 export default function AdminConfigurationItems() {
   const [items, setItems] = useState([]);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [serviceNowSysId, setServiceNowSysId] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState('');
-  const isAdmin = getCurrentUser()?.role === 'Admin';
+  const canManageTeam = canManageCurrentTeam(getCurrentUser());
 
   const loadItems = async () => {
     try {
@@ -36,19 +40,29 @@ export default function AdminConfigurationItems() {
         if (!window.confirm('Update this configuration item?')) {
           return;
         }
-        await updateConfigurationItem(editingId, { name, description });
+        if (!serviceNowSysId.trim()) {
+          setError('ServiceNow CI Sys ID is required.');
+          return;
+        }
+        await updateConfigurationItem(editingId, { name, description, serviceNowSysId });
         setEditingId(null);
         setName('');
         setDescription('');
+        setServiceNowSysId('');
         loadItems();
         return;
       }
       if (!window.confirm('Add this configuration item?')) {
         return;
       }
-      await createConfigurationItem({ name, description });
+      if (!serviceNowSysId.trim()) {
+        setError('ServiceNow CI Sys ID is required.');
+        return;
+      }
+      await createConfigurationItem({ name, description, serviceNowSysId });
       setName('');
       setDescription('');
+      setServiceNowSysId('');
       loadItems();
     } catch (err) {
       setError('Failed to create configuration item.');
@@ -67,23 +81,33 @@ export default function AdminConfigurationItems() {
     setEditingId(item.ci_id);
     setName(item.name || '');
     setDescription(item.description || '');
+    setServiceNowSysId(item.serviceNowSysId || '');
   };
 
   const handleCancel = () => {
     setEditingId(null);
     setName('');
     setDescription('');
+    setServiceNowSysId('');
   };
 
   return (
-    <div className="container">
-      <h4 className="mb-3">Manage Configuration Items</h4>
+    <div className="container admin-crud-page">
+      <SetupAssistBanner
+        title="Setup Step: Configuration Items"
+        helperText="Add each supported CI together with its ServiceNow CI sys ID."
+      />
+      <div className="admin-crud-hero mb-4">
+        <div className="admin-crud-hero__eyebrow">Configuration Inventory</div>
+        <h2 className="mb-1">Manage Configuration Items</h2>
+        <div className="text-muted">Track the systems this team supports and connect them to ServiceNow records.</div>
+      </div>
       {error && <div className="alert alert-danger">{error}</div>}
 
-      {isAdmin ? (
-        <div className="card p-3 mb-4">
-          <form className="row g-3" onSubmit={handleSubmit}>
-            <div className="col-md-4">
+      {canManageTeam ? (
+        <div className="card p-3 mb-4 admin-crud-card">
+          <form className="row g-3 admin-crud-form-grid" onSubmit={handleSubmit}>
+            <div className="col-md-3">
               <label className="form-label">Name</label>
               <input
                 type="text"
@@ -93,13 +117,24 @@ export default function AdminConfigurationItems() {
                 required
               />
             </div>
-            <div className="col-md-6">
+            <div className="col-md-4">
               <label className="form-label">Description</label>
               <input
                 type="text"
                 className="form-control"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
+              />
+            </div>
+            <div className="col-md-5">
+              <label className="form-label">ServiceNow CI Sys ID</label>
+              <input
+                type="text"
+                className="form-control"
+                value={serviceNowSysId}
+                onChange={(e) => setServiceNowSysId(e.target.value)}
+                placeholder="e.g. 0c43baaac61122750182c132ee74bcf0"
+                required
               />
             </div>
             <div className="col-12 d-flex gap-2">
@@ -118,14 +153,17 @@ export default function AdminConfigurationItems() {
         <div className="alert alert-info">Read-only access. Contact an admin to make changes.</div>
       )}
 
-      <div className="table-responsive">
-        <table className="table table-bordered">
+      <div className="card admin-crud-card">
+        <div className="card-body">
+          <div className="table-responsive">
+        <table className="table table-bordered admin-crud-table">
           <thead className="table-light">
             <tr>
               <th>ID</th>
               <th>Name</th>
               <th>Description</th>
-              {isAdmin && <th style={{ width: '180px' }}>Actions</th>}
+              <th>ServiceNow CI Sys ID</th>
+              {canManageTeam && <th style={{ width: '180px' }}>Actions</th>}
             </tr>
           </thead>
           <tbody>
@@ -134,7 +172,8 @@ export default function AdminConfigurationItems() {
                 <td>{item.ci_id}</td>
                 <td>{item.name}</td>
                 <td>{item.description || '-'}</td>
-                {isAdmin && (
+                <td>{item.serviceNowSysId ? <code>{item.serviceNowSysId}</code> : '-'}</td>
+                {canManageTeam && (
                   <td className="d-flex gap-2">
                     <button
                       className="btn btn-outline-primary btn-sm"
@@ -154,13 +193,15 @@ export default function AdminConfigurationItems() {
             ))}
             {items.length === 0 && (
               <tr>
-                <td colSpan={isAdmin ? 4 : 3} className="text-center">
+                <td colSpan={canManageTeam ? 5 : 4} className="text-center">
                   No configuration items yet.
                 </td>
               </tr>
             )}
           </tbody>
         </table>
+          </div>
+        </div>
       </div>
     </div>
   );

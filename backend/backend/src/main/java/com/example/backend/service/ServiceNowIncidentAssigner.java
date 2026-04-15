@@ -1,10 +1,10 @@
 package com.example.backend.service;
 
+import com.example.backend.dto.IncidentAssignmentDecision;
 import com.example.backend.dto.IncidentAssignmentSuggestion;
 import com.example.backend.dto.ServiceNowAssignmentResult;
 import com.example.backend.dto.ServiceNowIncident;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,27 +17,30 @@ public class ServiceNowIncidentAssigner {
 
     private final ServiceNowIncidentClient incidentClient;
     private final IncidentAssignmentService assignmentService;
-    private final SmsService notificationService;
     private final boolean assignmentEnabled;
 
     public ServiceNowIncidentAssigner(
             ServiceNowIncidentClient incidentClient,
             IncidentAssignmentService assignmentService,
-            SmsService notificationService,
             @Value("${servicenow.assignment.enabled:false}") boolean assignmentEnabled) {
         this.incidentClient = incidentClient;
         this.assignmentService = assignmentService;
-        this.notificationService = notificationService;
         this.assignmentEnabled = assignmentEnabled;
     }
 
     public List<ServiceNowAssignmentResult> assignIncidents(List<ServiceNowIncident> incidents) {
-        if (!assignmentEnabled) {
-            logger.info("ServiceNow assignment disabled; skipping incident updates.");
-            return List.of();
-        }
         if (incidents == null || incidents.isEmpty()) {
             return List.of();
+        }
+        if (!assignmentEnabled) {
+            logger.info("ServiceNow assignment disabled; skipping incident updates.");
+            return incidents.stream()
+                    .map(incident -> new ServiceNowAssignmentResult(
+                            incident.getNumber(),
+                            null,
+                            "SKIPPED",
+                            "Assignment is disabled in configuration."))
+                    .collect(Collectors.toList());
         }
         return incidents.stream()
                 .map(this::assignIncident)
@@ -45,12 +48,12 @@ public class ServiceNowIncidentAssigner {
     }
 
     private ServiceNowAssignmentResult assignIncident(ServiceNowIncident incident) {
-        Optional<IncidentAssignmentSuggestion> suggestion = assignmentService.suggestAssignee(incident);
-        if (suggestion.isEmpty()) {
+        IncidentAssignmentDecision decision = assignmentService.determineAssignment(incident);
+        if (!decision.hasSuggestion()) {
             return new ServiceNowAssignmentResult(
-                    incident.getNumber(), null, "SKIPPED", "No assignment suggestion available.");
+                    incident.getNumber(), null, "SKIPPED", decision.getReason());
         }
-        IncidentAssignmentSuggestion selected = suggestion.get();
+        IncidentAssignmentSuggestion selected = decision.getSuggestion();
         if (selected.getAssigneeSysId() == null || selected.getAssigneeSysId().isBlank()) {
             logger.warn("Missing ServiceNow assignee sys_id for incident {}; skipping assignment.", incident.getSys_id());
             return new ServiceNowAssignmentResult(
@@ -60,27 +63,10 @@ public class ServiceNowIncidentAssigner {
                     "Missing ServiceNow assignee sys_id.");
         }
         boolean success = incidentClient.assignIncidentBySysId(incident.getSys_id(), selected.getAssigneeSysId());
-        if (success) {
-            sendAssignmentNotification(selected, incident);
-        }
         return new ServiceNowAssignmentResult(
                 incident.getNumber(),
                 selected.getAssigneeName(),
                 success ? "SUCCESS" : "FAILED",
                 success ? "Assigned successfully." : "ServiceNow assignment failed.");
-    }
-
-    private void sendAssignmentNotification(IncidentAssignmentSuggestion suggestion, ServiceNowIncident incident) {
-        String phone = suggestion.getAssigneePhone();
-        if (phone == null || phone.isBlank()) {
-            return;
-        }
-        String message = String.format(
-                "ServiceNow incident assigned: %s | CI: %s | Priority: %s | %s",
-                incident.getNumber(),
-                incident.getCmdb_ci() != null ? incident.getCmdb_ci().getDisplayValue() : "N/A",
-                incident.getPriority() != null ? incident.getPriority() : "N/A",
-                incident.getShort_description() != null ? incident.getShort_description() : "");
-        notificationService.sendSms(phone, message);
     }
 }

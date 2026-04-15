@@ -2,9 +2,29 @@ package com.example.backend.repository;
 
 import com.example.backend.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import java.util.Optional;
 
 public interface UserRepository extends JpaRepository<User, Long> {
-    Optional<User> findByUsername(String username);
-    boolean existsByUsername(String username);
+    @Query(
+            value = """
+                    select *
+                    from users
+                    where lower(trim(both '"' from trim(username))) = lower(trim(both '"' from trim(:username)))
+                    limit 1
+                    """,
+            nativeQuery = true)
+    Optional<User> findByNormalizedUsername(@Param("username") String username);
+
+    @Query(
+            value = """
+                    select count(*) > 0
+                    from users
+                    where lower(trim(both '"' from trim(username))) = lower(trim(both '"' from trim(:username)))
+                    """,
+            nativeQuery = true)
+    boolean existsByNormalizedUsername(@Param("username") String username);
+
+    long countByRole(String role);
 }

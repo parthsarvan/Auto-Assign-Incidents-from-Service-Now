@@ -10,6 +10,9 @@ import {
   updateSchedule,
 } from '../services/admin';
 import { getCurrentUser } from '../services/auth';
+import { canManageCurrentTeam } from '../services/permissions';
+import SetupAssistBanner from './SetupAssistBanner';
+import './AdminCrud.css';
 
 export default function AdminSchedules() {
   const [schedules, setSchedules] = useState([]);
@@ -23,7 +26,19 @@ export default function AdminSchedules() {
   const [endDate, setEndDate] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState('');
-  const isAdmin = getCurrentUser()?.role === 'Admin';
+  const canManageTeam = canManageCurrentTeam(getCurrentUser());
+  const selectedMember = members.find((member) => String(member.tm_id) === String(teamMemberId));
+  const selectedGeoName = selectedMember?.geo?.name || '';
+  const allowedShiftIdsForGeo = geoShiftMappings
+    .filter((mapping) => String(mapping.geo?.g_id) === String(geoId))
+    .map((mapping) => String(mapping.shift?.s_id));
+  const uniqueAllowedShiftIds = Array.from(new Set(allowedShiftIdsForGeo));
+  const allowedShifts = shifts.filter((shift) =>
+    uniqueAllowedShiftIds.includes(String(shift.s_id))
+  );
+  const hasSingleMappedShift = uniqueAllowedShiftIds.length === 1;
+  const hasMultipleMappedShifts = uniqueAllowedShiftIds.length > 1;
+  const autoSelectedShiftName = allowedShifts[0]?.name || '';
 
   const loadData = async () => {
     try {
@@ -90,6 +105,10 @@ export default function AdminSchedules() {
           setError('Selected team member does not have a geo assigned.');
           return;
         }
+        if (uniqueAllowedShiftIds.length === 0) {
+          setError('This geo does not have any mapped shifts yet. Add a geo-shift mapping first.');
+          return;
+        }
         if (!shiftId) {
           setError('Please select a shift before saving.');
           return;
@@ -109,6 +128,10 @@ export default function AdminSchedules() {
       }
       if (!geoId) {
         setError('Selected team member does not have a geo assigned.');
+        return;
+      }
+      if (uniqueAllowedShiftIds.length === 0) {
+        setError('This geo does not have any mapped shifts yet. Add a geo-shift mapping first.');
         return;
       }
       if (!shiftId) {
@@ -162,13 +185,21 @@ export default function AdminSchedules() {
   };
 
   return (
-    <div className="container">
-      <h4 className="mb-3">Manage Shift Schedules</h4>
+    <div className="container admin-crud-page">
+      <SetupAssistBanner
+        title="Setup Step: Schedules"
+        helperText="Create the initial shift schedule so InciTeam can pick the right assignee."
+      />
+      <div className="admin-crud-hero mb-4">
+        <div className="admin-crud-hero__eyebrow">Rotation Planning</div>
+        <h2 className="mb-1">Manage Shift Schedules</h2>
+        <div className="text-muted">Define who covers each mapped shift window for the current team.</div>
+      </div>
       {error && <div className="alert alert-danger">{error}</div>}
 
-      {isAdmin ? (
-        <div className="card p-3 mb-4">
-          <form className="row g-3" onSubmit={handleSubmit}>
+      {canManageTeam ? (
+        <div className="card p-3 mb-4 admin-crud-card">
+          <form className="row g-3 admin-crud-form-grid" onSubmit={handleSubmit}>
           <div className="col-md-3">
             <label className="form-label">Team Member</label>
             <select
@@ -190,35 +221,47 @@ export default function AdminSchedules() {
             <input
               type="text"
               className="form-control"
-              value={members.find((m) => String(m.tm_id) === String(teamMemberId))?.geo?.name || ''}
+              value={selectedGeoName}
               readOnly
             />
           </div>
           <div className="col-md-3">
-            <label className="form-label">Shift</label>
-            {(() => {
-              const allowedShiftIds = geoShiftMappings
-                .filter((mapping) => String(mapping.geo?.g_id) === String(geoId))
-                .map((mapping) => String(mapping.shift?.s_id));
-              const uniqueShiftIds = Array.from(new Set(allowedShiftIds));
-              if (uniqueShiftIds.length <= 1) {
-                const shiftName = shifts.find(
-                  (shift) => String(shift.s_id) === String(uniqueShiftIds[0])
-                )?.name;
-                return (
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={shiftName || ''}
-                    readOnly
-                  />
-                );
-              }
-
-              const allowedShifts = shifts.filter((shift) =>
-                uniqueShiftIds.includes(String(shift.s_id))
-              );
-              return (
+            <label className="form-label">{hasMultipleMappedShifts ? 'Shift' : 'Mapped Shift'}</label>
+            {!teamMemberId ? (
+              <input
+                type="text"
+                className="form-control"
+                value=""
+                placeholder="Select a team member first"
+                readOnly
+              />
+            ) : uniqueAllowedShiftIds.length === 0 ? (
+              <>
+                <input
+                  type="text"
+                  className="form-control"
+                  value=""
+                  placeholder="No mapped shift available"
+                  readOnly
+                />
+                <div className="form-text text-danger">
+                  Add a geo-shift mapping for {selectedGeoName || 'this geo'} before creating a schedule.
+                </div>
+              </>
+            ) : hasSingleMappedShift ? (
+              <>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={autoSelectedShiftName}
+                  readOnly
+                />
+                <div className="form-text">
+                  This geo supports one shift, so InciTeam selected it automatically.
+                </div>
+              </>
+            ) : (
+              <>
                 <select
                   className="form-select"
                   value={shiftId}
@@ -230,8 +273,11 @@ export default function AdminSchedules() {
                     <option key={shift.s_id} value={shift.s_id}>{shift.name}</option>
                   ))}
                 </select>
-              );
-            })()}
+                <div className="form-text">
+                  Multiple shifts are mapped to {selectedGeoName || 'this geo'}, so choose the one to schedule.
+                </div>
+              </>
+            )}
           </div>
           <div className="col-md-3">
             <label className="form-label">Start Date</label>
@@ -269,8 +315,10 @@ export default function AdminSchedules() {
         <div className="alert alert-info">Read-only access. Contact an admin to make changes.</div>
       )}
 
-      <div className="table-responsive">
-        <table className="table table-bordered">
+      <div className="card admin-crud-card">
+        <div className="card-body">
+          <div className="table-responsive">
+        <table className="table table-bordered admin-crud-table">
           <thead className="table-light">
             <tr>
               <th>ID</th>
@@ -280,7 +328,7 @@ export default function AdminSchedules() {
               <th>Start Date</th>
               <th>End Date</th>
               <th>Duration</th>
-              {isAdmin && <th style={{ width: '180px' }}>Actions</th>}
+              {canManageTeam && <th style={{ width: '180px' }}>Actions</th>}
             </tr>
           </thead>
           <tbody>
@@ -293,7 +341,7 @@ export default function AdminSchedules() {
                 <td>{schedule.startDate}</td>
                 <td>{schedule.endDate}</td>
                 <td>{formatDurationDays(schedule.startDate, schedule.endDate)}</td>
-                {isAdmin && (
+                {canManageTeam && (
                   <td className="d-flex gap-2">
                     <button
                       className="btn btn-outline-primary btn-sm"
@@ -313,11 +361,13 @@ export default function AdminSchedules() {
             ))}
             {schedules.length === 0 && (
               <tr>
-                <td colSpan={isAdmin ? 8 : 7} className="text-center">No schedules yet.</td>
+                <td colSpan={canManageTeam ? 8 : 7} className="text-center">No schedules yet.</td>
               </tr>
             )}
           </tbody>
         </table>
+          </div>
+        </div>
       </div>
     </div>
   );

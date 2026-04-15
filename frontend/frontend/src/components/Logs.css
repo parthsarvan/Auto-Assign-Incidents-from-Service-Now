@@ -1,3 +1,26 @@
+.logs-hero {
+  padding: 1.55rem 1.7rem;
+  border-radius: 24px;
+  border: 1px solid #d8e1ec;
+  background:
+    radial-gradient(circle at top right, rgba(24, 89, 209, 0.14), transparent 26%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 251, 255, 0.94) 100%);
+  box-shadow: 0 24px 60px rgba(15, 31, 55, 0.08);
+}
+
+.logs-hero__eyebrow {
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: #71829a;
+  margin-bottom: 0.5rem;
+}
+
+.logs-kpi .summary-kpi__value {
+  font-size: 2rem;
+}
+
 .logs-page .card-title {
   font-size: 1.1rem;
 }
@@ -6,15 +29,27 @@
   font-size: 0.85rem;
 }
 
+.logs-page .card {
+  backdrop-filter: blur(12px);
+}
+
+.logs-page .form-label {
+  font-weight: 600;
+}
+
 .logs-page table td {
   vertical-align: middle;
 }
 
+.logs-page__results {
+  padding-top: 34px;
+}
+
 .selection-box {
-  border: 1px solid #e3e6ea;
-  border-radius: 8px;
-  background: #f8f9fb;
-  padding: 12px 16px;
+  border: 1px solid #d8e1ec;
+  border-radius: 14px;
+  background: rgba(248, 251, 255, 0.94);
+  padding: 14px 16px;
 }
 
 .selection-box__title {
@@ -29,9 +64,9 @@
 
 .selection-box__item {
   background: #ffffff;
-  border-radius: 6px;
-  padding: 10px 12px;
-  border: 1px solid #eef0f4;
+  border-radius: 12px;
+  padding: 12px 14px;
+  border: 1px solid #e7edf5;
 }
 
 .selection-box__meta {

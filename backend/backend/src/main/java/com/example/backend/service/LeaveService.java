@@ -1,6 +1,7 @@
 package com.example.backend.service;
 
 import com.example.backend.dto.LeaveRecord;
+import com.example.backend.entity.Team;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.Query;
@@ -18,6 +19,12 @@ import java.util.List;
 @Service
 public class LeaveService {
 
+    private final CurrentWorkspaceService currentWorkspaceService;
+
+    public LeaveService(CurrentWorkspaceService currentWorkspaceService) {
+        this.currentWorkspaceService = currentWorkspaceService;
+    }
+
     @PersistenceContext
     private EntityManager entityManager;
 
@@ -26,6 +33,7 @@ public class LeaveService {
      * Uses the SQL that joins leave → team_member_schedule → geo → shift.
      */
     public List<LeaveRecord> getLeaves(LocalDate startDate, LocalDate endDate) {
+        Team team = currentWorkspaceService.getCurrentTeam();
         // Build the lower/upper bounds as LocalDateTime
         LocalDateTime lowerLdt = startDate.atStartOfDay();
         LocalDateTime upperLdt = endDate.atTime(LocalTime.of(23, 59, 59, 999_000_000));
@@ -53,11 +61,16 @@ public class LeaveService {
             "  AND " +
             "  l.start_ts <= :tsUpper " +
             "  AND " +
-            "  (l.start_ts AT TIME ZONE 'UTC')::date BETWEEN tms.start_date AND tms.end_date";
+            "  (l.start_ts AT TIME ZONE 'UTC')::date BETWEEN tms.start_date AND tms.end_date " +
+            "  AND l.team_id = :teamId " +
+            "  AND tm.team_id = :teamId " +
+            "  AND tms.team_id = :teamId " +
+            "  AND gsm.team_id = :teamId";
 
         Query query = entityManager.createNativeQuery(sql)
             .setParameter("tsLower", tsLower)
-            .setParameter("tsUpper", tsUpper);
+            .setParameter("tsUpper", tsUpper)
+            .setParameter("teamId", team.getTeam_id());
 
         @SuppressWarnings("unchecked")
         List<Object[]> rows = (List<Object[]>) query.getResultList();

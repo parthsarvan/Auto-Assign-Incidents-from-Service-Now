@@ -4,8 +4,10 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "geo_shift_mapping")
-@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+@Table(
+        name = "geo_shift_mapping",
+        uniqueConstraints = @UniqueConstraint(columnNames = {"team_id", "g_id", "s_id"}))
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "team"})
 public class GeoShiftMapping {
 
     @Id
@@ -19,6 +21,10 @@ public class GeoShiftMapping {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "s_id")
     private Shift shift;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "team_id")
+    private Team team;
 
     public GeoShiftMapping() {}
 
@@ -49,5 +55,13 @@ public class GeoShiftMapping {
 
     public void setShift(Shift shift) {
         this.shift = shift;
+    }
+
+    public Team getTeam() {
+        return team;
+    }
+
+    public void setTeam(Team team) {
+        this.team = team;
     }
 }

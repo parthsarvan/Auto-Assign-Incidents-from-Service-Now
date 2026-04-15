@@ -7,7 +7,7 @@ import java.time.Instant;
 
 @Entity
 @Table(name = "break_time")
-@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "team"})
 public class BreakEntry {
 
     @Id
@@ -25,6 +25,10 @@ public class BreakEntry {
     private Instant endTs;
 
     private String reason;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "team_id")
+    private Team team;
 
     public BreakEntry() {}
 
@@ -73,5 +77,13 @@ public class BreakEntry {
 
     public void setReason(String reason) {
         this.reason = reason;
+    }
+
+    public Team getTeam() {
+        return team;
+    }
+
+    public void setTeam(Team team) {
+        this.team = team;
     }
 }

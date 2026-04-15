@@ -1,13 +1,21 @@
 // src/components/Dashboard.jsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { DateTime } from 'luxon';
 import axios from 'axios';
+import { Link, useOutletContext } from 'react-router-dom';
 
 import AvailabilityGrid from './AvailabilityGrid';
 import LeaveList from './LeaveList';
 import BreakList from './BreakList';
+import { canManageCurrentTeam } from '../services/permissions';
+import { getCurrentUser } from '../services/auth';
+import { buildApiUrl } from '../services/api';
+import './Dashboard.css';
 
 export default function Dashboard() {
+  const outletContext = useOutletContext() || {};
+  const currentUser = outletContext.currentUser || getCurrentUser();
+  const { setupStatus } = outletContext;
   // ── 1) Timezone & View State ─────────────────────────────────────────────
   // The user’s browser timezone (e.g. "America/Chicago")
   const zone = DateTime.local().zoneName;
@@ -41,6 +49,15 @@ export default function Dashboard() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const teamName = currentUser?.workspace?.teamName || 'Current Team';
+  const organizationName = currentUser?.workspace?.organizationName || 'Your Organization';
+  const canManageTeam = canManageCurrentTeam(currentUser);
+  const schedulesStep = setupStatus?.steps?.find((step) => step.key === 'schedules');
+  const isBrandNewTeam = Boolean(setupStatus?.brandNew);
+  const setupIncomplete = Boolean(setupStatus && !setupStatus.ready);
+  const schedulesMissing = Boolean(setupStatus?.ready && schedulesStep && !schedulesStep.complete);
+  const hasAnyAvailabilityData =
+    availabilityRecords.length > 0 || leaveRecords.length > 0 || breakRecords.length > 0;
 
   // ── 3) Fetch Availability & Leave Whenever startDate or viewMode Changes ──
   useEffect(() => {
@@ -59,7 +76,7 @@ export default function Dashboard() {
         // 3a) Fetch “on‐shift availability” from the backend
         //    (this returns flat objects: { tmId, fullName, geoName, shiftName, date })
         const availResp = await axios.get(
-          'http://localhost:8080/api/schedule/next',
+          buildApiUrl('/schedule/next'),
           {
             params: { startDate, days: dayCount },
             headers: { Authorization: `Bearer ${token}` },
@@ -70,7 +87,7 @@ export default function Dashboard() {
         // 3b) Fetch “on‐leave” records from the backend
         //    (this returns flat objects: { fullName, geoName, shiftName, startTs, endTs, reason })
         const leaveResp = await axios.get(
-          'http://localhost:8080/api/leave/next',
+          buildApiUrl('/leave/next'),
           {
             params: { startDate, days: dayCount },
             headers: { Authorization: `Bearer ${token}` },
@@ -103,7 +120,7 @@ export default function Dashboard() {
 
         // 3d) Fetch “on‐break” records from the backend
         const breakResp = await axios.get(
-          'http://localhost:8080/api/break/next',
+          buildApiUrl('/break/next'),
           {
             params: { startDate, days: dayCount },
             headers: { Authorization: `Bearer ${token}` },
@@ -169,32 +186,82 @@ export default function Dashboard() {
     setStartDate(today);
   };
 
+  const emptyState = useMemo(() => {
+    if (loading || error || hasAnyAvailabilityData) {
+      return null;
+    }
+
+    if (setupIncomplete) {
+      return {
+        variant: 'warning',
+        message: isBrandNewTeam
+          ? `${teamName} has not been set up yet, so there is no availability to show.`
+          : `${teamName} setup is still incomplete, so the availability view does not have enough team data yet.`,
+        ctaTo: canManageTeam ? '/setup' : null,
+        ctaLabel: canManageTeam ? 'Continue Setup' : null,
+      };
+    }
+
+    if (schedulesMissing) {
+      return {
+        variant: 'info',
+        message: `${teamName} setup is complete, but no schedules have been added yet. Add schedules to populate on-shift availability.`,
+        ctaTo: canManageTeam ? '/schedules' : null,
+        ctaLabel: canManageTeam ? 'Add Schedules' : null,
+      };
+    }
+
+    return {
+      variant: 'secondary',
+      message: `No on-shift availability, leave, or break data exists for ${teamName} in this ${viewMode === 'week' ? '7-day' : '1-day'} window.`,
+      ctaTo: canManageTeam ? '/summary' : null,
+      ctaLabel: canManageTeam ? 'Open Summary' : null,
+    };
+  }, [
+    canManageTeam,
+    error,
+    hasAnyAvailabilityData,
+    isBrandNewTeam,
+    loading,
+    schedulesMissing,
+    setupIncomplete,
+    teamName,
+    viewMode,
+  ]);
+
   // ── 5) Render ───────────────────────────────────────────────────────────────
   return (
-    <div className="px-3 py-3">
-
-      {/* ─────────────── Control Bar: Prev/Next & Week↔Day Toggle ─────────────── */}
-      <div className="d-flex justify-content-end align-items-center mb-4">
-        <button
-          className="btn btn-outline-secondary me-2"
-          onClick={handlePrev}
-        >
-          ‹ Prev {viewMode === 'week' ? '7 Days' : '1 Day'}
-        </button>
-        <button
-          className="btn btn-outline-secondary me-2"
-          onClick={handleNext}
-        >
-          Next {viewMode === 'week' ? '7 Days' : '1 Day'} ›
-        </button>
-        <button
-          className="btn btn-primary"
-          onClick={toggleViewMode}
-        >
-          {viewMode === 'week'
-            ? 'Switch to Daily View'
-            : 'Switch to Weekly View'}
-        </button>
+    <div className="dashboard-page px-3 py-3">
+      <div className="dashboard-hero mb-4">
+        <div>
+          <div className="dashboard-hero__eyebrow">Team Availability</div>
+          <h2 className="mb-1">{teamName} Coverage Board</h2>
+          <div className="text-muted">
+            Live on-shift availability, leave, and break visibility for {teamName} in {organizationName}.
+          </div>
+        </div>
+        <div className="dashboard-toolbar">
+          <button
+            className="btn btn-outline-secondary"
+            onClick={handlePrev}
+          >
+            ‹ Prev {viewMode === 'week' ? '7 Days' : '1 Day'}
+          </button>
+          <button
+            className="btn btn-outline-secondary"
+            onClick={handleNext}
+          >
+            Next {viewMode === 'week' ? '7 Days' : '1 Day'} ›
+          </button>
+          <button
+            className="btn btn-primary"
+            onClick={toggleViewMode}
+          >
+            {viewMode === 'week'
+              ? 'Switch to Daily View'
+              : 'Switch to Weekly View'}
+          </button>
+        </div>
       </div>
 
 
@@ -221,18 +288,39 @@ export default function Dashboard() {
         />
       )}
 
+      {!loading && !error && emptyState && (
+        <div className={`alert alert-${emptyState.variant} d-flex justify-content-between align-items-center gap-3 flex-wrap mt-4`}>
+          <div>{emptyState.message}</div>
+          {emptyState.ctaTo && emptyState.ctaLabel && (
+            <Link className="btn btn-sm btn-outline-primary" to={emptyState.ctaTo}>
+              {emptyState.ctaLabel}
+            </Link>
+          )}
+        </div>
+      )}
+
 
       {/* ─────────────── Leave List Table ─────────────────────────────────────── */}
       {!loading && !error && leaveRecords.length > 0 && (
-        <div className="mt-5">
-          <h4>On Leave</h4>
+        <div className="dashboard-section mt-5">
+          <div className="dashboard-section__header">
+            <div>
+              <div className="dashboard-section__eyebrow">Availability Impact</div>
+              <h4>On Leave</h4>
+            </div>
+          </div>
           <LeaveList data={leaveRecords} zone={zone} />
         </div>
       )}
 
       {!loading && !error && breakRecords.length > 0 && (
-        <div className="mt-5">
-          <h4>On Break</h4>
+        <div className="dashboard-section mt-5">
+          <div className="dashboard-section__header">
+            <div>
+              <div className="dashboard-section__eyebrow">Availability Impact</div>
+              <h4>On Break</h4>
+            </div>
+          </div>
           <BreakList data={breakRecords} zone={zone} />
         </div>
       )}

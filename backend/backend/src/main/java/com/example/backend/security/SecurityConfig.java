@@ -1,8 +1,11 @@
 package com.example.backend.security;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -21,6 +24,14 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
+    @Value("${spring.web.cors.allowed-origins:http://localhost:3000}")
+    private String allowedOrigins;
+
+    @Value("${spring.web.cors.allowed-methods:GET,POST,PUT,DELETE,OPTIONS}")
+    private String allowedMethods;
+
+    @Value("${spring.web.cors.allowed-headers:*}")
+    private String allowedHeaders;
 
     @Autowired
     private JwtAuthFilter jwtAuthFilter;
@@ -62,29 +73,22 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    /**
-     * Defines CORS rules for the entire application.
-     * In this example, we allow http://localhost:3000 (React) to call any endpoint.
-     */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-
-        // 1) Which origins are allowed?
-        config.setAllowedOrigins(List.of("http://localhost:3000"));
-
-        // 2) Which HTTP methods are allowed?
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-
-        // 3) Which headers can the client send?
-        config.setAllowedHeaders(List.of("*"));
-
-        // 4) Whether to allow credentials (e.g. cookies). For JWT use, usually false.
+        config.setAllowedOrigins(parseCsv(allowedOrigins));
+        config.setAllowedMethods(parseCsv(allowedMethods));
+        config.setAllowedHeaders(parseCsv(allowedHeaders));
         config.setAllowCredentials(true);
-
-        // 5) Apply this configuration to all endpoints (/**)
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;
+    }
+
+    private List<String> parseCsv(String rawValue) {
+        return Arrays.stream(rawValue.split(","))
+                .map(String::trim)
+                .filter(value -> !value.isBlank())
+                .collect(Collectors.toList());
     }
 }

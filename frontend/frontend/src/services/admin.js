@@ -1,10 +1,7 @@
-import axios from 'axios';
 import { authHeader } from './auth';
+import { createApiClient } from './api';
 
-const api = axios.create({
-  baseURL: 'http://localhost:8080/api',
-  headers: { 'Content-Type': 'application/json' },
-});
+const api = createApiClient();
 
 function withAuth() {
   return { headers: authHeader() };
@@ -188,5 +185,20 @@ export async function fetchUsers() {
 
 export async function updateUserRole(id, role) {
   const response = await api.put(`/users/${id}/role`, { role }, withAuth());
+  return response.data;
+}
+
+export async function assignUserToTeam(id, teamId) {
+  const response = await api.post(`/users/${id}/teams`, { teamId }, withAuth());
+  return response.data;
+}
+
+export async function removeUserFromTeam(id, teamId) {
+  const response = await api.delete(`/users/${id}/teams/${teamId}`, withAuth());
+  return response.data;
+}
+
+export async function updateUserTeamRole(id, teamId, role) {
+  const response = await api.put(`/users/${id}/teams/${teamId}/role`, { role }, withAuth());
   return response.data;
 }

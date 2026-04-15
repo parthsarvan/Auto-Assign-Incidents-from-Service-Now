@@ -8,6 +8,9 @@ import {
   updateGeoShiftMapping,
 } from '../services/admin';
 import { getCurrentUser } from '../services/auth';
+import { canManageCurrentTeam } from '../services/permissions';
+import SetupAssistBanner from './SetupAssistBanner';
+import './AdminCrud.css';
 
 export default function AdminGeoShiftMappings() {
   const [mappings, setMappings] = useState([]);
@@ -17,7 +20,7 @@ export default function AdminGeoShiftMappings() {
   const [shiftId, setShiftId] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState('');
-  const isAdmin = getCurrentUser()?.role === 'Admin';
+  const canManageTeam = canManageCurrentTeam(getCurrentUser());
 
   const loadData = async () => {
     try {
@@ -86,13 +89,21 @@ export default function AdminGeoShiftMappings() {
   };
 
   return (
-    <div className="container">
-      <h4 className="mb-3">Manage Geo-Shift Mappings</h4>
+    <div className="container admin-crud-page">
+      <SetupAssistBanner
+        title="Setup Step: Geo-Shift Mappings"
+        helperText="Connect each geo to the shifts that are valid for that region."
+      />
+      <div className="admin-crud-hero mb-4">
+        <div className="admin-crud-hero__eyebrow">Coverage Rules</div>
+        <h2 className="mb-1">Manage Geo-Shift Mappings</h2>
+        <div className="text-muted">Define which shifts are valid inside each supported region.</div>
+      </div>
       {error && <div className="alert alert-danger">{error}</div>}
 
-      {isAdmin ? (
-        <div className="card p-3 mb-4">
-          <form className="row g-3" onSubmit={handleSubmit}>
+      {canManageTeam ? (
+        <div className="card p-3 mb-4 admin-crud-card">
+          <form className="row g-3 admin-crud-form-grid" onSubmit={handleSubmit}>
             <div className="col-md-4">
               <label className="form-label">Geo</label>
               <select
@@ -137,14 +148,16 @@ export default function AdminGeoShiftMappings() {
         <div className="alert alert-info">Read-only access. Contact an admin to make changes.</div>
       )}
 
-      <div className="table-responsive">
-        <table className="table table-bordered">
+      <div className="card admin-crud-card">
+        <div className="card-body">
+          <div className="table-responsive">
+        <table className="table table-bordered admin-crud-table">
           <thead className="table-light">
             <tr>
               <th>ID</th>
               <th>Geo</th>
               <th>Shift</th>
-              {isAdmin && <th style={{ width: '180px' }}>Actions</th>}
+              {canManageTeam && <th style={{ width: '180px' }}>Actions</th>}
             </tr>
           </thead>
           <tbody>
@@ -153,7 +166,7 @@ export default function AdminGeoShiftMappings() {
                 <td>{mapping.gsm_id}</td>
                 <td>{mapping.geo?.name}</td>
                 <td>{mapping.shift?.name}</td>
-                {isAdmin && (
+                {canManageTeam && (
                   <td className="d-flex gap-2">
                     <button
                       className="btn btn-outline-primary btn-sm"
@@ -173,11 +186,13 @@ export default function AdminGeoShiftMappings() {
             ))}
             {mappings.length === 0 && (
               <tr>
-                <td colSpan={isAdmin ? 4 : 3} className="text-center">No mappings yet.</td>
+                <td colSpan={canManageTeam ? 4 : 3} className="text-center">No mappings yet.</td>
               </tr>
             )}
           </tbody>
         </table>
+          </div>
+        </div>
       </div>
     </div>
   );
