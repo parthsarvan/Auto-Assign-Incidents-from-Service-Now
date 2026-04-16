@@ -87,6 +87,9 @@ public class WorkspaceBootstrapService {
 
     @Transactional
     public void backfillDefaultWorkspace() {
+        if (!requiresLegacyWorkspaceBootstrap()) {
+            return;
+        }
         Organization organization = ensureDefaultOrganization();
         Team team = ensureDefaultTeam(organization);
         ensureJoinCodes();
@@ -98,10 +101,71 @@ public class WorkspaceBootstrapService {
 
     @Transactional
     public WorkspaceSummary ensureWorkspaceForUser(User user) {
+        User managedUser = userRepository.findById(user.getU_id()).orElse(user);
+        java.util.List<TeamMembership> memberships = teamMembershipRepository.findAllByUserWithTeam(managedUser);
+        TeamMembership preferredTeamMembership = selectPreferredTeamMembership(managedUser, memberships);
+
+        if (preferredTeamMembership != null) {
+            Team team = preferredTeamMembership.getTeam();
+            boolean currentMatchesPreferred =
+                    managedUser.getCurrentTeam() != null
+                            && managedUser.getCurrentOrganization() != null
+                            && team.getTeam_id().equals(managedUser.getCurrentTeam().getTeam_id())
+                            && team.getOrganization().getOrg_id().equals(managedUser.getCurrentOrganization().getOrg_id());
+            if (currentMatchesPreferred) {
+                return toSummary(managedUser);
+            }
+            managedUser.setCurrentTeam(team);
+            managedUser.setCurrentOrganization(team.getOrganization());
+            managedUser = userRepository.save(managedUser);
+            return toSummary(managedUser);
+        }
+
+        if (!requiresLegacyWorkspaceBootstrap()) {
+            return toSummary(managedUser);
+        }
+
         Organization organization = ensureDefaultOrganization();
         Team team = ensureDefaultTeam(organization);
-        User attachedUser = attachUserToDefaultWorkspace(user, organization, team);
+        User attachedUser = attachUserToDefaultWorkspace(managedUser, organization, team);
         return toSummary(attachedUser);
+    }
+
+    @Transactional
+    public WorkspaceSummary createWorkspaceForNewOrganization(User user, String organizationName, String teamName, String emailDomain) {
+        Organization organization = new Organization();
+        organization.setName(organizationName);
+        organization.setSlug(generateOrganizationSlug(organizationName));
+        organization.setEmailDomain(emailDomain);
+        organization.setCreated_at(Instant.now());
+        organization = organizationRepository.save(organization);
+
+        Team team = new Team();
+        team.setOrganization(organization);
+        team.setName(teamName);
+        team.setDescription("Initial team created during organization onboarding.");
+        team.setJoinCode(generateJoinCode());
+        team.setCreated_at(Instant.now());
+        team = teamRepository.save(team);
+
+        OrganizationMembership organizationMembership = new OrganizationMembership();
+        organizationMembership.setUser(user);
+        organizationMembership.setOrganization(organization);
+        organizationMembership.setRole("ORG_ADMIN");
+        organizationMembership.setCreated_at(Instant.now());
+        organizationMembershipRepository.save(organizationMembership);
+
+        TeamMembership teamMembership = new TeamMembership();
+        teamMembership.setUser(user);
+        teamMembership.setTeam(team);
+        teamMembership.setRole("TEAM_ADMIN");
+        teamMembership.setCreated_at(Instant.now());
+        teamMembershipRepository.save(teamMembership);
+
+        user.setCurrentOrganization(organization);
+        user.setCurrentTeam(team);
+        userRepository.save(user);
+        return toSummary(user);
     }
 
     @Transactional
@@ -128,6 +192,22 @@ public class WorkspaceBootstrapService {
                     organization.setCreated_at(Instant.now());
                     return organizationRepository.save(organization);
                 });
+    }
+
+    private boolean requiresLegacyWorkspaceBootstrap() {
+        if (organizationRepository.count() > 0 || teamRepository.count() > 0) {
+            return false;
+        }
+        return userRepository.count() > 0
+                || geoRepository.count() > 0
+                || shiftRepository.count() > 0
+                || configurationItemRepository.count() > 0
+                || teamMemberRepository.count() > 0
+                || geoShiftMappingRepository.count() > 0
+                || ciUserMappingRepository.count() > 0
+                || teamMemberScheduleRepository.count() > 0
+                || leaveEntryRepository.count() > 0
+                || breakEntryRepository.count() > 0;
     }
 
     private Team ensureDefaultTeam(Organization organization) {
@@ -243,6 +323,39 @@ public class WorkspaceBootstrapService {
                 getCurrentTeamRole(user));
     }
 
+    private TeamMembership selectPreferredTeamMembership(User user, java.util.List<TeamMembership> memberships) {
+        if (memberships == null || memberships.isEmpty()) {
+            return null;
+        }
+
+        TeamMembership currentMembership = memberships.stream()
+                .filter(membership ->
+                        user.getCurrentTeam() != null
+                                && membership.getTeam().getTeam_id().equals(user.getCurrentTeam().getTeam_id()))
+                .findFirst()
+                .orElse(null);
+
+        if (currentMembership != null && !shouldPreferNonDefaultMembership(currentMembership, memberships)) {
+            return currentMembership;
+        }
+
+        return memberships.stream()
+                .filter(membership -> !isLegacyDefaultTeam(membership.getTeam()))
+                .findFirst()
+                .orElse(currentMembership != null ? currentMembership : memberships.get(0));
+    }
+
+    private boolean shouldPreferNonDefaultMembership(TeamMembership currentMembership, java.util.List<TeamMembership> memberships) {
+        return memberships.size() > 1 && isLegacyDefaultTeam(currentMembership.getTeam());
+    }
+
+    private boolean isLegacyDefaultTeam(Team team) {
+        return team != null
+                && DEFAULT_TEAM_NAME.equals(team.getName())
+                && team.getOrganization() != null
+                && DEFAULT_ORG_SLUG.equals(team.getOrganization().getSlug());
+    }
+
     private String getCurrentTeamRole(User user) {
         if (user == null || user.getCurrentTeam() == null) {
             return null;
@@ -275,5 +388,23 @@ public class WorkspaceBootstrapService {
             code = "TEAM-" + java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase();
         } while (teamRepository.existsByJoinCode(code));
         return code;
+    }
+
+    private String generateOrganizationSlug(String organizationName) {
+        String base = organizationName == null ? "organization" : organizationName
+                .trim()
+                .toLowerCase()
+                .replaceAll("[^a-z0-9]+", "-")
+                .replaceAll("^-+|-+$", "");
+        if (base.isBlank()) {
+            base = "organization";
+        }
+
+        String candidate = base;
+        int suffix = 2;
+        while (organizationRepository.findBySlug(candidate).isPresent()) {
+            candidate = base + "-" + suffix++;
+        }
+        return candidate;
     }
 }

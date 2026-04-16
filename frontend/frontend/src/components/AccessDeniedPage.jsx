@@ -18,8 +18,8 @@ export default function AccessDeniedPage({
             <Link className="btn btn-primary" to={backTo}>
               {backLabel}
             </Link>
-            <Link className="btn btn-outline-secondary" to="/">
-              View Availability
+            <Link className="btn btn-outline-secondary" to="/dashboard">
+              Open Dashboard
             </Link>
           </div>
         </div>

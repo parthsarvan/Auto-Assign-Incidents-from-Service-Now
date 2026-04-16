@@ -10,7 +10,7 @@ export default function SignInPage() {
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const location = useLocation();
-  const from = location.state?.from?.pathname || '/'; // default redirect after login
+  const from = location.state?.from?.pathname || '/dashboard'; // default redirect after login
   const joinedViaInvite = Boolean(location.state?.joinedViaInvite);
 
   useEffect(() => {
@@ -25,6 +25,10 @@ export default function SignInPage() {
     try {
       await signIn(username, password);
       const signedInUser = getCurrentUser();
+      if (location.state?.firstWorkspaceOwner) {
+        navigate('/setup', { replace: true });
+        return;
+      }
       if (joinedViaInvite) {
         navigate('/welcome', { replace: true, state: { joinedViaInvite: true } });
         return;
@@ -78,8 +82,13 @@ export default function SignInPage() {
           <button type="submit" className="btn btn-primary w-100">Sign In</button>
         </form>
         <div className="mt-3 text-center">
-          <span>Joining for the first time? </span>
-          <Link to="/signup">Use an invite code</Link>
+          <div>
+            <span>New to InciTeam? </span>
+            <Link to="/signup">Create an account</Link>
+          </div>
+          <div className="text-muted small mt-2">
+            Use an invite code to join an existing team, or create the first account if this is a brand-new deployment.
+          </div>
         </div>
       </div>
     </div>

@@ -15,6 +15,15 @@ public interface TeamMemberRepository extends JpaRepository<TeamMember, Long> {
     @Query("select tm from TeamMember tm left join fetch tm.geo where tm.tm_id = :id and tm.team = :team")
     Optional<TeamMember> findByIdAndTeam(@Param("id") Long id, @Param("team") Team team);
 
+    @Query("""
+            select tm
+            from TeamMember tm
+            left join fetch tm.geo
+            where tm.team = :team
+              and lower(trim(tm.email)) = lower(trim(:email))
+            """)
+    Optional<TeamMember> findByTeamAndNormalizedEmail(@Param("team") Team team, @Param("email") String email);
+
     boolean existsByEmailIgnoreCaseAndTeam(String email, Team team);
 
     @Query("select count(tm) > 0 from TeamMember tm where lower(tm.sys_id) = lower(:sysId) and tm.team = :team")

@@ -2,9 +2,9 @@ package com.example.backend.service;
 
 import com.example.backend.dto.ServiceNowHealthResponse;
 import com.example.backend.dto.ServiceNowRunLog;
+import com.example.backend.entity.Team;
 import java.time.Instant;
 import java.util.List;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -19,27 +19,44 @@ import org.springframework.web.util.UriComponentsBuilder;
 public class ServiceNowHealthService {
     private final RestTemplate restTemplate;
     private final ServiceNowAuthHeaderProvider authHeaderProvider;
+    private final OrganizationServiceNowConfigService organizationServiceNowConfigService;
+    private final CurrentWorkspaceService currentWorkspaceService;
     private final ServiceNowLogService logService;
-    private final String instanceUrl;
 
     public ServiceNowHealthService(
             RestTemplate restTemplate,
             ServiceNowAuthHeaderProvider authHeaderProvider,
-            ServiceNowLogService logService,
-            @Value("${servicenow.instance-url}") String instanceUrl) {
+            OrganizationServiceNowConfigService organizationServiceNowConfigService,
+            CurrentWorkspaceService currentWorkspaceService,
+            ServiceNowLogService logService) {
         this.restTemplate = restTemplate;
         this.authHeaderProvider = authHeaderProvider;
+        this.organizationServiceNowConfigService = organizationServiceNowConfigService;
+        this.currentWorkspaceService = currentWorkspaceService;
         this.logService = logService;
-        this.instanceUrl = instanceUrl;
     }
 
     public ServiceNowHealthResponse checkHealth() {
         Instant checkedAt = Instant.now();
         ServiceNowRunLog lastPoll = latestPollLog();
+        Team team = currentWorkspaceService.getCurrentTeam();
+        if (!organizationServiceNowConfigService.isConfiguredForTeam(team)) {
+            return new ServiceNowHealthResponse(
+                    checkedAt,
+                    false,
+                    "NOT_CONFIGURED",
+                    "Connect ServiceNow for this organization before running health checks.",
+                    null,
+                    lastPoll != null ? lastPoll.getTimestamp() : null,
+                    lastPoll != null ? lastPoll.getStatus() : null,
+                    lastPoll != null ? lastPoll.getMessage() : null);
+        }
+
+        ServiceNowConnectionSettings settings = organizationServiceNowConfigService.requireSettingsForTeam(team);
 
         try {
-            HttpHeaders headers = authHeaderProvider.buildHeaders();
-            String url = UriComponentsBuilder.fromHttpUrl(instanceUrl)
+            HttpHeaders headers = authHeaderProvider.buildHeaders(settings.username(), settings.password());
+            String url = UriComponentsBuilder.fromHttpUrl(settings.instanceUrl())
                     .path("/api/now/table/incident")
                     .queryParam("sysparm_limit", "1")
                     .queryParam("sysparm_fields", "sys_id")
@@ -56,7 +73,7 @@ public class ServiceNowHealthService {
                     response.getStatusCode().is2xxSuccessful(),
                     response.getStatusCode().toString(),
                     "Successfully connected to ServiceNow.",
-                    instanceUrl,
+                    settings.instanceUrl(),
                     lastPoll != null ? lastPoll.getTimestamp() : null,
                     lastPoll != null ? lastPoll.getStatus() : null,
                     lastPoll != null ? lastPoll.getMessage() : null);
@@ -66,7 +83,7 @@ public class ServiceNowHealthService {
                     false,
                     ex.getStatusCode().toString(),
                     "ServiceNow responded with an error: " + ex.getResponseBodyAsString(),
-                    instanceUrl,
+                    settings.instanceUrl(),
                     lastPoll != null ? lastPoll.getTimestamp() : null,
                     lastPoll != null ? lastPoll.getStatus() : null,
                     lastPoll != null ? lastPoll.getMessage() : null);
@@ -76,7 +93,7 @@ public class ServiceNowHealthService {
                     false,
                     "ERROR",
                     ex.getMessage(),
-                    instanceUrl,
+                    settings.instanceUrl(),
                     lastPoll != null ? lastPoll.getTimestamp() : null,
                     lastPoll != null ? lastPoll.getStatus() : null,
                     lastPoll != null ? lastPoll.getMessage() : null);

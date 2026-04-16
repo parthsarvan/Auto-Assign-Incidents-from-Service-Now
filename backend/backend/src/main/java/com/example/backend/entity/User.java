@@ -15,6 +15,9 @@ public class User {
     @Column(nullable = false, unique = true)
     private String username;
 
+    @Column(name = "work_email", unique = true)
+    private String workEmail;
+
     @Column(nullable = false)
     private String password;
 
@@ -70,6 +73,14 @@ public class User {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public String getWorkEmail() {
+        return workEmail;
+    }
+
+    public void setWorkEmail(String workEmail) {
+        this.workEmail = workEmail;
     }
 
     public String getRole() {

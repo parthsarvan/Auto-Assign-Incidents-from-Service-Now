@@ -10,6 +10,14 @@ function emitUserSessionChanged() {
 // Base Axios instance
 const api = createApiClient('/auth');
 
+export async function discoverOrganization({ organizationName, workEmail }) {
+  const response = await api.post('/organization-discovery', {
+    organizationName: organizationName.trim(),
+    workEmail: workEmail.trim().toLowerCase(),
+  });
+  return response.data;
+}
+
 // Sign-In: POST /api/auth/login  { username, password }
 export async function signIn(username, password) {
   const response = await api.post('/login', {
@@ -25,6 +33,7 @@ export async function signIn(username, password) {
   const userObj = {
     u_id:     response.data.u_id,
     username: response.data.username,
+    workEmail: response.data.workEmail || null,
     role:     response.data.role,
     workspace: response.data.workspace || null,
   };
@@ -37,11 +46,21 @@ export async function signIn(username, password) {
 }
 
 // Sign-Up: POST /api/auth/signup  { username, password, role }
-export async function signUp(username, password, inviteCode = '') {
+export async function signUp({
+  username,
+  workEmail,
+  password,
+  inviteCode = '',
+  organizationName = '',
+  teamName = '',
+}) {
   const response = await api.post('/signup', {
     username: username.trim(),
+    workEmail: workEmail.trim().toLowerCase(),
     password,
     inviteCode: inviteCode.trim().toUpperCase(),
+    organizationName: organizationName.trim(),
+    teamName: teamName.trim(),
   });
   return response.data; // e.g. { message: 'User created', user: { … } }
 }

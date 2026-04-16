@@ -14,7 +14,6 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -28,32 +27,43 @@ import org.springframework.web.util.UriComponentsBuilder;
 public class ServiceNowValidationService {
     private final RestTemplate restTemplate;
     private final ServiceNowAuthHeaderProvider authHeaderProvider;
+    private final OrganizationServiceNowConfigService organizationServiceNowConfigService;
     private final ConfigurationItemRepository configurationItemRepository;
     private final TeamMemberRepository teamMemberRepository;
     private final ObjectMapper objectMapper;
-    private final String instanceUrl;
     private final CurrentWorkspaceService currentWorkspaceService;
 
     public ServiceNowValidationService(
             RestTemplate restTemplate,
             ServiceNowAuthHeaderProvider authHeaderProvider,
+            OrganizationServiceNowConfigService organizationServiceNowConfigService,
             ConfigurationItemRepository configurationItemRepository,
             TeamMemberRepository teamMemberRepository,
             ObjectMapper objectMapper,
-            CurrentWorkspaceService currentWorkspaceService,
-            @Value("${servicenow.instance-url}") String instanceUrl) {
+            CurrentWorkspaceService currentWorkspaceService) {
         this.restTemplate = restTemplate;
         this.authHeaderProvider = authHeaderProvider;
+        this.organizationServiceNowConfigService = organizationServiceNowConfigService;
         this.configurationItemRepository = configurationItemRepository;
         this.teamMemberRepository = teamMemberRepository;
         this.objectMapper = objectMapper;
         this.currentWorkspaceService = currentWorkspaceService;
-        this.instanceUrl = instanceUrl;
     }
 
     public ServiceNowValidationResponse validateRecords() {
         Instant checkedAt = Instant.now();
         Team team = currentWorkspaceService.getCurrentTeam();
+        if (!organizationServiceNowConfigService.isConfiguredForTeam(team)) {
+            return new ServiceNowValidationResponse(
+                    checkedAt,
+                    false,
+                    "Connect ServiceNow for this organization before validating records.",
+                    0,
+                    0,
+                    0,
+                    0,
+                    List.of());
+        }
         List<ConfigurationItem> configurationItems = configurationItemRepository.findAllByTeamOrderByNameAsc(team).stream()
                 .filter(ci -> hasText(ci.getServiceNowSysId()))
                 .toList();
@@ -62,10 +72,10 @@ public class ServiceNowValidationService {
                 .toList();
 
         try {
-            Set<String> validCiIds = fetchValidSysIds("cmdb_ci", configurationItems.stream()
+            Set<String> validCiIds = fetchValidSysIds(team, "cmdb_ci", configurationItems.stream()
                     .map(ConfigurationItem::getServiceNowSysId)
                     .toList());
-            Set<String> validUserIds = fetchValidSysIds("sys_user", teamMembers.stream()
+            Set<String> validUserIds = fetchValidSysIds(team, "sys_user", teamMembers.stream()
                     .map(TeamMember::getSys_id)
                     .toList());
 
@@ -116,13 +126,14 @@ public class ServiceNowValidationService {
         }
     }
 
-    private Set<String> fetchValidSysIds(String tableName, List<String> sysIds) {
+    private Set<String> fetchValidSysIds(Team team, String tableName, List<String> sysIds) {
         if (sysIds.isEmpty()) {
             return Set.of();
         }
 
-        HttpHeaders headers = authHeaderProvider.buildHeaders();
-        String url = UriComponentsBuilder.fromHttpUrl(instanceUrl)
+        ServiceNowConnectionSettings settings = organizationServiceNowConfigService.requireSettingsForTeam(team);
+        HttpHeaders headers = authHeaderProvider.buildHeaders(settings.username(), settings.password());
+        String url = UriComponentsBuilder.fromHttpUrl(settings.instanceUrl())
                 .path("/api/now/table/" + tableName)
                 .queryParam("sysparm_query", "sys_idIN" + String.join(",", sysIds))
                 .queryParam("sysparm_fields", "sys_id")

@@ -1,6 +1,6 @@
 // src/App.js
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import RequireAuth from './components/RequireAuth';
 import RequirePermission from './components/RequirePermission';
 import HomeLayout from './components/HomeLayout';
@@ -23,7 +23,8 @@ import SetupPage from './components/SetupPage';
 import AssignmentDiagnostics from './components/AssignmentDiagnostics';
 import Summary from './components/Summary';
 import InviteWelcomePage from './components/InviteWelcomePage';
-import { canManageCurrentTeam, isOrgAdmin } from './services/permissions';
+import MarketingHomePage from './components/MarketingHomePage';
+import { canManageCurrentTeam, canViewCurrentTeam, isOrgAdmin } from './services/permissions';
 
 function TeamManagerRoute({ children }) {
   return (
@@ -33,6 +34,20 @@ function TeamManagerRoute({ children }) {
       message="This page is available to TEAM_ADMIN and MANAGER users for the current team."
       backTo="/summary"
       backLabel="Go to Summary"
+    >
+      {children}
+    </RequirePermission>
+  );
+}
+
+function TeamViewerRoute({ children }) {
+  return (
+    <RequirePermission
+      allow={canViewCurrentTeam}
+      title="Team access required"
+      message="This page is available to members of the current team."
+      backTo="/dashboard"
+      backLabel="Go to Dashboard"
     >
       {children}
     </RequirePermission>
@@ -58,35 +73,36 @@ export default function App() {
     <Router>
       <Routes>
         {/* Public */}
+        <Route path="/" element={<MarketingHomePage />} />
         <Route path="/signin" element={<SignInPage />} />
         <Route path="/signup" element={<SignUpPage />} />
+        <Route path="/app" element={<Navigate to="/dashboard" replace />} />
 
         {/* Protected */}
         <Route
-          path="/"
           element={
             <RequireAuth>
               <HomeLayout />
             </RequireAuth>
           }
         >
-          <Route index element={<Dashboard />} />
+          <Route path="/dashboard" element={<Dashboard />} />
           <Route path="summary" element={<TeamManagerRoute><Summary /></TeamManagerRoute>} />
           <Route path="welcome" element={<InviteWelcomePage />} />
           <Route path="setup" element={<TeamManagerRoute><SetupPage /></TeamManagerRoute>} />
           <Route path="geos" element={<TeamManagerRoute><AdminGeos /></TeamManagerRoute>} />
           <Route path="shifts" element={<TeamManagerRoute><AdminShifts /></TeamManagerRoute>} />
-          <Route path="team-members" element={<TeamManagerRoute><AdminTeamMembers /></TeamManagerRoute>} />
+          <Route path="team-members" element={<TeamViewerRoute><AdminTeamMembers /></TeamViewerRoute>} />
           <Route path="configuration-items" element={<TeamManagerRoute><AdminConfigurationItems /></TeamManagerRoute>} />
-          <Route path="geo-shift-mappings" element={<TeamManagerRoute><AdminGeoShiftMappings /></TeamManagerRoute>} />
-          <Route path="ci-user-mappings" element={<TeamManagerRoute><AdminCiUserMappings /></TeamManagerRoute>} />
-          <Route path="schedules" element={<TeamManagerRoute><AdminSchedules /></TeamManagerRoute>} />
-          <Route path="leaves" element={<TeamManagerRoute><AdminLeaves /></TeamManagerRoute>} />
-          <Route path="breaks" element={<TeamManagerRoute><AdminBreaks /></TeamManagerRoute>} />
+          <Route path="geo-shift-mappings" element={<TeamViewerRoute><AdminGeoShiftMappings /></TeamViewerRoute>} />
+          <Route path="ci-user-mappings" element={<TeamViewerRoute><AdminCiUserMappings /></TeamViewerRoute>} />
+          <Route path="schedules" element={<TeamViewerRoute><AdminSchedules /></TeamViewerRoute>} />
+          <Route path="leaves" element={<TeamViewerRoute><AdminLeaves /></TeamViewerRoute>} />
+          <Route path="breaks" element={<TeamViewerRoute><AdminBreaks /></TeamViewerRoute>} />
           <Route path="user-access" element={<OrgAdminRoute><AdminUserAccess /></OrgAdminRoute>} />
           <Route path="teams" element={<OrgAdminRoute><AdminTeams /></OrgAdminRoute>} />
-          <Route path="logs" element={<TeamManagerRoute><Logs /></TeamManagerRoute>} />
-          <Route path="assignment-diagnostics" element={<TeamManagerRoute><AssignmentDiagnostics /></TeamManagerRoute>} />
+          <Route path="logs" element={<TeamViewerRoute><Logs /></TeamViewerRoute>} />
+          <Route path="assignment-diagnostics" element={<TeamViewerRoute><AssignmentDiagnostics /></TeamViewerRoute>} />
           {/* …other nested routes… */}
         </Route>
       </Routes>

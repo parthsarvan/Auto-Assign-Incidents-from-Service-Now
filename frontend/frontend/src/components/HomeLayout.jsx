@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { Outlet, useLocation, useNavigate, Link } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import { getCurrentUser } from '../services/auth';
-import { canManageCurrentTeam, isOrgAdmin } from '../services/permissions';
+import { canManageCurrentTeam, INCOMPLETE_SETUP_ALLOWED_PATHS, isOrgAdmin } from '../services/permissions';
 import { fetchSetupStatus } from '../services/setup';
 import { fetchWorkspaceTeams, switchWorkspaceTeam } from '../services/workspace';
 import './HomeLayout.css';
@@ -29,7 +29,10 @@ export default function HomeLayout() {
       try {
         const status = await fetchSetupStatus();
         setSetupStatus(status);
-        if (status.brandNew && location.pathname !== '/setup') {
+        const shouldAllowIncompleteSetupPath =
+          INCOMPLETE_SETUP_ALLOWED_PATHS.has(location.pathname)
+          || (!canManageCurrentTeam(user) && location.pathname === '/dashboard');
+        if ((status.brandNew || !status.ready) && !shouldAllowIncompleteSetupPath) {
           navigate('/setup', { replace: true });
         }
       } catch (err) {
@@ -85,7 +88,7 @@ export default function HomeLayout() {
       setUser(updatedUser);
       const refreshedTeams = await fetchWorkspaceTeams();
       setTeams(refreshedTeams || []);
-      let targetPath = '/';
+      let targetPath = '/dashboard';
       if (canManageCurrentTeam(updatedUser)) {
         const status = await fetchSetupStatus();
         setSetupStatus(status);
@@ -106,7 +109,12 @@ export default function HomeLayout() {
   return (
     <div className="home-layout d-flex">
       {/* ─── Left: Sidebar (fixed width 60px or 220px) ─── */}
-      <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} currentUser={user} />
+      <Sidebar
+        isOpen={isSidebarOpen}
+        toggleSidebar={toggleSidebar}
+        currentUser={user}
+        setupStatus={setupStatus}
+      />
 
       {/* ─── Right: Main Content (shifts over by sidebar’s width) ─── */}
       <div

@@ -21,18 +21,21 @@ public class ServiceNowIncidentPoller {
     private final ServiceNowLogService logService;
     private final TeamRepository teamRepository;
     private final CurrentWorkspaceService currentWorkspaceService;
+    private final OrganizationServiceNowConfigService organizationServiceNowConfigService;
 
     public ServiceNowIncidentPoller(
             ServiceNowIncidentClient incidentClient,
             ServiceNowIncidentAssigner incidentAssigner,
             ServiceNowLogService logService,
             TeamRepository teamRepository,
-            CurrentWorkspaceService currentWorkspaceService) {
+            CurrentWorkspaceService currentWorkspaceService,
+            OrganizationServiceNowConfigService organizationServiceNowConfigService) {
         this.incidentClient = incidentClient;
         this.incidentAssigner = incidentAssigner;
         this.logService = logService;
         this.teamRepository = teamRepository;
         this.currentWorkspaceService = currentWorkspaceService;
+        this.organizationServiceNowConfigService = organizationServiceNowConfigService;
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -47,6 +50,10 @@ public class ServiceNowIncidentPoller {
     public void poll() {
         for (Team team : teamRepository.findAll()) {
             currentWorkspaceService.runInTeam(team, () -> {
+                if (!organizationServiceNowConfigService.isConfiguredForTeam(team)) {
+                    logger.info("Skipping ServiceNow polling for team {} because the organization is not connected yet.", team.getName());
+                    return;
+                }
                 try {
                     List<ServiceNowIncident> incidents = incidentClient.fetchUnassignedIncidents();
                     List<ServiceNowAssignmentResult> results = incidentAssigner.assignIncidents(incidents);

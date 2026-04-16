@@ -41,7 +41,6 @@ public class BreakAdminController {
 
     @PostMapping
     public ResponseEntity<?> create(@RequestBody BreakEntryRequest request) {
-        workspaceAccessService.requireCurrentTeamManager();
         Team team = currentWorkspaceService.getCurrentTeam();
         if (request == null) {
             return ResponseEntity.badRequest().body("Break request is required.");
@@ -58,6 +57,9 @@ public class BreakAdminController {
         TeamMember tm = teamMemberRepository.findByIdAndTeam(request.getTeamMemberId(), team).orElse(null);
         if (tm == null) {
             return ResponseEntity.badRequest().body("Invalid team member id");
+        }
+        if (!canManageOrCreateForSelf(tm, team)) {
+            return ResponseEntity.status(403).body("You can only add break entries for yourself.");
         }
 
         BreakEntry entry = new BreakEntry(
@@ -123,5 +125,18 @@ public class BreakAdminController {
         }
         String normalized = value.trim().replaceAll("\\s{2,}", " ");
         return normalized.isBlank() ? null : normalized;
+    }
+
+    private boolean canManageOrCreateForSelf(TeamMember targetMember, Team team) {
+        if (workspaceAccessService.hasCurrentTeamManagerAccess()) {
+            return true;
+        }
+        var currentUser = currentWorkspaceService.getCurrentUser();
+        if (currentUser.getWorkEmail() == null || currentUser.getWorkEmail().isBlank()) {
+            return false;
+        }
+        return teamMemberRepository.findByTeamAndNormalizedEmail(team, currentUser.getWorkEmail())
+                .map(member -> member.getTm_id().equals(targetMember.getTm_id()))
+                .orElse(false);
     }
 }

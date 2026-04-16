@@ -72,7 +72,28 @@ export default function AdminTeams() {
 
   const handleCopyInviteCode = async (team) => {
     try {
-      await navigator.clipboard.writeText(team.joinCode || '');
+      const code = team.joinCode || '';
+      if (!code) {
+        throw new Error('Missing invite code');
+      }
+
+      if (navigator.clipboard?.writeText && window.isSecureContext) {
+        await navigator.clipboard.writeText(code);
+      } else {
+        const helperInput = document.createElement('textarea');
+        helperInput.value = code;
+        helperInput.setAttribute('readonly', '');
+        helperInput.style.position = 'fixed';
+        helperInput.style.opacity = '0';
+        document.body.appendChild(helperInput);
+        helperInput.focus();
+        helperInput.select();
+        const copied = document.execCommand('copy');
+        document.body.removeChild(helperInput);
+        if (!copied) {
+          throw new Error('Copy command failed');
+        }
+      }
       setInviteMessage(`Copied invite code for ${team.teamName}.`);
       window.setTimeout(() => setInviteMessage(''), 2500);
     } catch (err) {

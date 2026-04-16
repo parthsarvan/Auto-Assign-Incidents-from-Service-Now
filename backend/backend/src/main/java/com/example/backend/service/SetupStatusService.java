@@ -2,6 +2,7 @@ package com.example.backend.service;
 
 import com.example.backend.dto.SetupStatusResponse;
 import com.example.backend.dto.SetupStepStatus;
+import com.example.backend.entity.Organization;
 import com.example.backend.entity.Team;
 import com.example.backend.repository.CiUserMappingRepository;
 import com.example.backend.repository.ConfigurationItemRepository;
@@ -23,6 +24,7 @@ public class SetupStatusService {
     private final CiUserMappingRepository ciUserMappingRepository;
     private final TeamMemberScheduleRepository teamMemberScheduleRepository;
     private final CurrentWorkspaceService currentWorkspaceService;
+    private final OrganizationServiceNowConfigService organizationServiceNowConfigService;
 
     public SetupStatusService(
             GeoRepository geoRepository,
@@ -32,7 +34,8 @@ public class SetupStatusService {
             GeoShiftMappingRepository geoShiftMappingRepository,
             CiUserMappingRepository ciUserMappingRepository,
             TeamMemberScheduleRepository teamMemberScheduleRepository,
-            CurrentWorkspaceService currentWorkspaceService) {
+            CurrentWorkspaceService currentWorkspaceService,
+            OrganizationServiceNowConfigService organizationServiceNowConfigService) {
         this.geoRepository = geoRepository;
         this.shiftRepository = shiftRepository;
         this.configurationItemRepository = configurationItemRepository;
@@ -41,11 +44,19 @@ public class SetupStatusService {
         this.ciUserMappingRepository = ciUserMappingRepository;
         this.teamMemberScheduleRepository = teamMemberScheduleRepository;
         this.currentWorkspaceService = currentWorkspaceService;
+        this.organizationServiceNowConfigService = organizationServiceNowConfigService;
     }
 
     public SetupStatusResponse getStatus() {
         Team team = currentWorkspaceService.getCurrentTeam();
+        Organization organization = team.getOrganization();
         List<SetupStepStatus> steps = List.of(
+                requiredStep(
+                        "servicenow_connection",
+                        "Connect ServiceNow",
+                        organizationServiceNowConfigService.isConfigured(organization) ? 1 : 0,
+                        "/setup",
+                        "Connect your organization's ServiceNow instance before team setup begins."),
                 requiredStep("geos", "Geos", geoRepository.countByTeam(team), "/geos",
                         "Define the geographic regions your team supports."),
                 requiredStep("shifts", "Shifts", shiftRepository.countByTeam(team), "/shifts",

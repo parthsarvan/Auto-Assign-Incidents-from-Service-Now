@@ -61,6 +61,11 @@ public class WorkspaceAccessService {
         }
     }
 
+    public boolean hasCurrentTeamManagerAccess() {
+        User user = currentWorkspaceService.getCurrentUser();
+        return canManageCurrentTeam(user);
+    }
+
     public void requireCurrentTeamAdmin() {
         User user = currentWorkspaceService.getCurrentUser();
         if (!isCurrentTeamAdmin(user)) {

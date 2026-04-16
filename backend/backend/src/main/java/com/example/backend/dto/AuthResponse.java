@@ -4,13 +4,15 @@ public class AuthResponse {
     private String token;
     private Long u_id;
     private String username;
+    private String workEmail;
     private String role;
     private WorkspaceSummary workspace;
 
-    public AuthResponse(String token, Long u_id, String username, String role, WorkspaceSummary workspace) {
+    public AuthResponse(String token, Long u_id, String username, String workEmail, String role, WorkspaceSummary workspace) {
         this.token = token;
         this.u_id = u_id;
         this.username = username;
+        this.workEmail = workEmail;
         this.role = role;
         this.workspace = workspace;
     }
@@ -26,6 +28,10 @@ public class AuthResponse {
 
     public String getUsername() {
         return username;
+    }
+
+    public String getWorkEmail() {
+        return workEmail;
     }
 
     public String getRole() {

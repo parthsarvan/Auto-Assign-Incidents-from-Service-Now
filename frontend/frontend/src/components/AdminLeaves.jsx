@@ -20,7 +20,13 @@ export default function AdminLeaves() {
   const [reason, setReason] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState('');
-  const canManageTeam = canManageCurrentTeam(getCurrentUser());
+  const currentUser = getCurrentUser();
+  const canManageTeam = canManageCurrentTeam(currentUser);
+  const selfMember = members.find((member) =>
+    currentUser?.workEmail
+    && member.email?.trim().toLowerCase() === currentUser.workEmail.trim().toLowerCase()
+  );
+  const canSelfManageLeave = !canManageTeam && Boolean(selfMember);
 
   const formatUtcToLocal = (isoStr) =>
     DateTime.fromISO(isoStr, { zone: 'utc' })
@@ -77,12 +83,17 @@ export default function AdminLeaves() {
     e.preventDefault();
     setError('');
     try {
+      const selectedTeamMemberId = canManageTeam ? teamMemberId : selfMember?.tm_id;
+      if (!selectedTeamMemberId) {
+        setError('Your account is not linked to a team member record yet.');
+        return;
+      }
       if (editingId) {
         if (!window.confirm('Update this leave entry?')) {
           return;
         }
         await updateLeave(editingId, {
-          teamMemberId,
+          teamMemberId: selectedTeamMemberId,
           startTs: toUtcISOString(startTs),
           endTs: toUtcISOString(endTs),
           reason,
@@ -99,7 +110,7 @@ export default function AdminLeaves() {
         return;
       }
       await createLeave({
-        teamMemberId,
+        teamMemberId: selectedTeamMemberId,
         startTs: toUtcISOString(startTs),
         endTs: toUtcISOString(endTs),
         reason,
@@ -147,24 +158,33 @@ export default function AdminLeaves() {
       </div>
       {error && <div className="alert alert-danger">{error}</div>}
 
-      {canManageTeam ? (
+      {canManageTeam || canSelfManageLeave ? (
         <div className="card p-3 mb-4 admin-crud-card">
           <form className="row g-3 admin-crud-form-grid" onSubmit={handleSubmit}>
           <div className="col-md-3">
             <label className="form-label">Team Member</label>
-            <select
-              className="form-select"
-              value={teamMemberId}
-              onChange={(e) => setTeamMemberId(e.target.value)}
-              required
-            >
-              <option value="">Select Member</option>
-              {members.map((member) => (
-                <option key={member.tm_id} value={member.tm_id}>
-                  {member.f_name} {member.l_name}
-                </option>
-              ))}
-            </select>
+            {canManageTeam ? (
+              <select
+                className="form-select"
+                value={teamMemberId}
+                onChange={(e) => setTeamMemberId(e.target.value)}
+                required
+              >
+                <option value="">Select Member</option>
+                {members.map((member) => (
+                  <option key={member.tm_id} value={member.tm_id}>
+                    {member.f_name} {member.l_name}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                type="text"
+                className="form-control"
+                value={selfMember ? `${selfMember.f_name} ${selfMember.l_name}` : ''}
+                readOnly
+              />
+            )}
           </div>
           <div className="col-md-3">
             <label className="form-label">Start (Local)</label>
@@ -208,7 +228,7 @@ export default function AdminLeaves() {
           </form>
         </div>
       ) : (
-        <div className="alert alert-info">Read-only access. Contact an admin to make changes.</div>
+        <div className="alert alert-info">Read-only access. Ask your manager to link your work email to a team member record if you need to add leave for yourself.</div>
       )}
 
       <div className="card admin-crud-card">

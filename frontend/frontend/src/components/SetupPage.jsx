@@ -27,6 +27,7 @@ import {
   updateTeamMember,
 } from '../services/admin';
 import { fetchSetupStatus } from '../services/setup';
+import { fetchServiceNowConfig, updateServiceNowConfig } from '../services/servicenow';
 import './SetupPage.css';
 
 const INLINE_STEP_KEYS = new Set([
@@ -42,6 +43,7 @@ export default function SetupPage() {
   const navigate = useNavigate();
   const outletContext = useOutletContext() || {};
   const [status, setStatus] = useState(null);
+  const [serviceNowConfig, setServiceNowConfig] = useState(null);
   const [geos, setGeos] = useState([]);
   const [shifts, setShifts] = useState([]);
   const [configurationItems, setConfigurationItems] = useState([]);
@@ -92,6 +94,12 @@ export default function SetupPage() {
   const [ciUserError, setCiUserError] = useState('');
   const [ciUserSaving, setCiUserSaving] = useState(false);
 
+  const [serviceNowInstanceUrl, setServiceNowInstanceUrl] = useState('');
+  const [serviceNowUsername, setServiceNowUsername] = useState('');
+  const [serviceNowPassword, setServiceNowPassword] = useState('');
+  const [serviceNowError, setServiceNowError] = useState('');
+  const [serviceNowSaving, setServiceNowSaving] = useState(false);
+
   const canAccessStep = useCallback((steps, index) => {
     if (index <= 0) {
       return true;
@@ -114,8 +122,9 @@ export default function SetupPage() {
     setLoading(true);
     setError('');
     try {
-      const [setupData, geoData, shiftData, ciData, teamMemberData, geoShiftData, ciUserData] = await Promise.all([
+      const [setupData, configData, geoData, shiftData, ciData, teamMemberData, geoShiftData, ciUserData] = await Promise.all([
         fetchSetupStatus(),
+        fetchServiceNowConfig(),
         fetchGeos(),
         fetchShifts(),
         fetchConfigurationItems(),
@@ -124,6 +133,10 @@ export default function SetupPage() {
         fetchCiUserMappings(),
       ]);
       setStatus(setupData);
+      setServiceNowConfig(configData);
+      setServiceNowInstanceUrl(configData?.instanceUrl || '');
+      setServiceNowUsername(configData?.username || '');
+      setServiceNowPassword('');
       setGeos(geoData);
       setShifts(shiftData);
       setConfigurationItems(ciData);
@@ -143,6 +156,29 @@ export default function SetupPage() {
   useEffect(() => {
     loadSetupData();
   }, [loadSetupData]);
+
+  async function handleServiceNowSubmit(event) {
+    event.preventDefault();
+    setServiceNowError('');
+    setServiceNowSaving(true);
+    try {
+      await updateServiceNowConfig({
+        instanceUrl: serviceNowInstanceUrl,
+        username: serviceNowUsername,
+        password: serviceNowPassword,
+      });
+      setServiceNowPassword('');
+      await loadSetupData('geos');
+    } catch (err) {
+      setServiceNowError(
+        typeof err?.response?.data === 'string'
+          ? err.response.data
+          : 'Failed to connect ServiceNow.'
+      );
+    } finally {
+      setServiceNowSaving(false);
+    }
+  }
 
   function resetGeoForm() {
     setGeoName('');
@@ -633,6 +669,21 @@ export default function SetupPage() {
                   </div>
                 )}
 
+                {currentStepAccessible && currentStep.key === 'servicenow_connection' && (
+                  <InlineServiceNowConnectionStep
+                    serviceNowConfig={serviceNowConfig}
+                    serviceNowInstanceUrl={serviceNowInstanceUrl}
+                    serviceNowUsername={serviceNowUsername}
+                    serviceNowPassword={serviceNowPassword}
+                    serviceNowError={serviceNowError}
+                    serviceNowSaving={serviceNowSaving}
+                    setServiceNowInstanceUrl={setServiceNowInstanceUrl}
+                    setServiceNowUsername={setServiceNowUsername}
+                    setServiceNowPassword={setServiceNowPassword}
+                    onSubmit={handleServiceNowSubmit}
+                  />
+                )}
+
                 {currentStepAccessible && currentStep.key === 'geos' && (
                   <InlineGeoStep
                     geos={geos}
@@ -782,7 +833,7 @@ export default function SetupPage() {
                   />
                 )}
 
-                {currentStepAccessible && !INLINE_STEP_KEYS.has(currentStep.key) && (
+                {currentStepAccessible && currentStep.key !== 'servicenow_connection' && !INLINE_STEP_KEYS.has(currentStep.key) && (
                   <GuidedExternalStep step={currentStep} onRefresh={() => loadSetupData(currentStep.key)} />
                 )}
 
@@ -1578,5 +1629,74 @@ function GuidedExternalStep({ step, onRefresh }) {
         </button>
       </div>
     </div>
+  );
+}
+
+function InlineServiceNowConnectionStep({
+  serviceNowConfig,
+  serviceNowInstanceUrl,
+  serviceNowUsername,
+  serviceNowPassword,
+  serviceNowError,
+  serviceNowSaving,
+  setServiceNowInstanceUrl,
+  setServiceNowUsername,
+  setServiceNowPassword,
+  onSubmit,
+}) {
+  return (
+    <>
+      <div className="alert alert-primary">
+        Connect the organization’s ServiceNow instance first. Once this connection is verified, the remaining team setup steps unlock automatically.
+      </div>
+      {serviceNowConfig?.configured && (
+        <div className="alert alert-success">
+          ServiceNow is connected for this organization.
+          {serviceNowConfig.connectedAt && (
+            <> Last verified at {new Date(serviceNowConfig.connectedAt).toLocaleString()}.</>
+          )}
+        </div>
+      )}
+      {serviceNowError && <div className="alert alert-danger">{serviceNowError}</div>}
+      <form className="row g-3" onSubmit={onSubmit}>
+        <div className="col-md-12">
+          <label className="form-label">ServiceNow Instance URL</label>
+          <input
+            type="url"
+            className="form-control"
+            value={serviceNowInstanceUrl}
+            onChange={(event) => setServiceNowInstanceUrl(event.target.value)}
+            placeholder="https://your-instance.service-now.com"
+            required
+          />
+        </div>
+        <div className="col-md-6">
+          <label className="form-label">ServiceNow Username</label>
+          <input
+            type="text"
+            className="form-control"
+            value={serviceNowUsername}
+            onChange={(event) => setServiceNowUsername(event.target.value)}
+            required
+          />
+        </div>
+        <div className="col-md-6">
+          <label className="form-label">ServiceNow Password</label>
+          <input
+            type="password"
+            className="form-control"
+            value={serviceNowPassword}
+            onChange={(event) => setServiceNowPassword(event.target.value)}
+            placeholder={serviceNowConfig?.configured ? 'Re-enter to update credentials' : ''}
+            required
+          />
+        </div>
+        <div className="col-12 d-flex gap-2">
+          <button type="submit" className="btn btn-primary" disabled={serviceNowSaving}>
+            {serviceNowSaving ? 'Connecting...' : serviceNowConfig?.configured ? 'Update Connection' : 'Connect ServiceNow'}
+          </button>
+        </div>
+      </form>
+    </>
   );
 }

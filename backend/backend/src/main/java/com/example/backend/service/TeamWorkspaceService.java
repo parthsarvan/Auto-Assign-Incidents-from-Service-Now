@@ -132,6 +132,7 @@ public class TeamWorkspaceService {
             teamMembershipRepository.save(membership);
         }
 
+        user.setCurrentOrganization(organization);
         user.setCurrentTeam(savedTeam);
         userRepository.save(user);
         return new WorkspaceSummary(
@@ -247,11 +248,12 @@ public class TeamWorkspaceService {
             membership.setCreated_at(Instant.now());
             teamMembershipRepository.save(membership);
         }
+        user.setCurrentOrganization(targetTeam.getOrganization());
         user.setCurrentTeam(targetTeam);
         userRepository.save(user);
         return new WorkspaceSummary(
-                user.getCurrentOrganization().getOrg_id(),
-                user.getCurrentOrganization().getName(),
+                targetTeam.getOrganization().getOrg_id(),
+                targetTeam.getOrganization().getName(),
                 targetTeam.getTeam_id(),
                 targetTeam.getName(),
                 workspaceAccessService.getCurrentTeamRole(user));

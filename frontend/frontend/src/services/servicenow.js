@@ -4,6 +4,16 @@ import { buildApiUrl, createApiClient } from './api';
 
 const api = createApiClient('/servicenow');
 
+export async function fetchServiceNowConfig() {
+  const response = await api.get('/config', { headers: authHeader() });
+  return response.data;
+}
+
+export async function updateServiceNowConfig(payload) {
+  const response = await api.put('/config', payload, { headers: authHeader() });
+  return response.data;
+}
+
 export async function fetchServiceNowHealth() {
   const response = await api.get('/health', { headers: authHeader() });
   return response.data;

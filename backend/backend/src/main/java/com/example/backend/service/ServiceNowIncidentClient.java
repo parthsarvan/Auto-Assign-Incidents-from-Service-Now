@@ -12,7 +12,6 @@ import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -32,30 +31,32 @@ public class ServiceNowIncidentClient {
 
     private final RestTemplate restTemplate;
     private final ServiceNowAuthHeaderProvider authHeaderProvider;
+    private final OrganizationServiceNowConfigService organizationServiceNowConfigService;
     private final ConfigurationItemRepository configurationItemRepository;
     private final ObjectMapper objectMapper;
-    private final String instanceUrl;
     private final CurrentWorkspaceService currentWorkspaceService;
 
     public ServiceNowIncidentClient(
             RestTemplate restTemplate,
             ServiceNowAuthHeaderProvider authHeaderProvider,
+            OrganizationServiceNowConfigService organizationServiceNowConfigService,
             ConfigurationItemRepository configurationItemRepository,
             ObjectMapper objectMapper,
-            CurrentWorkspaceService currentWorkspaceService,
-            @Value("${servicenow.instance-url}") String instanceUrl) {
+            CurrentWorkspaceService currentWorkspaceService) {
         this.restTemplate = restTemplate;
         this.authHeaderProvider = authHeaderProvider;
+        this.organizationServiceNowConfigService = organizationServiceNowConfigService;
         this.configurationItemRepository = configurationItemRepository;
         this.objectMapper = objectMapper;
         this.currentWorkspaceService = currentWorkspaceService;
-        this.instanceUrl = instanceUrl;
     }
 
     public List<ServiceNowIncident> fetchUnassignedIncidents() {
         String query = buildQuery();
         logger.info("ServiceNow incident query: {}", query);
-        String url = UriComponentsBuilder.fromHttpUrl(instanceUrl)
+        ServiceNowConnectionSettings settings = organizationServiceNowConfigService
+                .requireSettingsForTeam(currentWorkspaceService.getCurrentTeam());
+        String url = UriComponentsBuilder.fromHttpUrl(settings.instanceUrl())
                 .path("/api/now/table/incident")
                 .queryParam("sysparm_query", query)
                 .queryParam("sysparm_fields", INCIDENT_FIELDS)
@@ -63,7 +64,7 @@ public class ServiceNowIncidentClient {
                 .queryParam("sysparm_limit", "100")
                 .toUriString();
 
-        HttpHeaders headers = authHeaderProvider.buildHeaders();
+        HttpHeaders headers = authHeaderProvider.buildHeaders(settings.username(), settings.password());
 
         HttpEntity<Void> request = new HttpEntity<>(headers);
         try {
@@ -103,13 +104,15 @@ public class ServiceNowIncidentClient {
             return false;
         }
 
-        String url = UriComponentsBuilder.fromHttpUrl(instanceUrl)
+        ServiceNowConnectionSettings settings = organizationServiceNowConfigService
+                .requireSettingsForTeam(currentWorkspaceService.getCurrentTeam());
+        String url = UriComponentsBuilder.fromHttpUrl(settings.instanceUrl())
                 .pathSegment("api", "now", "table", "incident", incidentSysId)
                 .queryParam("sysparm_input_display_value", "false")
                 .queryParam("sysparm_exclude_reference_link", "true")
                 .toUriString();
 
-        HttpHeaders headers = authHeaderProvider.buildHeaders();
+        HttpHeaders headers = authHeaderProvider.buildHeaders(settings.username(), settings.password());
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<Map<String, String>> request =
                 new HttpEntity<>(Map.of("assigned_to", assigneeSysId), headers);

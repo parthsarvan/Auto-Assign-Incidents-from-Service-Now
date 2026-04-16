@@ -52,7 +52,10 @@ public class SecurityConfig {
 
           // 4) Public endpoints: allow POST to /api/auth/**
           .authorizeHttpRequests(auth -> auth
-              .requestMatchers(HttpMethod.POST, "/api/auth/**").permitAll()
+              .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+              .requestMatchers(HttpMethod.POST, "/api/auth/organization-discovery").permitAll()
+              .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
+              .requestMatchers(HttpMethod.POST, "/api/auth/signup").permitAll()
               .anyRequest().authenticated()
           )
 

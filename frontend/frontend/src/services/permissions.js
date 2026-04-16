@@ -2,18 +2,30 @@ export function isOrgAdmin(user) {
   return user?.role === 'Admin';
 }
 
+export const INCOMPLETE_SETUP_ALLOWED_PATHS = new Set([
+  '/setup',
+  '/teams',
+  '/user-access',
+]);
+
 const TEAM_MANAGER_PATHS = new Set([
   '/summary',
   '/setup',
   '/geos',
   '/shifts',
+]);
+
+const TEAM_VIEWER_PATHS = new Set([
   '/team-members',
-  '/configuration-items',
   '/geo-shift-mappings',
+  '/ci-user-mappings',
+  '/team-members',
   '/ci-user-mappings',
   '/schedules',
   '/leaves',
   '/breaks',
+  '/logs',
+  '/assignment-diagnostics',
 ]);
 
 const ORG_ADMIN_PATHS = new Set([
@@ -40,6 +52,10 @@ export function isCurrentTeamAdmin(user) {
   return getCurrentTeamRole(user) === 'TEAM_ADMIN';
 }
 
+export function canViewCurrentTeam(user) {
+  return Boolean(user);
+}
+
 export function canAccessPath(user, pathname) {
   if (!user || !pathname) {
     return false;
@@ -50,11 +66,14 @@ export function canAccessPath(user, pathname) {
   if (TEAM_MANAGER_PATHS.has(pathname)) {
     return canManageCurrentTeam(user);
   }
+  if (TEAM_VIEWER_PATHS.has(pathname)) {
+    return canViewCurrentTeam(user);
+  }
   return true;
 }
 
 export function getDefaultRouteForUser(user) {
-  return canManageCurrentTeam(user) ? '/summary' : '/';
+  return canManageCurrentTeam(user) ? '/summary' : '/dashboard';
 }
 
 export function resolveLandingRoute(user, requestedPath) {
