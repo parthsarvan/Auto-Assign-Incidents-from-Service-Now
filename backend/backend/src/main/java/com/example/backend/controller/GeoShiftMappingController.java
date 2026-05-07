@@ -66,6 +66,7 @@ public class GeoShiftMappingController {
 
         GeoShiftMapping mapping = new GeoShiftMapping(geo, shift);
         mapping.setTeam(team);
+        mapping.syncTimesFromShift();
         return ResponseEntity.ok(mappingRepository.save(mapping));
     }
 
@@ -98,6 +99,7 @@ public class GeoShiftMappingController {
                 existing.setGeo(geo);
                 existing.setShift(shift);
                 existing.setTeam(team);
+                existing.syncTimesFromShift();
                 return ResponseEntity.ok(mappingRepository.save(existing));
             })
             .orElseGet(() -> ResponseEntity.notFound().build());

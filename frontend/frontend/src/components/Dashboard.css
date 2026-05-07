@@ -46,4 +46,13 @@
   .dashboard-hero {
     padding: 1.2rem 1.2rem;
   }
+
+  .dashboard-toolbar {
+    width: 100%;
+  }
+
+  .dashboard-toolbar .btn,
+  .dashboard-toolbar .form-select {
+    flex: 1 1 100%;
+  }
 }

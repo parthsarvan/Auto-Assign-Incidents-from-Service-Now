@@ -111,6 +111,7 @@
 
 .setup-inline-table {
   border-color: #e5edf5;
+  min-width: 640px;
 }
 
 .setup-inline-table thead th {
@@ -127,5 +128,45 @@
 @media (max-width: 768px) {
   .setup-hero {
     padding: 18px;
+  }
+
+  .setup-page {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  .setup-step-nav {
+    margin-bottom: 1rem;
+  }
+
+  .setup-step-nav .list-group-item {
+    padding: 0.85rem 0.9rem;
+    border-radius: 14px;
+  }
+
+  .setup-section-card,
+  .setup-review-card {
+    border-radius: 18px;
+  }
+
+  .setup-page .btn-group,
+  .setup-page .d-flex.gap-2,
+  .setup-page .d-flex.gap-3 {
+    flex-wrap: wrap;
+  }
+
+  .setup-page .d-flex.gap-2 > .btn,
+  .setup-page .d-flex.gap-3 > .btn {
+    flex: 1 1 100%;
+  }
+}
+
+@media (max-width: 576px) {
+  .setup-hero__stats {
+    grid-template-columns: 1fr;
+  }
+
+  .setup-stat__value {
+    font-size: 1.25rem;
   }
 }

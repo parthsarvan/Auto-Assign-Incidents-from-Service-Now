@@ -4,30 +4,30 @@ import {
   createCiUserMapping,
   createGeo,
   createConfigurationItem,
-  createGeoShiftMapping,
   createShift,
   createTeamMember,
   deleteCiUserMapping,
   deleteConfigurationItem,
   deleteGeo,
-  deleteGeoShiftMapping,
   deleteShift,
   deleteTeamMember,
   fetchCiUserMappings,
   fetchConfigurationItems,
   fetchGeos,
   fetchGeoShiftMappings,
+  fetchJoinedTeamUsers,
   fetchShifts,
   fetchTeamMembers,
   updateCiUserMapping,
   updateGeo,
   updateConfigurationItem,
-  updateGeoShiftMapping,
   updateShift,
   updateTeamMember,
 } from '../services/admin';
 import { fetchSetupStatus } from '../services/setup';
+import { getTimeZoneOptions } from '../services/timezones';
 import { fetchServiceNowConfig, updateServiceNowConfig } from '../services/servicenow';
+import { updateCurrentTeamTimezone } from '../services/workspace';
 import './SetupPage.css';
 
 const INLINE_STEP_KEYS = new Set([
@@ -35,19 +35,20 @@ const INLINE_STEP_KEYS = new Set([
   'shifts',
   'configuration_items',
   'team_members',
-  'geo_shift_mappings',
   'ci_user_mappings',
 ]);
 
 export default function SetupPage() {
   const navigate = useNavigate();
   const outletContext = useOutletContext() || {};
+  const currentTeamTimezone = outletContext.currentUser?.workspace?.teamTimezone || '';
   const [status, setStatus] = useState(null);
   const [serviceNowConfig, setServiceNowConfig] = useState(null);
   const [geos, setGeos] = useState([]);
   const [shifts, setShifts] = useState([]);
   const [configurationItems, setConfigurationItems] = useState([]);
   const [teamMembers, setTeamMembers] = useState([]);
+  const [joinedUsers, setJoinedUsers] = useState([]);
   const [geoShiftMappings, setGeoShiftMappings] = useState([]);
   const [ciUserMappings, setCiUserMappings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -60,9 +61,14 @@ export default function SetupPage() {
   const [geoSaving, setGeoSaving] = useState(false);
 
   const [shiftName, setShiftName] = useState('');
+  const [shiftStartTime, setShiftStartTime] = useState('');
+  const [shiftEndTime, setShiftEndTime] = useState('');
+  const [shiftGeoIds, setShiftGeoIds] = useState([]);
+  const [teamTimezone, setTeamTimezone] = useState(currentTeamTimezone);
   const [editingShiftId, setEditingShiftId] = useState(null);
   const [shiftError, setShiftError] = useState('');
   const [shiftSaving, setShiftSaving] = useState(false);
+  const [timezoneSaving, setTimezoneSaving] = useState(false);
 
   const [ciName, setCiName] = useState('');
   const [ciDescription, setCiDescription] = useState('');
@@ -77,15 +83,10 @@ export default function SetupPage() {
   const [teamPhone, setTeamPhone] = useState('');
   const [teamSysId, setTeamSysId] = useState('');
   const [teamGeoId, setTeamGeoId] = useState('');
+  const [selectedJoinedUserId, setSelectedJoinedUserId] = useState('');
   const [editingTeamMemberId, setEditingTeamMemberId] = useState(null);
   const [teamMemberError, setTeamMemberError] = useState('');
   const [teamMemberSaving, setTeamMemberSaving] = useState(false);
-
-  const [mappingGeoId, setMappingGeoId] = useState('');
-  const [mappingShiftId, setMappingShiftId] = useState('');
-  const [editingGeoShiftMappingId, setEditingGeoShiftMappingId] = useState(null);
-  const [geoShiftError, setGeoShiftError] = useState('');
-  const [geoShiftSaving, setGeoShiftSaving] = useState(false);
 
   const [mappingConfigurationItemId, setMappingConfigurationItemId] = useState('');
   const [mappingTeamMemberId, setMappingTeamMemberId] = useState('');
@@ -97,8 +98,22 @@ export default function SetupPage() {
   const [serviceNowInstanceUrl, setServiceNowInstanceUrl] = useState('');
   const [serviceNowUsername, setServiceNowUsername] = useState('');
   const [serviceNowPassword, setServiceNowPassword] = useState('');
+  const [serviceNowAssignmentGroups, setServiceNowAssignmentGroups] = useState('');
   const [serviceNowError, setServiceNowError] = useState('');
   const [serviceNowSaving, setServiceNowSaving] = useState(false);
+  const timezoneOptions = getTimeZoneOptions();
+
+  const describeRequestError = useCallback((err, fallbackMessage) => {
+    const status = err?.response?.status;
+    const responseMessage = typeof err?.response?.data === 'string' ? err.response.data : '';
+    if (status === 403) {
+      return responseMessage || 'You need TEAM_ADMIN or MANAGER access for the current team.';
+    }
+    if (responseMessage) {
+      return responseMessage;
+    }
+    return fallbackMessage;
+  }, []);
 
   const canAccessStep = useCallback((steps, index) => {
     if (index <= 0) {
@@ -122,36 +137,70 @@ export default function SetupPage() {
     setLoading(true);
     setError('');
     try {
-      const [setupData, configData, geoData, shiftData, ciData, teamMemberData, geoShiftData, ciUserData] = await Promise.all([
-        fetchSetupStatus(),
+      const setupData = await fetchSetupStatus();
+      setStatus(setupData);
+
+      const [
+        configResult,
+        geoResult,
+        shiftResult,
+        ciResult,
+        teamMemberResult,
+        joinedUsersResult,
+        geoShiftResult,
+        ciUserResult,
+      ] = await Promise.allSettled([
         fetchServiceNowConfig(),
         fetchGeos(),
         fetchShifts(),
         fetchConfigurationItems(),
         fetchTeamMembers(),
+        fetchJoinedTeamUsers(),
         fetchGeoShiftMappings(),
         fetchCiUserMappings(),
       ]);
-      setStatus(setupData);
+
+      if (configResult.status === 'rejected') {
+        throw configResult.reason;
+      }
+
+      const configData = configResult.value;
       setServiceNowConfig(configData);
       setServiceNowInstanceUrl(configData?.instanceUrl || '');
       setServiceNowUsername(configData?.username || '');
       setServiceNowPassword('');
-      setGeos(geoData);
-      setShifts(shiftData);
-      setConfigurationItems(ciData);
-      setTeamMembers(teamMemberData);
-      setGeoShiftMappings(geoShiftData);
-      setCiUserMappings(ciUserData);
+      setServiceNowAssignmentGroups((configData?.assignmentGroups || []).join('\n'));
+      setTeamTimezone(currentTeamTimezone);
+      setGeos(geoResult.status === 'fulfilled' ? geoResult.value : []);
+      setShifts(shiftResult.status === 'fulfilled' ? shiftResult.value : []);
+      setConfigurationItems(ciResult.status === 'fulfilled' ? ciResult.value : []);
+      const currentTeamMembers = teamMemberResult.status === 'fulfilled' ? teamMemberResult.value : [];
+      setTeamMembers(currentTeamMembers);
+      const eligibleUsers = (joinedUsersResult.status === 'fulfilled' ? joinedUsersResult.value : []).map((user) => ({
+        ...user,
+        displayName: [user.firstName, user.lastName].filter(Boolean).join(' ').trim() || user.username,
+        alreadyMapped: Boolean(user.workEmail) && currentTeamMembers.some((member) =>
+          (member.email || '').trim().toLowerCase() === user.workEmail.trim().toLowerCase()
+        ),
+      }));
+      setJoinedUsers(eligibleUsers);
+      if (selectedJoinedUserId) {
+        const stillAvailable = eligibleUsers.some((user) => String(user.id) === String(selectedJoinedUserId));
+        if (!stillAvailable) {
+          setSelectedJoinedUserId('');
+        }
+      }
+      setGeoShiftMappings(geoShiftResult.status === 'fulfilled' ? geoShiftResult.value : []);
+      setCiUserMappings(ciUserResult.status === 'fulfilled' ? ciUserResult.value : []);
       setCurrentStepKey((previousStepKey) =>
         resolveStepKey(setupData.steps || [], preferredStepKey || previousStepKey)
       );
     } catch (err) {
-      setError('Failed to load setup status.');
+      setError(describeRequestError(err, 'Failed to load setup data.'));
     } finally {
       setLoading(false);
     }
-  }, [resolveStepKey]);
+  }, [currentTeamTimezone, describeRequestError, resolveStepKey, selectedJoinedUserId]);
 
   useEffect(() => {
     loadSetupData();
@@ -166,15 +215,15 @@ export default function SetupPage() {
         instanceUrl: serviceNowInstanceUrl,
         username: serviceNowUsername,
         password: serviceNowPassword,
+        assignmentGroups: serviceNowAssignmentGroups
+          .split(/\n+/)
+          .map((value) => value.trim())
+          .filter(Boolean),
       });
       setServiceNowPassword('');
       await loadSetupData('geos');
     } catch (err) {
-      setServiceNowError(
-        typeof err?.response?.data === 'string'
-          ? err.response.data
-          : 'Failed to connect ServiceNow.'
-      );
+      setServiceNowError(describeRequestError(err, 'Failed to connect ServiceNow.'));
     } finally {
       setServiceNowSaving(false);
     }
@@ -188,6 +237,9 @@ export default function SetupPage() {
 
   function resetShiftForm() {
     setShiftName('');
+    setShiftStartTime('');
+    setShiftEndTime('');
+    setShiftGeoIds([]);
     setEditingShiftId(null);
     setShiftError('');
   }
@@ -201,6 +253,7 @@ export default function SetupPage() {
   }
 
   function resetTeamMemberForm() {
+    setSelectedJoinedUserId('');
     setTeamFirstName('');
     setTeamLastName('');
     setTeamEmail('');
@@ -209,13 +262,6 @@ export default function SetupPage() {
     setTeamGeoId('');
     setEditingTeamMemberId(null);
     setTeamMemberError('');
-  }
-
-  function resetGeoShiftForm() {
-    setMappingGeoId('');
-    setMappingShiftId('');
-    setEditingGeoShiftMappingId(null);
-    setGeoShiftError('');
   }
 
   function resetCiUserForm() {
@@ -244,7 +290,7 @@ export default function SetupPage() {
       resetGeoForm();
       await loadSetupData('geos');
     } catch (err) {
-      setGeoError('Failed to save geo.');
+      setGeoError(describeRequestError(err, 'Failed to save geo.'));
     } finally {
       setGeoSaving(false);
     }
@@ -262,29 +308,51 @@ export default function SetupPage() {
       }
       await loadSetupData('geos');
     } catch (err) {
-      setGeoError('Failed to delete geo.');
+      setGeoError(describeRequestError(err, 'Failed to delete geo.'));
     }
   }
 
   async function handleShiftSubmit(event) {
     event.preventDefault();
     setShiftError('');
+    if (!teamTimezone) {
+      setShiftError('Select and save the team timezone before adding shifts.');
+      return;
+    }
     if (!shiftName.trim()) {
       setShiftError('Shift name is required.');
+      return;
+    }
+    if (!shiftStartTime || !shiftEndTime) {
+      setShiftError('Shift start time and end time are required.');
+      return;
+    }
+    if (shiftGeoIds.length === 0) {
+      setShiftError('Select at least one geo for this shift.');
       return;
     }
 
     setShiftSaving(true);
     try {
       if (editingShiftId) {
-        await updateShift(editingShiftId, { name: shiftName.trim() });
+        await updateShift(editingShiftId, {
+          name: shiftName.trim(),
+          startTime: shiftStartTime,
+          endTime: shiftEndTime,
+          geoIds: shiftGeoIds.map(Number),
+        });
       } else {
-        await createShift({ name: shiftName.trim() });
+        await createShift({
+          name: shiftName.trim(),
+          startTime: shiftStartTime,
+          endTime: shiftEndTime,
+          geoIds: shiftGeoIds.map(Number),
+        });
       }
       resetShiftForm();
       await loadSetupData('shifts');
     } catch (err) {
-      setShiftError('Failed to save shift.');
+      setShiftError(describeRequestError(err, 'Failed to save shift.'));
     } finally {
       setShiftSaving(false);
     }
@@ -302,7 +370,21 @@ export default function SetupPage() {
       }
       await loadSetupData('shifts');
     } catch (err) {
-      setShiftError('Failed to delete shift.');
+      setShiftError(describeRequestError(err, 'Failed to delete shift.'));
+    }
+  }
+
+  async function handleTimezoneSubmit(event) {
+    event.preventDefault();
+    setShiftError('');
+    setTimezoneSaving(true);
+    try {
+      await updateCurrentTeamTimezone(teamTimezone);
+      await loadSetupData('shifts');
+    } catch (err) {
+      setShiftError(describeRequestError(err, 'Failed to save team timezone.'));
+    } finally {
+      setTimezoneSaving(false);
     }
   }
 
@@ -415,45 +497,18 @@ export default function SetupPage() {
     }
   }
 
-  async function handleGeoShiftSubmit(event) {
-    event.preventDefault();
-    setGeoShiftError('');
-    if (!mappingGeoId || !mappingShiftId) {
-      setGeoShiftError('Geo and shift are required.');
+  function handleJoinedUserSelection(userId) {
+    setSelectedJoinedUserId(userId);
+    if (!userId) {
       return;
     }
-
-    setGeoShiftSaving(true);
-    try {
-      const payload = { geoId: Number(mappingGeoId), shiftId: Number(mappingShiftId) };
-      if (editingGeoShiftMappingId) {
-        await updateGeoShiftMapping(editingGeoShiftMappingId, payload);
-      } else {
-        await createGeoShiftMapping(payload);
-      }
-      resetGeoShiftForm();
-      await loadSetupData('geo_shift_mappings');
-    } catch (err) {
-      setGeoShiftError('Failed to save geo-shift mapping.');
-    } finally {
-      setGeoShiftSaving(false);
-    }
-  }
-
-  async function handleGeoShiftDelete(id) {
-    if (!window.confirm('Delete this geo-shift mapping?')) {
+    const selectedUser = joinedUsers.find((user) => String(user.id) === String(userId));
+    if (!selectedUser) {
       return;
     }
-    setGeoShiftError('');
-    try {
-      await deleteGeoShiftMapping(id);
-      if (editingGeoShiftMappingId === id) {
-        resetGeoShiftForm();
-      }
-      await loadSetupData('geo_shift_mappings');
-    } catch (err) {
-      setGeoShiftError('Failed to delete geo-shift mapping.');
-    }
+    setTeamFirstName(selectedUser.firstName || '');
+    setTeamLastName(selectedUser.lastName || '');
+    setTeamEmail(selectedUser.workEmail || '');
   }
 
   async function handleCiUserSubmit(event) {
@@ -536,6 +591,11 @@ export default function SetupPage() {
   const completionPercent = status?.totalSteps
     ? Math.round(((status?.completedSteps || 0) / status.totalSteps) * 100)
     : 0;
+
+  const getShiftGeoIds = (shiftId) =>
+    geoShiftMappings
+      .filter((mapping) => mapping.shift?.s_id === shiftId && mapping.geo?.g_id)
+      .map((mapping) => String(mapping.geo.g_id));
 
   return (
     <div className="container py-3 setup-page">
@@ -675,11 +735,13 @@ export default function SetupPage() {
                     serviceNowInstanceUrl={serviceNowInstanceUrl}
                     serviceNowUsername={serviceNowUsername}
                     serviceNowPassword={serviceNowPassword}
+                    serviceNowAssignmentGroups={serviceNowAssignmentGroups}
                     serviceNowError={serviceNowError}
                     serviceNowSaving={serviceNowSaving}
                     setServiceNowInstanceUrl={setServiceNowInstanceUrl}
                     setServiceNowUsername={setServiceNowUsername}
                     setServiceNowPassword={setServiceNowPassword}
+                    setServiceNowAssignmentGroups={setServiceNowAssignmentGroups}
                     onSubmit={handleServiceNowSubmit}
                   />
                 )}
@@ -705,16 +767,32 @@ export default function SetupPage() {
 
                 {currentStepAccessible && currentStep.key === 'shifts' && (
                   <InlineShiftStep
+                    geos={geos}
                     shifts={shifts}
+                    geoShiftMappings={geoShiftMappings}
+                    teamTimezone={teamTimezone}
+                    timezoneOptions={timezoneOptions}
                     shiftName={shiftName}
+                    shiftStartTime={shiftStartTime}
+                    shiftEndTime={shiftEndTime}
+                    shiftGeoIds={shiftGeoIds}
                     editingShiftId={editingShiftId}
                     shiftError={shiftError}
                     shiftSaving={shiftSaving}
+                    timezoneSaving={timezoneSaving}
+                    setTeamTimezone={setTeamTimezone}
                     setShiftName={setShiftName}
+                    setShiftStartTime={setShiftStartTime}
+                    setShiftEndTime={setShiftEndTime}
+                    setShiftGeoIds={setShiftGeoIds}
+                    onTimezoneSubmit={handleTimezoneSubmit}
                     onSubmit={handleShiftSubmit}
                     onEdit={(shift) => {
                       setEditingShiftId(shift.s_id);
                       setShiftName(shift.name || '');
+                      setShiftStartTime(shift.startTime || '');
+                      setShiftEndTime(shift.endTime || '');
+                      setShiftGeoIds(getShiftGeoIds(shift.s_id));
                       setShiftError('');
                     }}
                     onDelete={handleShiftDelete}
@@ -750,6 +828,8 @@ export default function SetupPage() {
                 {currentStepAccessible && currentStep.key === 'team_members' && (
                   <InlineTeamMemberStep
                     teamMembers={teamMembers}
+                    joinedUsers={joinedUsers}
+                    selectedJoinedUserId={selectedJoinedUserId}
                     geos={geos}
                     teamFirstName={teamFirstName}
                     teamLastName={teamLastName}
@@ -766,9 +846,11 @@ export default function SetupPage() {
                     setTeamPhone={setTeamPhone}
                     setTeamSysId={setTeamSysId}
                     setTeamGeoId={setTeamGeoId}
+                    onJoinedUserChange={handleJoinedUserSelection}
                     onSubmit={handleTeamMemberSubmit}
                     onEdit={(member) => {
                       setEditingTeamMemberId(member.tm_id);
+                      setSelectedJoinedUserId('');
                       setTeamFirstName(member.f_name || '');
                       setTeamLastName(member.l_name || '');
                       setTeamEmail(member.email || '');
@@ -779,30 +861,6 @@ export default function SetupPage() {
                     }}
                     onDelete={handleTeamMemberDelete}
                     onCancel={resetTeamMemberForm}
-                  />
-                )}
-
-                {currentStepAccessible && currentStep.key === 'geo_shift_mappings' && (
-                  <InlineGeoShiftMappingStep
-                    geos={geos}
-                    shifts={shifts}
-                    geoShiftMappings={geoShiftMappings}
-                    mappingGeoId={mappingGeoId}
-                    mappingShiftId={mappingShiftId}
-                    editingGeoShiftMappingId={editingGeoShiftMappingId}
-                    geoShiftError={geoShiftError}
-                    geoShiftSaving={geoShiftSaving}
-                    setMappingGeoId={setMappingGeoId}
-                    setMappingShiftId={setMappingShiftId}
-                    onSubmit={handleGeoShiftSubmit}
-                    onEdit={(mapping) => {
-                      setEditingGeoShiftMappingId(mapping.gsm_id);
-                      setMappingGeoId(mapping.geo?.g_id ? String(mapping.geo.g_id) : '');
-                      setMappingShiftId(mapping.shift?.s_id ? String(mapping.shift.s_id) : '');
-                      setGeoShiftError('');
-                    }}
-                    onDelete={handleGeoShiftDelete}
-                    onCancel={resetGeoShiftForm}
                   />
                 )}
 
@@ -1043,22 +1101,70 @@ function InlineGeoStep({
 }
 
 function InlineShiftStep({
+  geos,
   shifts,
+  geoShiftMappings,
+  teamTimezone,
+  timezoneOptions,
   shiftName,
+  shiftStartTime,
+  shiftEndTime,
+  shiftGeoIds,
   editingShiftId,
   shiftError,
   shiftSaving,
+  timezoneSaving,
+  setTeamTimezone,
   setShiftName,
+  setShiftStartTime,
+  setShiftEndTime,
+  setShiftGeoIds,
+  onTimezoneSubmit,
   onSubmit,
   onEdit,
   onDelete,
   onCancel,
 }) {
+  const getShiftGeoNames = (shiftId) => {
+    const names = geoShiftMappings
+      .filter((mapping) => mapping.shift?.s_id === shiftId)
+      .map((mapping) => mapping.geo?.name)
+      .filter(Boolean);
+    return names.length > 0 ? names.join(', ') : '—';
+  };
+
   return (
     <>
       {shiftError && <div className="alert alert-danger">{shiftError}</div>}
-      <form className="row g-3 mb-4" onSubmit={onSubmit}>
+      <form className="row g-3 mb-4" onSubmit={onTimezoneSubmit}>
         <div className="col-md-8">
+          <label className="form-label">Team Timezone</label>
+          <select
+            className="form-select"
+            value={teamTimezone}
+            onChange={(event) => setTeamTimezone(event.target.value)}
+            required
+          >
+            <option value="">Select a timezone</option>
+            {timezoneOptions.map((timezone) => (
+              <option key={timezone} value={timezone}>
+                {timezone}
+              </option>
+            ))}
+          </select>
+          <div className="form-text">
+            All shifts for this team use one timezone so assignment logic can maintain continuous coverage.
+          </div>
+        </div>
+        <div className="col-12 d-flex gap-2">
+          <button type="submit" className="btn btn-outline-primary" disabled={timezoneSaving}>
+            {timezoneSaving ? 'Saving Timezone...' : 'Save Team Timezone'}
+          </button>
+        </div>
+      </form>
+
+      <form className="row g-3 mb-4" onSubmit={onSubmit}>
+        <div className="col-md-4">
           <label className="form-label">Shift Name</label>
           <input
             type="text"
@@ -1068,6 +1174,64 @@ function InlineShiftStep({
             placeholder="e.g. General"
             required
           />
+        </div>
+        <div className="col-md-4">
+          <label className="form-label">Start Time</label>
+          <input
+            type="time"
+            className="form-control"
+            value={shiftStartTime}
+            onChange={(event) => setShiftStartTime(event.target.value)}
+            required
+          />
+        </div>
+        <div className="col-md-4">
+          <label className="form-label">End Time</label>
+          <input
+            type="time"
+            className="form-control"
+            value={shiftEndTime}
+            onChange={(event) => setShiftEndTime(event.target.value)}
+            required
+          />
+        </div>
+        <div className="col-12">
+          <label className="form-label">Applies To Geos</label>
+          {geos.length > 0 ? (
+            <div className="d-flex flex-wrap gap-3">
+              {geos.map((geo) => {
+                const checked = shiftGeoIds.includes(String(geo.g_id));
+                return (
+                  <div className="form-check" key={geo.g_id}>
+                    <input
+                      className="form-check-input"
+                      type="checkbox"
+                      id={`shift-geo-${geo.g_id}`}
+                      checked={checked}
+                      onChange={(event) => {
+                        const value = String(geo.g_id);
+                        setShiftGeoIds((current) =>
+                          event.target.checked
+                            ? [...current, value]
+                            : current.filter((geoId) => geoId !== value)
+                        );
+                      }}
+                    />
+                    <label className="form-check-label" htmlFor={`shift-geo-${geo.g_id}`}>
+                      {geo.name}
+                    </label>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="form-text text-danger">
+              Add at least one geo before creating shifts.
+            </div>
+          )}
+          <div className="form-text">
+            Choose every geo that should use this shift. InciTeam will create the geo-shift mapping automatically.
+          </div>
         </div>
         <div className="col-12 d-flex gap-2">
           <button type="submit" className="btn btn-primary" disabled={shiftSaving}>
@@ -1087,6 +1251,10 @@ function InlineShiftStep({
             <tr>
               <th>ID</th>
               <th>Name</th>
+              <th>Start</th>
+              <th>End</th>
+              <th>Geos</th>
+              <th>Timezone</th>
               <th style={{ width: '180px' }}>Actions</th>
             </tr>
           </thead>
@@ -1095,6 +1263,10 @@ function InlineShiftStep({
               <tr key={shift.s_id}>
                 <td>{shift.s_id}</td>
                 <td>{shift.name}</td>
+                <td>{shift.startTime || '—'}</td>
+                <td>{shift.endTime || '—'}</td>
+                <td>{getShiftGeoNames(shift.s_id)}</td>
+                <td>{teamTimezone || '—'}</td>
                 <td className="d-flex gap-2">
                   <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => onEdit(shift)}>
                     Edit
@@ -1111,7 +1283,7 @@ function InlineShiftStep({
             ))}
             {shifts.length === 0 && (
               <tr>
-                <td colSpan={3} className="text-center">
+                <td colSpan={7} className="text-center">
                   No shifts yet. Add your first shift to continue.
                 </td>
               </tr>
@@ -1228,6 +1400,8 @@ function InlineConfigurationItemStep({
 
 function InlineTeamMemberStep({
   teamMembers,
+  joinedUsers,
+  selectedJoinedUserId,
   geos,
   teamFirstName,
   teamLastName,
@@ -1244,6 +1418,7 @@ function InlineTeamMemberStep({
   setTeamPhone,
   setTeamSysId,
   setTeamGeoId,
+  onJoinedUserChange,
   onSubmit,
   onEdit,
   onDelete,
@@ -1253,6 +1428,25 @@ function InlineTeamMemberStep({
     <>
       {teamMemberError && <div className="alert alert-danger">{teamMemberError}</div>}
       <form className="row g-3 mb-4" onSubmit={onSubmit}>
+        <div className="col-12">
+          <label className="form-label">Joined InciTeam User</label>
+          <select
+            className="form-select"
+            value={selectedJoinedUserId}
+            onChange={(event) => onJoinedUserChange(event.target.value)}
+            disabled={Boolean(editingTeamMemberId)}
+          >
+            <option value="">Select an existing joined user (optional)</option>
+            {joinedUsers.map((user) => (
+              <option key={user.id} value={user.id} disabled={user.alreadyMapped}>
+                {user.displayName}{user.workEmail ? ` (${user.workEmail})` : ''}
+              </option>
+            ))}
+          </select>
+          <div className="form-text">
+            Pick a joined team user to prefill name and email, or leave this blank and enter everything manually.
+          </div>
+        </div>
         <div className="col-md-3">
           <label className="form-label">First Name</label>
           <input
@@ -1373,114 +1567,6 @@ function InlineTeamMemberStep({
               <tr>
                 <td colSpan={8} className="text-center">
                   No team members yet. Add your first team member to continue.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-    </>
-  );
-}
-
-function InlineGeoShiftMappingStep({
-  geos,
-  shifts,
-  geoShiftMappings,
-  mappingGeoId,
-  mappingShiftId,
-  editingGeoShiftMappingId,
-  geoShiftError,
-  geoShiftSaving,
-  setMappingGeoId,
-  setMappingShiftId,
-  onSubmit,
-  onEdit,
-  onDelete,
-  onCancel,
-}) {
-  return (
-    <>
-      {geoShiftError && <div className="alert alert-danger">{geoShiftError}</div>}
-      <form className="row g-3 mb-4" onSubmit={onSubmit}>
-        <div className="col-md-4">
-          <label className="form-label">Geo</label>
-          <select
-            className="form-select"
-            value={mappingGeoId}
-            onChange={(event) => setMappingGeoId(event.target.value)}
-            required
-          >
-            <option value="">Select Geo</option>
-            {geos.map((geo) => (
-              <option key={geo.g_id} value={geo.g_id}>
-                {geo.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="col-md-4">
-          <label className="form-label">Shift</label>
-          <select
-            className="form-select"
-            value={mappingShiftId}
-            onChange={(event) => setMappingShiftId(event.target.value)}
-            required
-          >
-            <option value="">Select Shift</option>
-            {shifts.map((shift) => (
-              <option key={shift.s_id} value={shift.s_id}>
-                {shift.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="col-12 d-flex gap-2">
-          <button type="submit" className="btn btn-primary" disabled={geoShiftSaving}>
-            {geoShiftSaving ? 'Saving...' : editingGeoShiftMappingId ? 'Update Mapping' : 'Add Mapping'}
-          </button>
-          {editingGeoShiftMappingId && (
-            <button type="button" className="btn btn-outline-secondary" onClick={onCancel}>
-              Cancel
-            </button>
-          )}
-        </div>
-      </form>
-
-      <div className="table-responsive">
-        <table className="table table-bordered align-middle mb-0 setup-inline-table">
-          <thead className="table-light">
-            <tr>
-              <th>ID</th>
-              <th>Geo</th>
-              <th>Shift</th>
-              <th style={{ width: '180px' }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {geoShiftMappings.map((mapping) => (
-              <tr key={mapping.gsm_id}>
-                <td>{mapping.gsm_id}</td>
-                <td>{mapping.geo?.name || '-'}</td>
-                <td>{mapping.shift?.name || '-'}</td>
-                <td className="d-flex gap-2">
-                  <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => onEdit(mapping)}>
-                    Edit
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-outline-danger btn-sm"
-                    onClick={() => onDelete(mapping.gsm_id)}
-                  >
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {geoShiftMappings.length === 0 && (
-              <tr>
-                <td colSpan={4} className="text-center">
-                  No geo-shift mappings yet. Connect each geo to the shifts it supports.
                 </td>
               </tr>
             )}
@@ -1637,17 +1723,19 @@ function InlineServiceNowConnectionStep({
   serviceNowInstanceUrl,
   serviceNowUsername,
   serviceNowPassword,
+  serviceNowAssignmentGroups,
   serviceNowError,
   serviceNowSaving,
   setServiceNowInstanceUrl,
   setServiceNowUsername,
   setServiceNowPassword,
+  setServiceNowAssignmentGroups,
   onSubmit,
 }) {
   return (
     <>
       <div className="alert alert-primary">
-        Connect the organization’s ServiceNow instance first. Once this connection is verified, the remaining team setup steps unlock automatically.
+        Connect the organization’s ServiceNow instance first, then set the assignment group names this team should watch for. Once both are saved, the remaining team setup steps unlock automatically.
       </div>
       {serviceNowConfig?.configured && (
         <div className="alert alert-success">
@@ -1690,6 +1778,20 @@ function InlineServiceNowConnectionStep({
             placeholder={serviceNowConfig?.configured ? 'Re-enter to update credentials' : ''}
             required
           />
+        </div>
+        <div className="col-md-12">
+          <label className="form-label">Team Assignment Groups</label>
+          <textarea
+            className="form-control"
+            rows="4"
+            value={serviceNowAssignmentGroups}
+            onChange={(event) => setServiceNowAssignmentGroups(event.target.value)}
+            placeholder={'Enter one ServiceNow assignment group per line\nExample:\nPlatform Support\nSite Reliability Engineering'}
+            required
+          />
+          <div className="form-text">
+            InciTeam will poll only incidents in these assignment groups for the current team.
+          </div>
         </div>
         <div className="col-12 d-flex gap-2">
           <button type="submit" className="btn btn-primary" disabled={serviceNowSaving}>

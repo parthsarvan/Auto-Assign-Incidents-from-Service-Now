@@ -73,6 +73,7 @@ export default function Logs() {
       ...(log.incidents || []).flatMap((incident) => [
         incident.number,
         incident.configurationItem,
+        incident.assignmentGroup,
         incident.caller,
         incident.shortDescription,
       ]),
@@ -116,6 +117,9 @@ export default function Logs() {
     if (normalized.includes('no ci-user mapping')) {
       return 'Missing CI-user mapping';
     }
+    if (normalized.includes('ci not configured for this team')) {
+      return 'CI not in this team';
+    }
     if (normalized.includes('no eligible mapped team member')) {
       return 'No eligible scheduled user';
     }
@@ -135,6 +139,9 @@ export default function Logs() {
     const message = (result?.message || '').toLowerCase();
     if (message.includes('no ci-user mapping')) {
       return { to: '/ci-user-mappings', label: 'Fix CI Mapping' };
+    }
+    if (message.includes('ci not configured for this team')) {
+      return { to: '/configuration-items', label: 'Review Team CIs' };
     }
     if (message.includes('no eligible mapped team member')) {
       return { to: '/schedules', label: 'Fix Schedules' };
@@ -397,6 +404,7 @@ export default function Logs() {
                         <th>Incident</th>
                         <th>Created (Local)</th>
                         <th>Configuration Item</th>
+                        <th>Assignment Group</th>
                         <th>Priority</th>
                         <th>Caller</th>
                         <th>Description</th>
@@ -412,6 +420,7 @@ export default function Logs() {
                               : '-'}
                           </td>
                           <td>{incident.configurationItem || '-'}</td>
+                          <td>{incident.assignmentGroup || '-'}</td>
                           <td>{incident.priority || '-'}</td>
                           <td>{incident.caller || '-'}</td>
                           <td>{incident.shortDescription}</td>

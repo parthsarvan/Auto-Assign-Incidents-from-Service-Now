@@ -55,6 +55,11 @@ export async function createTeamMember(payload) {
   return response.data;
 }
 
+export async function fetchJoinedTeamUsers() {
+  const response = await api.get('/team-members/joined-users', withAuth());
+  return response.data;
+}
+
 export async function updateTeamMember(id, payload) {
   const response = await api.put(`/team-members/${id}`, payload, withAuth());
   return response.data;

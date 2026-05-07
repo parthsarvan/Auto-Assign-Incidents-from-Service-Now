@@ -48,6 +48,8 @@ export async function signIn(username, password) {
 // Sign-Up: POST /api/auth/signup  { username, password, role }
 export async function signUp({
   username,
+  firstName,
+  lastName,
   workEmail,
   password,
   inviteCode = '',
@@ -56,6 +58,8 @@ export async function signUp({
 }) {
   const response = await api.post('/signup', {
     username: username.trim(),
+    firstName: firstName.trim(),
+    lastName: lastName.trim(),
     workEmail: workEmail.trim().toLowerCase(),
     password,
     inviteCode: inviteCode.trim().toUpperCase(),

@@ -5,8 +5,13 @@ import com.example.backend.dto.ServiceNowConfigResponse;
 import com.example.backend.entity.Organization;
 import com.example.backend.entity.Team;
 import com.example.backend.repository.OrganizationRepository;
+import com.example.backend.repository.TeamRepository;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -21,16 +26,19 @@ import org.springframework.web.util.UriComponentsBuilder;
 public class OrganizationServiceNowConfigService {
     private final CurrentWorkspaceService currentWorkspaceService;
     private final OrganizationRepository organizationRepository;
+    private final TeamRepository teamRepository;
     private final RestTemplate restTemplate;
     private final ServiceNowAuthHeaderProvider authHeaderProvider;
 
     public OrganizationServiceNowConfigService(
             CurrentWorkspaceService currentWorkspaceService,
             OrganizationRepository organizationRepository,
+            TeamRepository teamRepository,
             RestTemplate restTemplate,
             ServiceNowAuthHeaderProvider authHeaderProvider) {
         this.currentWorkspaceService = currentWorkspaceService;
         this.organizationRepository = organizationRepository;
+        this.teamRepository = teamRepository;
         this.restTemplate = restTemplate;
         this.authHeaderProvider = authHeaderProvider;
     }
@@ -48,6 +56,7 @@ public class OrganizationServiceNowConfigService {
         String instanceUrl = normalizeUrl(request.getInstanceUrl());
         String username = normalizeCompactText(request.getUsername());
         String password = request.getPassword() == null ? "" : request.getPassword().trim();
+        List<String> assignmentGroups = normalizeAssignmentGroups(request.getAssignmentGroups());
 
         if (instanceUrl.isBlank()) {
             throw new IllegalArgumentException("ServiceNow instance URL is required.");
@@ -58,15 +67,21 @@ public class OrganizationServiceNowConfigService {
         if (password.isBlank()) {
             throw new IllegalArgumentException("ServiceNow password is required.");
         }
+        if (assignmentGroups.isEmpty()) {
+            throw new IllegalArgumentException("At least one ServiceNow assignment group is required for this team.");
+        }
 
         validateConnection(new ServiceNowConnectionSettings(instanceUrl, username, password));
 
         Organization organization = getCurrentOrganization();
+        Team team = getCurrentTeam();
         organization.setServiceNowInstanceUrl(instanceUrl);
         organization.setServiceNowUsername(username);
         organization.setServiceNowPassword(password);
         organization.setServiceNowConnectedAt(Instant.now());
         organization = organizationRepository.save(organization);
+        team.setServiceNowAssignmentGroups(String.join("\n", assignmentGroups));
+        teamRepository.save(team);
         return toResponse(organization);
     }
 
@@ -83,7 +98,10 @@ public class OrganizationServiceNowConfigService {
     }
 
     public boolean isConfiguredForTeam(Team team) {
-        return team != null && isConfigured(team.getOrganization());
+        Team resolvedTeam = resolveTeam(team);
+        return resolvedTeam != null
+                && isConfigured(resolveOrganizationForTeam(resolvedTeam))
+                && !getAssignmentGroupsForTeam(resolvedTeam).isEmpty();
     }
 
     public ServiceNowConnectionSettings requireCurrentOrganizationSettings() {
@@ -91,10 +109,11 @@ public class OrganizationServiceNowConfigService {
     }
 
     public ServiceNowConnectionSettings requireSettingsForTeam(Team team) {
-        if (team == null || team.getOrganization() == null) {
+        Team resolvedTeam = resolveTeam(team);
+        if (resolvedTeam == null) {
             throw new IllegalStateException("No organization is available for the current team.");
         }
-        return requireSettings(team.getOrganization());
+        return requireSettings(resolveOrganizationForTeam(resolvedTeam));
     }
 
     private ServiceNowConnectionSettings requireSettings(Organization organization) {
@@ -140,12 +159,22 @@ public class OrganizationServiceNowConfigService {
                 .orElse(user.getCurrentOrganization());
     }
 
+    private Team getCurrentTeam() {
+        Team team = currentWorkspaceService.getCurrentTeam();
+        if (team == null) {
+            throw new IllegalStateException("No active team is available.");
+        }
+        return teamRepository.findById(team.getTeam_id()).orElse(team);
+    }
+
     private ServiceNowConfigResponse toResponse(Organization organization) {
+        Team team = getCurrentTeam();
         return new ServiceNowConfigResponse(
                 isConfigured(organization),
                 organization != null ? organization.getServiceNowInstanceUrl() : null,
                 organization != null ? organization.getServiceNowUsername() : null,
-                organization != null ? organization.getServiceNowConnectedAt() : null);
+                organization != null ? organization.getServiceNowConnectedAt() : null,
+                getAssignmentGroupsForTeam(team));
     }
 
     private String normalizeUrl(String value) {
@@ -165,5 +194,42 @@ public class OrganizationServiceNowConfigService {
 
     private boolean hasText(String value) {
         return value != null && !value.isBlank();
+    }
+
+    public List<String> getAssignmentGroupsForTeam(Team team) {
+        Team resolvedTeam = resolveTeam(team);
+        if (resolvedTeam == null || resolvedTeam.getServiceNowAssignmentGroups() == null) {
+            return List.of();
+        }
+        return normalizeAssignmentGroups(List.of(resolvedTeam.getServiceNowAssignmentGroups().split("[\\n,]+")));
+    }
+
+    private Team resolveTeam(Team team) {
+        if (team == null || team.getTeam_id() == null) {
+            return null;
+        }
+        return teamRepository.findById(team.getTeam_id()).orElse(team);
+    }
+
+    private Organization resolveOrganizationForTeam(Team team) {
+        if (team == null || team.getOrganization() == null || team.getOrganization().getOrg_id() == null) {
+            throw new IllegalStateException("No organization is available for the current team.");
+        }
+        return organizationRepository.findById(team.getOrganization().getOrg_id())
+                .orElse(team.getOrganization());
+    }
+
+    private List<String> normalizeAssignmentGroups(List<String> values) {
+        if (values == null || values.isEmpty()) {
+            return List.of();
+        }
+        Set<String> normalized = new LinkedHashSet<>();
+        for (String value : values) {
+            String candidate = normalizeCompactText(value);
+            if (!candidate.isBlank()) {
+                normalized.add(candidate);
+            }
+        }
+        return new ArrayList<>(normalized);
     }
 }

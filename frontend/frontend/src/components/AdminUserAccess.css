@@ -7,3 +7,14 @@
   border-color: #dde7f1 !important;
   background: rgba(248, 251, 255, 0.8);
 }
+
+.admin-user-access-page table {
+  min-width: 960px;
+}
+
+@media (max-width: 768px) {
+  .admin-user-access-page {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+}

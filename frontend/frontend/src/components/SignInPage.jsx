@@ -49,8 +49,8 @@ export default function SignInPage() {
   };
 
   return (
-    <div className="container vh-100 d-flex align-items-center justify-content-center">
-      <div className="card p-4 shadow-sm" style={{ maxWidth: '400px', width: '100%' }}>
+    <div className="container auth-shell d-flex align-items-center justify-content-center">
+      <div className="card auth-card p-4 shadow-sm" style={{ maxWidth: '400px', width: '100%' }}>
         <h3 className="card-title text-center mb-2">Sign In to InciTeam</h3>
         <p className="text-muted text-center small mb-3">
           Sign in to access your organization and active team workspace.

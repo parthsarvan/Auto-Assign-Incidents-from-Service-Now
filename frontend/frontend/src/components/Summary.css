@@ -128,4 +128,8 @@
   .summary-issue-item {
     flex-direction: column;
   }
+
+  .summary-hero .btn {
+    width: 100%;
+  }
 }

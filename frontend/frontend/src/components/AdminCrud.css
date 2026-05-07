@@ -38,6 +38,10 @@
   align-items: end;
 }
 
+.admin-crud-table {
+  min-width: 760px;
+}
+
 @media (max-width: 768px) {
   .admin-crud-page {
     padding-left: 0 !important;
@@ -46,5 +50,19 @@
 
   .admin-crud-hero {
     padding: 1.2rem 1.2rem;
+  }
+
+  .admin-crud-form-grid {
+    row-gap: 0.85rem;
+  }
+
+  .admin-crud-form-grid .col-12.d-flex,
+  .admin-crud-table td.d-flex {
+    flex-wrap: wrap;
+  }
+
+  .admin-crud-form-grid .col-12.d-flex .btn,
+  .admin-crud-table td.d-flex .btn {
+    flex: 1 1 100%;
   }
 }

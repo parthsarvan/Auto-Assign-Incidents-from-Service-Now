@@ -2,14 +2,15 @@ package com.example.backend.service;
 
 import com.example.backend.dto.ServiceNowIncident;
 import com.example.backend.dto.ServiceNowIncidentResponse;
-import com.example.backend.entity.ConfigurationItem;
+import com.example.backend.dto.ServiceNowReference;
 import com.example.backend.entity.Team;
-import com.example.backend.repository.ConfigurationItemRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpEntity;
@@ -27,12 +28,11 @@ import org.springframework.web.util.UriComponentsBuilder;
 public class ServiceNowIncidentClient {
     private static final Logger logger = LoggerFactory.getLogger(ServiceNowIncidentClient.class);
     private static final String INCIDENT_FIELDS =
-            "sys_id,number,short_description,sys_created_on,state,priority,assigned_to,cmdb_ci,caller_id";
+            "sys_id,number,short_description,sys_created_on,state,priority,assigned_to,assignment_group,cmdb_ci,caller_id";
 
     private final RestTemplate restTemplate;
     private final ServiceNowAuthHeaderProvider authHeaderProvider;
     private final OrganizationServiceNowConfigService organizationServiceNowConfigService;
-    private final ConfigurationItemRepository configurationItemRepository;
     private final ObjectMapper objectMapper;
     private final CurrentWorkspaceService currentWorkspaceService;
 
@@ -40,22 +40,51 @@ public class ServiceNowIncidentClient {
             RestTemplate restTemplate,
             ServiceNowAuthHeaderProvider authHeaderProvider,
             OrganizationServiceNowConfigService organizationServiceNowConfigService,
-            ConfigurationItemRepository configurationItemRepository,
             ObjectMapper objectMapper,
             CurrentWorkspaceService currentWorkspaceService) {
         this.restTemplate = restTemplate;
         this.authHeaderProvider = authHeaderProvider;
         this.organizationServiceNowConfigService = organizationServiceNowConfigService;
-        this.configurationItemRepository = configurationItemRepository;
         this.objectMapper = objectMapper;
         this.currentWorkspaceService = currentWorkspaceService;
     }
 
     public List<ServiceNowIncident> fetchUnassignedIncidents() {
-        String query = buildQuery();
-        logger.info("ServiceNow incident query: {}", query);
+        Team team = currentWorkspaceService.getCurrentTeam();
+        List<String> assignmentGroups =
+                organizationServiceNowConfigService.getAssignmentGroupsForTeam(team);
+        if (assignmentGroups.isEmpty()) {
+            logger.warn("No ServiceNow assignment groups configured for current team; returning no incidents.");
+            return Collections.emptyList();
+        }
+
         ServiceNowConnectionSettings settings = organizationServiceNowConfigService
-                .requireSettingsForTeam(currentWorkspaceService.getCurrentTeam());
+                .requireSettingsForTeam(team);
+        List<ServiceNowIncident> incidents = fetchIncidents(settings, buildQuery());
+        if (incidents.isEmpty()) {
+            return incidents;
+        }
+
+        Set<String> normalizedAssignmentGroups = assignmentGroups.stream()
+                .map(this::normalizeValue)
+                .filter(value -> !value.isBlank())
+                .collect(Collectors.toSet());
+
+        List<ServiceNowIncident> filteredIncidents = incidents.stream()
+                .filter(incident -> matchesAssignmentGroup(incident, normalizedAssignmentGroups))
+                .toList();
+
+        logger.info(
+                "ServiceNow assignment-group filter kept {} of {} fetched incidents for team {}.",
+                filteredIncidents.size(),
+                incidents.size(),
+                team.getName());
+        logIncidents(filteredIncidents);
+        return filteredIncidents;
+    }
+
+    private List<ServiceNowIncident> fetchIncidents(ServiceNowConnectionSettings settings, String query) {
+        logger.info("ServiceNow incident query: {}", query);
         String url = UriComponentsBuilder.fromHttpUrl(settings.instanceUrl())
                 .path("/api/now/table/incident")
                 .queryParam("sysparm_query", query)
@@ -63,7 +92,6 @@ public class ServiceNowIncidentClient {
                 .queryParam("sysparm_display_value", "true")
                 .queryParam("sysparm_limit", "100")
                 .toUriString();
-
         HttpHeaders headers = authHeaderProvider.buildHeaders(settings.username(), settings.password());
 
         HttpEntity<Void> request = new HttpEntity<>(headers);
@@ -146,38 +174,6 @@ public class ServiceNowIncidentClient {
         }
     }
 
-    private String buildQuery() {
-        Team team = currentWorkspaceService.getCurrentTeam();
-        List<String> ciSysIds = configurationItemRepository.findAllByTeamOrderByNameAsc(team).stream()
-                .map(ConfigurationItem::getServiceNowSysId)
-                .filter(this::hasText)
-                .map(String::trim)
-                .distinct()
-                .toList();
-        String baseFilter =
-                "assigned_toISEMPTY^assigned_to=NULL^assigned_to=^assigned_to.sys_idISEMPTY^stateNOT IN6,7";
-        if (ciSysIds.isEmpty()) {
-            logger.warn("No ServiceNow CI sys IDs found for current team; returning no incidents.");
-            return String.format("sys_idISEMPTY^%s", baseFilter);
-        }
-        String joinedIds = String.join(",", ciSysIds);
-        return String.format("cmdb_ciIN%s^%s", joinedIds, baseFilter);
-    }
-
-    private void logIncidents(List<ServiceNowIncident> incidents) {
-        logger.info("ServiceNow incident fetch returned {} incidents.", incidents.size());
-        for (ServiceNowIncident incident : incidents) {
-            String cmdb = incident.getCmdb_ci() != null ? incident.getCmdb_ci().getDisplayValue() : "unknown";
-            logger.info(
-                    "Incident {} (sys_id={}) state={} cmdb_ci={} assigned_to={}",
-                    incident.getNumber(),
-                    incident.getSys_id(),
-                    incident.getState(),
-                    cmdb,
-                    incident.getAssigned_to() != null ? incident.getAssigned_to().getDisplayValue() : "unassigned");
-        }
-    }
-
     private boolean isUnassigned(ServiceNowIncident incident) {
         if (incident == null || incident.getAssigned_to() == null) {
             return true;
@@ -187,7 +183,38 @@ public class ServiceNowIncidentClient {
         return (value == null || value.isBlank()) && (display == null || display.isBlank());
     }
 
-    private boolean hasText(String value) {
-        return value != null && !value.isBlank();
+    private boolean matchesAssignmentGroup(ServiceNowIncident incident, Set<String> normalizedAssignmentGroups) {
+        ServiceNowReference assignmentGroup = incident.getAssignment_group();
+        if (assignmentGroup == null) {
+            return false;
+        }
+
+        String displayValue = normalizeValue(assignmentGroup.getDisplayValue());
+        String rawValue = normalizeValue(assignmentGroup.getValue());
+        return normalizedAssignmentGroups.contains(displayValue)
+                || normalizedAssignmentGroups.contains(rawValue);
+    }
+
+    private String buildQuery() {
+        return "assigned_toISEMPTY^stateNOT IN6,7";
+    }
+
+    private String normalizeValue(String value) {
+        return value == null ? "" : value.trim().toLowerCase();
+    }
+
+    private void logIncidents(List<ServiceNowIncident> incidents) {
+        logger.info("ServiceNow incident fetch returned {} incidents.", incidents.size());
+        for (ServiceNowIncident incident : incidents) {
+            String cmdb = incident.getCmdb_ci() != null ? incident.getCmdb_ci().getDisplayValue() : "unknown";
+            logger.info(
+                    "Incident {} (sys_id={}) state={} assignment_group={} cmdb_ci={} assigned_to={}",
+                    incident.getNumber(),
+                    incident.getSys_id(),
+                    incident.getState(),
+                    incident.getAssignment_group() != null ? incident.getAssignment_group().getDisplayValue() : "unknown",
+                    cmdb,
+                    incident.getAssigned_to() != null ? incident.getAssigned_to().getDisplayValue() : "unassigned");
+        }
     }
 }

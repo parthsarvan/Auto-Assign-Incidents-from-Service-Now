@@ -87,6 +87,7 @@ public class ServiceNowLogService {
                 incident.getNumber(),
                 incident.getSys_created_on(),
                 resolveDisplayValue(incident.getCmdb_ci()),
+                resolveDisplayValue(incident.getAssignment_group()),
                 incident.getPriority(),
                 resolveDisplayValue(incident.getCaller_id()),
                 incident.getShort_description());

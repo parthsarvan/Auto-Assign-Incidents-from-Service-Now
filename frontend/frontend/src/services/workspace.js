@@ -29,6 +29,12 @@ export async function regenerateWorkspaceInvite(teamId) {
   return response.data;
 }
 
+export async function updateCurrentTeamTimezone(timezone) {
+  const response = await api.post('/current-team/timezone', { timezone }, { headers: authHeader() });
+  updateWorkspace(response.data);
+  return response.data;
+}
+
 function updateWorkspace(workspace) {
   const user = getCurrentUser();
   if (!user) {

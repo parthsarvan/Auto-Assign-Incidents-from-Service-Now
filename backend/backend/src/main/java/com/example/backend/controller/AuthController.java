@@ -91,6 +91,8 @@ public class AuthController {
         }
 
         String normalizedUsername = normalizeUsername(signupRequest.getUsername());
+        String firstName = normalizeName(signupRequest.getFirstName());
+        String lastName = normalizeName(signupRequest.getLastName());
         String normalizedWorkEmail = normalizeWorkEmail(signupRequest.getWorkEmail());
         String password = signupRequest.getPassword();
         String inviteCode = normalizeInviteCode(signupRequest.getInviteCode());
@@ -102,6 +104,12 @@ public class AuthController {
         }
         if (normalizedWorkEmail.isBlank()) {
             return ResponseEntity.badRequest().body("Work email is required.");
+        }
+        if (firstName.isBlank()) {
+            return ResponseEntity.badRequest().body("First name is required.");
+        }
+        if (lastName.isBlank()) {
+            return ResponseEntity.badRequest().body("Last name is required.");
         }
         if (password == null || password.isBlank()) {
             return ResponseEntity.badRequest().body("Password is required.");
@@ -146,6 +154,8 @@ public class AuthController {
 
         User user = new User();
         user.setUsername(normalizedUsername);
+        user.setFirstName(firstName);
+        user.setLastName(lastName);
         user.setWorkEmail(normalizedWorkEmail);
         user.setPassword(passwordEncoder.encode(password));
         user.setRole(creatingNewOrganization ? "Admin" : "User");

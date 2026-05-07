@@ -25,6 +25,12 @@ public class Team {
     @Column(name = "join_code", nullable = false, unique = true)
     private String joinCode;
 
+    @Column(name = "timezone")
+    private String timezone;
+
+    @Column(name = "servicenow_assignment_groups", length = 4000)
+    private String serviceNowAssignmentGroups;
+
     @Column(nullable = false, updatable = false)
     private Instant created_at;
 
@@ -74,5 +80,21 @@ public class Team {
 
     public void setJoinCode(String joinCode) {
         this.joinCode = joinCode;
+    }
+
+    public String getTimezone() {
+        return timezone;
+    }
+
+    public void setTimezone(String timezone) {
+        this.timezone = timezone;
+    }
+
+    public String getServiceNowAssignmentGroups() {
+        return serviceNowAssignmentGroups;
+    }
+
+    public void setServiceNowAssignmentGroups(String serviceNowAssignmentGroups) {
+        this.serviceNowAssignmentGroups = serviceNowAssignmentGroups;
     }
 }

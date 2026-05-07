@@ -10,6 +10,11 @@ export default function Sidebar({ isOpen, toggleSidebar, currentUser, setupStatu
   const teamManager = canManageCurrentTeam(currentUser);
   const teamViewer = canViewCurrentTeam(currentUser);
   const setupLocked = Boolean(teamManager && setupStatus && !setupStatus.ready);
+  const handleNavClick = () => {
+    if (typeof window !== 'undefined' && window.innerWidth <= 768 && isOpen) {
+      toggleSidebar();
+    }
+  };
 
   const menuItems = [
     ...(!setupLocked ? [{ label: 'Dashboard', path: '/dashboard' }] : []),
@@ -65,7 +70,7 @@ export default function Sidebar({ isOpen, toggleSidebar, currentUser, setupStatu
           <ul className="sidebar__menu">
             {menuItems.map((item) => (
               <li key={item.path} className={location.pathname === item.path ? 'active' : ''}>
-                <Link to={item.path}>{item.label}</Link>
+                <Link to={item.path} onClick={handleNavClick}>{item.label}</Link>
               </li>
             ))}
           </ul>

@@ -2,6 +2,7 @@ package com.example.backend.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
+import java.time.LocalTime;
 
 @Entity
 @Table(
@@ -25,6 +26,12 @@ public class GeoShiftMapping {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "team_id")
     private Team team;
+
+    @Column(name = "start_time")
+    private LocalTime startTime;
+
+    @Column(name = "end_time")
+    private LocalTime endTime;
 
     public GeoShiftMapping() {}
 
@@ -63,5 +70,26 @@ public class GeoShiftMapping {
 
     public void setTeam(Team team) {
         this.team = team;
+    }
+
+    public LocalTime getStartTime() {
+        return startTime;
+    }
+
+    public void setStartTime(LocalTime startTime) {
+        this.startTime = startTime;
+    }
+
+    public LocalTime getEndTime() {
+        return endTime;
+    }
+
+    public void setEndTime(LocalTime endTime) {
+        this.endTime = endTime;
+    }
+
+    public void syncTimesFromShift() {
+        this.startTime = shift != null ? shift.getStartTime() : null;
+        this.endTime = shift != null ? shift.getEndTime() : null;
     }
 }

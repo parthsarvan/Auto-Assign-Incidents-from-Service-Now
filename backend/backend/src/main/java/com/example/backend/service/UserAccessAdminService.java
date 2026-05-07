@@ -203,6 +203,9 @@ public class UserAccessAdminService {
         return new UserSummary(
                 managedUser.getU_id(),
                 managedUser.getUsername(),
+                managedUser.getFirstName(),
+                managedUser.getLastName(),
+                managedUser.getWorkEmail(),
                 managedUser.getRole(),
                 managedUser.getCurrentTeam() != null ? managedUser.getCurrentTeam().getTeam_id() : null,
                 managedUser.getCurrentTeam() != null ? managedUser.getCurrentTeam().getName() : null,
@@ -254,6 +257,9 @@ public class UserAccessAdminService {
             return new UserSummary(
                     user.getU_id(),
                     user.getUsername(),
+                    user.getFirstName(),
+                    user.getLastName(),
+                    user.getWorkEmail(),
                     user.getRole(),
                     user.getCurrentTeam() != null ? user.getCurrentTeam().getTeam_id() : null,
                     user.getCurrentTeam() != null ? user.getCurrentTeam().getName() : null,

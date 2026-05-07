@@ -7,6 +7,8 @@ export default function SignUpPage() {
   const [organizationName, setOrganizationName] = useState('');
   const [workEmail, setWorkEmail] = useState('');
   const [username, setUsername] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [password, setPassword] = useState('');
   const [inviteCode, setInviteCode] = useState('');
   const [teamName, setTeamName] = useState('');
@@ -59,6 +61,8 @@ export default function SignUpPage() {
     try {
       await signUp({
         username,
+        firstName,
+        lastName,
         workEmail,
         password,
         inviteCode: normalizedInviteCode,
@@ -93,8 +97,8 @@ export default function SignUpPage() {
   };
 
   return (
-    <div className="container min-vh-100 d-flex align-items-center justify-content-center py-5">
-      <div className="card p-4 shadow-sm" style={{ maxWidth: '520px', width: '100%' }}>
+    <div className="container auth-shell d-flex align-items-center justify-content-center py-5">
+      <div className="card auth-card auth-card--wide p-4 shadow-sm" style={{ maxWidth: '520px', width: '100%' }}>
         <h3 className="card-title text-center mb-2">Create Your InciTeam Account</h3>
         <p className="text-muted text-center small mb-4">
           Start with your organization and work email. We will guide you into either joining an existing workspace or creating the first team for a new one.
@@ -179,6 +183,31 @@ export default function SignUpPage() {
                 onChange={(e) => setUsername(e.target.value)}
                 required
               />
+            </div>
+
+            <div className="row g-3">
+              <div className="col-sm-6">
+                <label htmlFor="firstName" className="form-label">First Name</label>
+                <input
+                  type="text"
+                  id="firstName"
+                  className="form-control"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="col-sm-6">
+                <label htmlFor="lastName" className="form-label">Last Name</label>
+                <input
+                  type="text"
+                  id="lastName"
+                  className="form-control"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  required
+                />
+              </div>
             </div>
 
             <div className="mb-3">

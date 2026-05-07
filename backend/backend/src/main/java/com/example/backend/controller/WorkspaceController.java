@@ -2,6 +2,7 @@ package com.example.backend.controller;
 
 import com.example.backend.dto.CreateTeamRequest;
 import com.example.backend.dto.SwitchTeamRequest;
+import com.example.backend.dto.TeamTimezoneRequest;
 import com.example.backend.dto.TeamSummary;
 import com.example.backend.dto.WorkspaceSummary;
 import com.example.backend.service.TeamWorkspaceService;
@@ -67,6 +68,20 @@ public class WorkspaceController {
         try {
             workspaceAccessService.requireGlobalAdmin();
             return ResponseEntity.ok(teamWorkspaceService.regenerateJoinCode(teamId));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(ex.getMessage());
+        } catch (IllegalStateException ex) {
+            return ResponseEntity.status(403).body(ex.getMessage());
+        }
+    }
+
+    @PostMapping("/current-team/timezone")
+    public ResponseEntity<?> updateCurrentTeamTimezone(@RequestBody TeamTimezoneRequest request) {
+        try {
+            workspaceAccessService.requireCurrentTeamManager();
+            WorkspaceSummary workspace = teamWorkspaceService.updateCurrentTeamTimezone(
+                    request != null ? request.getTimezone() : null);
+            return ResponseEntity.ok(workspace);
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.badRequest().body(ex.getMessage());
         } catch (IllegalStateException ex) {

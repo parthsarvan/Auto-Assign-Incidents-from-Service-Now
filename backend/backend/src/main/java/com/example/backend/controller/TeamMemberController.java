@@ -1,17 +1,20 @@
 package com.example.backend.controller;
 
 import com.example.backend.dto.TeamMemberRequest;
+import com.example.backend.dto.TeamJoinedUserSummary;
 import com.example.backend.entity.Geo;
 import com.example.backend.entity.Team;
 import com.example.backend.entity.TeamMember;
 import com.example.backend.repository.GeoRepository;
 import com.example.backend.repository.TeamMemberRepository;
+import com.example.backend.repository.TeamMembershipRepository;
 import com.example.backend.service.CurrentWorkspaceService;
 import com.example.backend.service.WorkspaceAccessService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 
 @RestController
@@ -20,17 +23,20 @@ public class TeamMemberController {
 
     private final TeamMemberRepository teamMemberRepository;
     private final GeoRepository geoRepository;
+    private final TeamMembershipRepository teamMembershipRepository;
     private final CurrentWorkspaceService currentWorkspaceService;
     private final WorkspaceAccessService workspaceAccessService;
 
     public TeamMemberController(
         TeamMemberRepository teamMemberRepository,
         GeoRepository geoRepository,
+        TeamMembershipRepository teamMembershipRepository,
         CurrentWorkspaceService currentWorkspaceService,
         WorkspaceAccessService workspaceAccessService
     ) {
         this.teamMemberRepository = teamMemberRepository;
         this.geoRepository = geoRepository;
+        this.teamMembershipRepository = teamMembershipRepository;
         this.currentWorkspaceService = currentWorkspaceService;
         this.workspaceAccessService = workspaceAccessService;
     }
@@ -38,6 +44,23 @@ public class TeamMemberController {
     @GetMapping
     public List<TeamMember> getAll() {
         return teamMemberRepository.findAllByTeamOrderByName(currentWorkspaceService.getCurrentTeam());
+    }
+
+    @GetMapping("/joined-users")
+    public List<TeamJoinedUserSummary> getJoinedUsers() {
+        workspaceAccessService.requireCurrentTeamManager();
+        Team team = currentWorkspaceService.getCurrentTeam();
+        return teamMembershipRepository.findAllByTeamWithUser(team).stream()
+            .map(membership -> membership.getUser())
+            .filter(user -> user.getWorkEmail() != null && !user.getWorkEmail().isBlank())
+            .map(user -> new TeamJoinedUserSummary(
+                user.getU_id(),
+                user.getUsername(),
+                user.getFirstName(),
+                user.getLastName(),
+                user.getWorkEmail().trim().toLowerCase(Locale.ROOT)
+            ))
+            .toList();
     }
 
     @PostMapping

@@ -194,9 +194,9 @@ export default function MarketingHomePage() {
             </div>
             {comparisonRows.map((row) => (
               <div key={row.category} className="marketing-compare__row">
-                <div className="marketing-compare__category">{row.category}</div>
-                <div className="marketing-compare__incteam">{row.incteam}</div>
-                <div>{row.traditional}</div>
+                <div className="marketing-compare__category" data-label="Capability">{row.category}</div>
+                <div className="marketing-compare__incteam" data-label="InciTeam">{row.incteam}</div>
+                <div data-label="Traditional incident suites">{row.traditional}</div>
               </div>
             ))}
           </div>

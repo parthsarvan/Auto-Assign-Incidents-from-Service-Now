@@ -4,6 +4,7 @@ public class ServiceNowIncidentSummary {
     private String number;
     private String createdOn;
     private String configurationItem;
+    private String assignmentGroup;
     private String priority;
     private String caller;
     private String shortDescription;
@@ -18,12 +19,14 @@ public class ServiceNowIncidentSummary {
             String number,
             String createdOn,
             String configurationItem,
+            String assignmentGroup,
             String priority,
             String caller,
             String shortDescription) {
         this.number = number;
         this.createdOn = createdOn;
         this.configurationItem = configurationItem;
+        this.assignmentGroup = assignmentGroup;
         this.priority = priority;
         this.caller = caller;
         this.shortDescription = shortDescription;
@@ -51,6 +54,14 @@ public class ServiceNowIncidentSummary {
 
     public void setConfigurationItem(String configurationItem) {
         this.configurationItem = configurationItem;
+    }
+
+    public String getAssignmentGroup() {
+        return assignmentGroup;
+    }
+
+    public void setAssignmentGroup(String assignmentGroup) {
+        this.assignmentGroup = assignmentGroup;
     }
 
     public String getPriority() {

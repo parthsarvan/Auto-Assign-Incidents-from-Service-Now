@@ -1,6 +1,7 @@
 package com.example.backend.repository;
 
 import com.example.backend.entity.GeoShiftMapping;
+import com.example.backend.entity.Shift;
 import com.example.backend.entity.Team;
 import java.util.List;
 import java.util.Optional;
@@ -19,6 +20,8 @@ public interface GeoShiftMappingRepository extends JpaRepository<GeoShiftMapping
     Optional<GeoShiftMapping> findByIdAndTeam(@Param("id") Long id, @Param("team") Team team);
 
     boolean existsByGeoAndShiftAndTeam(com.example.backend.entity.Geo geo, com.example.backend.entity.Shift shift, Team team);
+
+    List<GeoShiftMapping> findAllByShiftAndTeam(Shift shift, Team team);
 
     long countByTeam(Team team);
 }

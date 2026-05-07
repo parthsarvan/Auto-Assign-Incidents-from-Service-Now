@@ -115,6 +115,14 @@ export default function HomeLayout() {
         currentUser={user}
         setupStatus={setupStatus}
       />
+      {isSidebarOpen && (
+        <button
+          type="button"
+          className="sidebar-backdrop"
+          onClick={toggleSidebar}
+          aria-label="Close sidebar"
+        />
+      )}
 
       {/* ─── Right: Main Content (shifts over by sidebar’s width) ─── */}
       <div

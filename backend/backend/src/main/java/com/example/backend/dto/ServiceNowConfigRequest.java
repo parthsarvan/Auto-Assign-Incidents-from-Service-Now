@@ -4,6 +4,7 @@ public class ServiceNowConfigRequest {
     private String instanceUrl;
     private String username;
     private String password;
+    private java.util.List<String> assignmentGroups;
 
     public String getInstanceUrl() {
         return instanceUrl;
@@ -27,5 +28,13 @@ public class ServiceNowConfigRequest {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public java.util.List<String> getAssignmentGroups() {
+        return assignmentGroups;
+    }
+
+    public void setAssignmentGroups(java.util.List<String> assignmentGroups) {
+        this.assignmentGroups = assignmentGroups;
     }
 }

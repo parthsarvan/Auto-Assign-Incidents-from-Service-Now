@@ -7,7 +7,6 @@ import com.example.backend.entity.Team;
 import com.example.backend.repository.CiUserMappingRepository;
 import com.example.backend.repository.ConfigurationItemRepository;
 import com.example.backend.repository.GeoRepository;
-import com.example.backend.repository.GeoShiftMappingRepository;
 import com.example.backend.repository.ShiftRepository;
 import com.example.backend.repository.TeamMemberRepository;
 import com.example.backend.repository.TeamMemberScheduleRepository;
@@ -20,7 +19,6 @@ public class SetupStatusService {
     private final ShiftRepository shiftRepository;
     private final ConfigurationItemRepository configurationItemRepository;
     private final TeamMemberRepository teamMemberRepository;
-    private final GeoShiftMappingRepository geoShiftMappingRepository;
     private final CiUserMappingRepository ciUserMappingRepository;
     private final TeamMemberScheduleRepository teamMemberScheduleRepository;
     private final CurrentWorkspaceService currentWorkspaceService;
@@ -31,7 +29,6 @@ public class SetupStatusService {
             ShiftRepository shiftRepository,
             ConfigurationItemRepository configurationItemRepository,
             TeamMemberRepository teamMemberRepository,
-            GeoShiftMappingRepository geoShiftMappingRepository,
             CiUserMappingRepository ciUserMappingRepository,
             TeamMemberScheduleRepository teamMemberScheduleRepository,
             CurrentWorkspaceService currentWorkspaceService,
@@ -40,7 +37,6 @@ public class SetupStatusService {
         this.shiftRepository = shiftRepository;
         this.configurationItemRepository = configurationItemRepository;
         this.teamMemberRepository = teamMemberRepository;
-        this.geoShiftMappingRepository = geoShiftMappingRepository;
         this.ciUserMappingRepository = ciUserMappingRepository;
         this.teamMemberScheduleRepository = teamMemberScheduleRepository;
         this.currentWorkspaceService = currentWorkspaceService;
@@ -54,15 +50,19 @@ public class SetupStatusService {
                 requiredStep(
                         "servicenow_connection",
                         "Connect ServiceNow",
-                        organizationServiceNowConfigService.isConfigured(organization) ? 1 : 0,
+                        organizationServiceNowConfigService.isConfiguredForTeam(team) ? 1 : 0,
                         "/setup",
-                        "Connect your organization's ServiceNow instance before team setup begins."),
+                        "Connect your organization's ServiceNow instance and set the assignment groups for this team."),
                 requiredStep("geos", "Geos", geoRepository.countByTeam(team), "/geos",
                         "Define the geographic regions your team supports."),
-                requiredStep("shifts", "Shifts", shiftRepository.countByTeam(team), "/shifts",
-                        "Create the shift names used across your team."),
-                requiredStep("geo_shift_mappings", "Geo Shift Mappings", geoShiftMappingRepository.countByTeam(team), "/geo-shift-mappings",
-                        "Connect each geo to the shifts that can run there."),
+                new SetupStepStatus(
+                        "shifts",
+                        "Shifts",
+                        shiftRepository.countByTeam(team),
+                        hasConfiguredShifts(team),
+                        true,
+                        "/shifts",
+                        "Set one team timezone and create the shift hours used across your geos."),
                 requiredStep("configuration_items", "Configuration Items", configurationItemRepository.countByTeam(team), "/configuration-items",
                         "Add your supported CIs and their ServiceNow CI sys IDs."),
                 requiredStep("team_members", "Team Members", teamMemberRepository.countByTeam(team), "/team-members",
@@ -89,5 +89,11 @@ public class SetupStatusService {
 
     private SetupStepStatus optionalStep(String key, String label, long count, String route, String description) {
         return new SetupStepStatus(key, label, count, count > 0, false, route, description);
+    }
+
+    private boolean hasConfiguredShifts(Team team) {
+        return team.getTimezone() != null
+                && !team.getTimezone().isBlank()
+                && shiftRepository.countByTeam(team) > 0;
     }
 }

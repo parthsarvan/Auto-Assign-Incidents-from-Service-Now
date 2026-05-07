@@ -74,3 +74,22 @@
   flex-wrap: wrap;
   gap: 16px;
 }
+
+@media (max-width: 768px) {
+  .logs-hero {
+    padding: 1.2rem 1.2rem;
+  }
+
+  .logs-page {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  .logs-page__results {
+    padding-top: 1rem;
+  }
+
+  .selection-box {
+    padding: 12px 14px;
+  }
+}

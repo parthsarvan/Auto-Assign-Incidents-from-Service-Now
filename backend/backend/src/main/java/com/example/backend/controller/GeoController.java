@@ -13,6 +13,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/geos")
 public class GeoController {
+    private static final String LEGACY_DEFAULT_TIMEZONE = "UTC";
 
     private final GeoRepository geoRepository;
     private final CurrentWorkspaceService currentWorkspaceService;
@@ -48,6 +49,7 @@ public class GeoController {
         }
         geo.setName(normalizedName);
         geo.setTeam(team);
+        geo.setTimeZone(resolveGeoTimezone(team));
         return ResponseEntity.ok(geoRepository.save(geo));
     }
 
@@ -70,6 +72,7 @@ public class GeoController {
                 }
                 existing.setName(normalizedName);
                 existing.setTeam(team);
+                existing.setTimeZone(resolveGeoTimezone(team));
                 return ResponseEntity.ok(geoRepository.save(existing));
             })
             .orElseGet(() -> ResponseEntity.notFound().build());
@@ -92,5 +95,12 @@ public class GeoController {
             return "";
         }
         return value.trim().replaceAll("\\s{2,}", " ");
+    }
+
+    private String resolveGeoTimezone(Team team) {
+        if (team.getTimezone() == null || team.getTimezone().isBlank()) {
+            return LEGACY_DEFAULT_TIMEZONE;
+        }
+        return team.getTimezone();
     }
 }

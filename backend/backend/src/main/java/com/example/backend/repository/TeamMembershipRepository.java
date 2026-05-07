@@ -24,4 +24,11 @@ public interface TeamMembershipRepository extends JpaRepository<TeamMembership, 
                     + "where t.organization = :organization "
                     + "order by u.username asc, t.name asc")
     List<TeamMembership> findAllByOrganizationWithTeamAndUser(@Param("organization") com.example.backend.entity.Organization organization);
+
+    @Query(
+            "select tm from TeamMembership tm "
+                    + "join fetch tm.user u "
+                    + "where tm.team = :team "
+                    + "order by u.firstName asc, u.lastName asc, u.username asc")
+    List<TeamMembership> findAllByTeamWithUser(@Param("team") Team team);
 }

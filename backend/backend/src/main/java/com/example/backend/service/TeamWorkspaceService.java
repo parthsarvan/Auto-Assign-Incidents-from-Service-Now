@@ -22,6 +22,7 @@ import com.example.backend.repository.TeamMemberRepository;
 import com.example.backend.repository.TeamRepository;
 import com.example.backend.repository.UserRepository;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -140,7 +141,8 @@ public class TeamWorkspaceService {
                 organization.getName(),
                 savedTeam.getTeam_id(),
                 savedTeam.getName(),
-                workspaceAccessService.getCurrentTeamRole(user));
+                workspaceAccessService.getCurrentTeamRole(user),
+                savedTeam.getTimezone());
     }
 
     private void cloneSetup(Team targetTeam, Long copyFromTeamId, Organization organization) {
@@ -154,10 +156,13 @@ public class TeamWorkspaceService {
         }
 
         Map<Long, Geo> clonedGeos = new HashMap<>();
+        targetTeam.setServiceNowAssignmentGroups(sourceTeam.getServiceNowAssignmentGroups());
+        teamRepository.save(targetTeam);
         for (Geo sourceGeo : geoRepository.findAllByTeamOrderByNameAsc(sourceTeam)) {
             Geo clonedGeo = new Geo();
             clonedGeo.setName(sourceGeo.getName());
             clonedGeo.setTeam(targetTeam);
+            clonedGeo.setTimeZone(targetTeam.getTimezone());
             clonedGeo = geoRepository.save(clonedGeo);
             clonedGeos.put(sourceGeo.getG_id(), clonedGeo);
         }
@@ -167,6 +172,8 @@ public class TeamWorkspaceService {
             Shift clonedShift = new Shift();
             clonedShift.setName(sourceShift.getName());
             clonedShift.setTeam(targetTeam);
+            clonedShift.setStartTime(sourceShift.getStartTime());
+            clonedShift.setEndTime(sourceShift.getEndTime());
             clonedShift = shiftRepository.save(clonedShift);
             clonedShifts.put(sourceShift.getS_id(), clonedShift);
         }
@@ -206,6 +213,7 @@ public class TeamWorkspaceService {
             clonedMapping.setGeo(clonedGeo);
             clonedMapping.setShift(clonedShift);
             clonedMapping.setTeam(targetTeam);
+            clonedMapping.syncTimesFromShift();
             geoShiftMappingRepository.save(clonedMapping);
         }
 
@@ -256,7 +264,31 @@ public class TeamWorkspaceService {
                 targetTeam.getOrganization().getName(),
                 targetTeam.getTeam_id(),
                 targetTeam.getName(),
-                workspaceAccessService.getCurrentTeamRole(user));
+                workspaceAccessService.getCurrentTeamRole(user),
+                targetTeam.getTimezone());
+    }
+
+    @Transactional
+    public WorkspaceSummary updateCurrentTeamTimezone(String timezone) {
+        User user = currentWorkspaceService.getCurrentUser();
+        Team currentTeam = currentWorkspaceService.getCurrentTeam();
+        String normalizedTimezone = normalizeTimezone(timezone);
+        currentTeam.setTimezone(normalizedTimezone);
+        Team savedTeam = teamRepository.save(currentTeam);
+        geoRepository.findAllByTeamOrderByNameAsc(savedTeam).forEach((geo) -> {
+            geo.setTimeZone(normalizedTimezone);
+            geoRepository.save(geo);
+        });
+        user.setCurrentOrganization(savedTeam.getOrganization());
+        user.setCurrentTeam(savedTeam);
+        userRepository.save(user);
+        return new WorkspaceSummary(
+                savedTeam.getOrganization().getOrg_id(),
+                savedTeam.getOrganization().getName(),
+                savedTeam.getTeam_id(),
+                savedTeam.getName(),
+                workspaceAccessService.getCurrentTeamRole(user),
+                savedTeam.getTimezone());
     }
 
     @Transactional
@@ -312,5 +344,18 @@ public class TeamWorkspaceService {
         }
         String normalized = description.trim().replaceAll("\\s{2,}", " ");
         return normalized.isBlank() ? null : normalized;
+    }
+
+    private String normalizeTimezone(String timezone) {
+        if (timezone == null || timezone.isBlank()) {
+            throw new IllegalArgumentException("Team timezone is required.");
+        }
+        String normalizedTimezone = timezone.trim();
+        try {
+            ZoneId.of(normalizedTimezone);
+        } catch (Exception ex) {
+            throw new IllegalArgumentException("Select a valid team timezone.");
+        }
+        return normalizedTimezone;
     }
 }

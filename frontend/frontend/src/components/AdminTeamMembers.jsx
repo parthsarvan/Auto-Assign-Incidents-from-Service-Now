@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   createTeamMember,
   deleteTeamMember,
   fetchGeos,
+  fetchJoinedTeamUsers,
   fetchTeamMembers,
   updateTeamMember,
 } from '../services/admin';
@@ -14,6 +15,8 @@ import './AdminCrud.css';
 export default function AdminTeamMembers() {
   const [teamMembers, setTeamMembers] = useState([]);
   const [geos, setGeos] = useState([]);
+  const [joinedUsers, setJoinedUsers] = useState([]);
+  const [selectedUserId, setSelectedUserId] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -24,22 +27,37 @@ export default function AdminTeamMembers() {
   const [error, setError] = useState('');
   const canManageTeam = canManageCurrentTeam(getCurrentUser());
 
-  const loadTeamMembers = async () => {
+  const loadTeamMembers = useCallback(async () => {
     try {
-      const [data, geoData] = await Promise.all([
+      const [data, geoData, userData] = await Promise.all([
         fetchTeamMembers(),
         fetchGeos(),
+        canManageTeam ? fetchJoinedTeamUsers() : Promise.resolve([]),
       ]);
       setTeamMembers(data);
       setGeos(geoData);
+      const eligibleUsers = (userData || []).map((user) => ({
+        ...user,
+        displayName: [user.firstName, user.lastName].filter(Boolean).join(' ').trim() || user.username,
+        alreadyMapped: Boolean(user.workEmail) && (data || []).some((member) =>
+          (member.email || '').trim().toLowerCase() === user.workEmail.trim().toLowerCase()
+        ),
+      }));
+      setJoinedUsers(eligibleUsers);
+      if (selectedUserId) {
+        const stillAvailable = eligibleUsers.some((user) => String(user.id) === String(selectedUserId));
+        if (!stillAvailable) {
+          setSelectedUserId('');
+        }
+      }
     } catch (err) {
       setError('Failed to load team members.');
     }
-  };
+  }, [canManageTeam, selectedUserId]);
 
   useEffect(() => {
     loadTeamMembers();
-  }, []);
+  }, [loadTeamMembers]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -72,6 +90,7 @@ export default function AdminTeamMembers() {
         setPhone('');
         setSysId('');
         setGeoId('');
+        setSelectedUserId('');
         loadTeamMembers();
         return;
       }
@@ -100,9 +119,10 @@ export default function AdminTeamMembers() {
       setPhone('');
       setSysId('');
       setGeoId('');
+      setSelectedUserId('');
       loadTeamMembers();
     } catch (err) {
-      setError('Failed to create team member.');
+      setError(typeof err?.response?.data === 'string' ? err.response.data : 'Failed to create team member.');
     }
   };
 
@@ -126,12 +146,27 @@ export default function AdminTeamMembers() {
 
   const handleCancel = () => {
     setEditingId(null);
+    setSelectedUserId('');
     setFirstName('');
     setLastName('');
     setEmail('');
     setPhone('');
     setSysId('');
     setGeoId('');
+  };
+
+  const handleLinkedUserChange = (userId) => {
+    setSelectedUserId(userId);
+    if (!userId) {
+      return;
+    }
+    const selectedUser = joinedUsers.find((user) => String(user.id) === String(userId));
+    if (!selectedUser) {
+      return;
+    }
+    setFirstName(selectedUser.firstName || '');
+    setLastName(selectedUser.lastName || '');
+    setEmail(selectedUser.workEmail || '');
   };
 
   return (
@@ -150,6 +185,25 @@ export default function AdminTeamMembers() {
       {canManageTeam ? (
         <div className="card p-3 mb-4 admin-crud-card">
           <form className="row g-3 admin-crud-form-grid" onSubmit={handleSubmit}>
+          <div className="col-12">
+            <label className="form-label">Joined InciTeam User</label>
+            <select
+              className="form-select"
+              value={selectedUserId}
+              onChange={(e) => handleLinkedUserChange(e.target.value)}
+              disabled={Boolean(editingId)}
+            >
+              <option value="">Select an existing joined user (optional)</option>
+              {joinedUsers.map((user) => (
+                <option key={user.id} value={user.id} disabled={user.alreadyMapped}>
+                  {user.displayName}{user.workEmail ? ` (${user.workEmail})` : ''}
+                </option>
+              ))}
+            </select>
+            <div className="form-text">
+              Pick a joined team user to prefill name and email, or leave this blank and enter everything manually.
+            </div>
+          </div>
           <div className="col-md-5">
             <label className="form-label">First Name</label>
             <input

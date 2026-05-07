@@ -46,7 +46,7 @@ export default function AdminGeos() {
       setName('');
       loadGeos();
     } catch (err) {
-      setError('Failed to create geo.');
+      setError(typeof err?.response?.data === 'string' ? err.response.data : 'Failed to save geo.');
     }
   };
 

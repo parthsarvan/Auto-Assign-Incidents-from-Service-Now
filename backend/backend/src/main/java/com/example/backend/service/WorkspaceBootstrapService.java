@@ -285,6 +285,9 @@ public class WorkspaceBootstrapService {
         for (GeoShiftMapping mapping : geoShiftMappingRepository.findAll()) {
             if (mapping.getTeam() == null) {
                 mapping.setTeam(team);
+                if (mapping.getStartTime() == null || mapping.getEndTime() == null) {
+                    mapping.syncTimesFromShift();
+                }
                 geoShiftMappingRepository.save(mapping);
             }
         }
@@ -320,7 +323,8 @@ public class WorkspaceBootstrapService {
                 user.getCurrentOrganization() != null ? user.getCurrentOrganization().getName() : null,
                 user.getCurrentTeam() != null ? user.getCurrentTeam().getTeam_id() : null,
                 user.getCurrentTeam() != null ? user.getCurrentTeam().getName() : null,
-                getCurrentTeamRole(user));
+                getCurrentTeamRole(user),
+                user.getCurrentTeam() != null ? user.getCurrentTeam().getTimezone() : null);
     }
 
     private TeamMembership selectPreferredTeamMembership(User user, java.util.List<TeamMembership> memberships) {

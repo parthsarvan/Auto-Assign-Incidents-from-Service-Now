@@ -14,6 +14,8 @@ public class ServiceNowIncident {
     @JsonDeserialize(using = ServiceNowReferenceDeserializer.class)
     private ServiceNowReference assigned_to;
     @JsonDeserialize(using = ServiceNowReferenceDeserializer.class)
+    private ServiceNowReference assignment_group;
+    @JsonDeserialize(using = ServiceNowReferenceDeserializer.class)
     private ServiceNowReference cmdb_ci;
     @JsonDeserialize(using = ServiceNowReferenceDeserializer.class)
     private ServiceNowReference caller_id;
@@ -72,6 +74,14 @@ public class ServiceNowIncident {
 
     public void setAssigned_to(ServiceNowReference assigned_to) {
         this.assigned_to = assigned_to;
+    }
+
+    public ServiceNowReference getAssignment_group() {
+        return assignment_group;
+    }
+
+    public void setAssignment_group(ServiceNowReference assignment_group) {
+        this.assignment_group = assignment_group;
     }
 
     public ServiceNowReference getCmdb_ci() {

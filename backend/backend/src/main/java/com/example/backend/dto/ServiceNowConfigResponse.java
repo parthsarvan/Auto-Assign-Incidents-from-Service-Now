@@ -1,20 +1,28 @@
 package com.example.backend.dto;
 
 import java.time.Instant;
+import java.util.List;
 
 public class ServiceNowConfigResponse {
     private boolean configured;
     private String instanceUrl;
     private String username;
     private Instant connectedAt;
+    private List<String> assignmentGroups;
 
     public ServiceNowConfigResponse() {}
 
-    public ServiceNowConfigResponse(boolean configured, String instanceUrl, String username, Instant connectedAt) {
+    public ServiceNowConfigResponse(
+            boolean configured,
+            String instanceUrl,
+            String username,
+            Instant connectedAt,
+            List<String> assignmentGroups) {
         this.configured = configured;
         this.instanceUrl = instanceUrl;
         this.username = username;
         this.connectedAt = connectedAt;
+        this.assignmentGroups = assignmentGroups;
     }
 
     public boolean isConfigured() {
@@ -47,5 +55,13 @@ public class ServiceNowConfigResponse {
 
     public void setConnectedAt(Instant connectedAt) {
         this.connectedAt = connectedAt;
+    }
+
+    public List<String> getAssignmentGroups() {
+        return assignmentGroups;
+    }
+
+    public void setAssignmentGroups(List<String> assignmentGroups) {
+        this.assignmentGroups = assignmentGroups;
     }
 }

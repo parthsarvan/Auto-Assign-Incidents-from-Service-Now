@@ -8,3 +8,8 @@ node_modules/
 
 frontend/frontend/build/
 backend/backend/target/
+
+/copyright_deposit/
+/package.json
+/package-lock.json
+/tools/

@@ -17,6 +17,9 @@ public class Geo {
     @Column(nullable = false)
     private String name;
 
+    @Column(name = "time_zone")
+    private String timeZone;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "team_id")
     private Team team;
@@ -41,6 +44,14 @@ public class Geo {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public String getTimeZone() {
+        return timeZone;
+    }
+
+    public void setTimeZone(String timeZone) {
+        this.timeZone = timeZone;
     }
 
     public Team getTeam() {
