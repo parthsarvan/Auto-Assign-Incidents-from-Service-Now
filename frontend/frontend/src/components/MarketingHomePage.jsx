@@ -72,6 +72,7 @@ export default function MarketingHomePage() {
   const primaryLabel = currentUser ? 'Open App' : 'Create Organization';
   const secondaryPath = currentUser ? '/summary' : '/signin';
   const secondaryLabel = currentUser ? 'Open Summary' : 'Sign In';
+  const authLinkProps = currentUser ? {} : { target: '_blank', rel: 'noreferrer' };
 
   return (
     <div className="marketing-page">
@@ -86,10 +87,10 @@ export default function MarketingHomePage() {
           <a href="#workflow">How It Works</a>
         </nav>
         <div className="marketing-nav__actions">
-          <Link className="btn btn-outline-primary" to="/signin">
+          <Link className="btn btn-outline-primary" to="/signin" {...authLinkProps}>
             Sign In
           </Link>
-          <Link className="btn btn-primary" to={primaryPath}>
+          <Link className="btn btn-primary" to={primaryPath} {...authLinkProps}>
             {primaryLabel}
           </Link>
         </div>
@@ -107,10 +108,10 @@ export default function MarketingHomePage() {
               and automate assignment decisions in one focused workspace built for real operational use.
             </p>
             <div className="marketing-hero__actions">
-              <Link className="btn btn-primary btn-lg" to={primaryPath}>
+              <Link className="btn btn-primary btn-lg" to={primaryPath} {...authLinkProps}>
                 {primaryLabel}
               </Link>
-              <Link className="btn btn-outline-primary btn-lg" to={secondaryPath}>
+              <Link className="btn btn-outline-primary btn-lg" to={secondaryPath} {...authLinkProps}>
                 {secondaryLabel}
               </Link>
             </div>
@@ -237,15 +238,22 @@ export default function MarketingHomePage() {
             <h2>Open the product, sign in, and build the incident workspace around your real teams.</h2>
           </div>
           <div className="marketing-cta__actions">
-            <Link className="btn btn-primary btn-lg" to={primaryPath}>
+            <Link className="btn btn-primary btn-lg" to={primaryPath} {...authLinkProps}>
               {primaryLabel}
             </Link>
-            <Link className="btn btn-outline-primary btn-lg" to="/signin">
+            <Link className="btn btn-outline-primary btn-lg" to="/signin" {...authLinkProps}>
               Sign In
             </Link>
           </div>
         </section>
       </main>
+
+      <footer className="legal-footer legal-footer--marketing">
+        <div className="legal-footer__brand">InciTeam™</div>
+        <div>Copyright © 2026 Parth Sarvan. All Rights Reserved.</div>
+        <div>U.S. Trademark Application Serial No. 99808275.</div>
+        <div>U.S. Copyright Case No. 1-15157770821 pending.</div>
+      </footer>
     </div>
   );
 }

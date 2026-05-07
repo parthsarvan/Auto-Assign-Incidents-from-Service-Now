@@ -186,6 +186,13 @@ export default function HomeLayout() {
         <div className="page-body p-3">
           <Outlet context={{ setupStatus, currentUser: user }} />
         </div>
+
+        <footer className="legal-footer legal-footer--app">
+          <div className="legal-footer__brand">InciTeam™</div>
+          <div>Copyright © 2026 Parth Sarvan. All Rights Reserved.</div>
+          <div>U.S. Trademark Application Serial No. 99808275.</div>
+          <div>U.S. Copyright Case No. 1-15157770821 pending.</div>
+        </footer>
       </div>
     </div>
   );
