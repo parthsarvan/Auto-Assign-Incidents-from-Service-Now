@@ -6,6 +6,8 @@ import { getCurrentUser } from '../services/auth';
 import { buildApiUrl } from '../services/api';
 import './Logs.css';
 
+const POLL_REFRESH_BUFFER_MS = 303000;
+
 export default function Logs() {
   const outletContext = useOutletContext() || {};
   const currentUser = outletContext.currentUser || getCurrentUser();
@@ -43,9 +45,33 @@ export default function Logs() {
 
   useEffect(() => {
     fetchLogs();
-    const intervalId = setInterval(fetchLogs, 300000);
-    return () => clearInterval(intervalId);
   }, []);
+
+  useEffect(() => {
+    if (!logs.length) {
+      return undefined;
+    }
+
+    const latestPollTimestamp = logs
+      .filter((log) => log.type === 'POLL' && log.timestamp)
+      .map((log) => Date.parse(log.timestamp))
+      .filter((value) => !Number.isNaN(value))
+      .sort((left, right) => right - left)[0];
+
+    if (!latestPollTimestamp) {
+      return undefined;
+    }
+
+    const nextRefreshDelay = Math.max(
+      latestPollTimestamp + POLL_REFRESH_BUFFER_MS - Date.now(),
+      3000
+    );
+    const timeoutId = setTimeout(() => {
+      fetchLogs();
+    }, nextRefreshDelay);
+
+    return () => clearTimeout(timeoutId);
+  }, [logs]);
 
   const logMatchesFilters = (log) => {
     if (statusFilter !== 'ALL' && log.status !== statusFilter) {
@@ -160,6 +186,16 @@ export default function Logs() {
     }
     return { to: '/assignment-diagnostics', label: 'Investigate' };
   };
+
+  const sortIncidentsByCreatedOn = (incidents = []) =>
+    [...incidents].sort((left, right) => {
+      const leftTime = left?.createdOn ? Date.parse(left.createdOn) : Number.POSITIVE_INFINITY;
+      const rightTime = right?.createdOn ? Date.parse(right.createdOn) : Number.POSITIVE_INFINITY;
+      if (leftTime !== rightTime) {
+        return leftTime - rightTime;
+      }
+      return String(left?.number || '').localeCompare(String(right?.number || ''));
+    });
 
   return (
     <div className="logs-page">
@@ -411,7 +447,7 @@ export default function Logs() {
                       </tr>
                     </thead>
                     <tbody>
-                      {log.incidents.map((incident) => (
+                      {sortIncidentsByCreatedOn(log.incidents).map((incident) => (
                         <tr key={`${incident.number}-${incident.createdOn}`}>
                           <td>{incident.number}</td>
                           <td>

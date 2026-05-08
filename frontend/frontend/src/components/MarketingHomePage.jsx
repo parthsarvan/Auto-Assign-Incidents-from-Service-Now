@@ -70,8 +70,6 @@ export default function MarketingHomePage() {
   const currentUser = getCurrentUser();
   const primaryPath = currentUser ? getDefaultRouteForUser(currentUser) : '/signup';
   const primaryLabel = currentUser ? 'Open App' : 'Create Organization';
-  const secondaryPath = currentUser ? '/summary' : '/signin';
-  const secondaryLabel = currentUser ? 'Open Summary' : 'Sign In';
   const authLinkProps = currentUser ? {} : { target: '_blank', rel: 'noreferrer' };
 
   return (
@@ -86,14 +84,6 @@ export default function MarketingHomePage() {
           <a href="#compare">Comparison</a>
           <a href="#workflow">How It Works</a>
         </nav>
-        <div className="marketing-nav__actions">
-          <Link className="btn btn-outline-primary" to="/signin" {...authLinkProps}>
-            Sign In
-          </Link>
-          <Link className="btn btn-primary" to={primaryPath} {...authLinkProps}>
-            {primaryLabel}
-          </Link>
-        </div>
       </header>
 
       <main className="marketing-main">
@@ -107,14 +97,6 @@ export default function MarketingHomePage() {
               InciTeam helps organizations connect ServiceNow, onboard teams, manage coverage,
               and automate assignment decisions in one focused workspace built for real operational use.
             </p>
-            <div className="marketing-hero__actions">
-              <Link className="btn btn-primary btn-lg" to={primaryPath} {...authLinkProps}>
-                {primaryLabel}
-              </Link>
-              <Link className="btn btn-outline-primary btn-lg" to={secondaryPath} {...authLinkProps}>
-                {secondaryLabel}
-              </Link>
-            </div>
             <div className="marketing-proof">
               <div>
                 <strong>Structured onboarding</strong>

@@ -59,9 +59,9 @@ public class ServiceNowLogService {
                 .map(this::toSummary)
                 .collect(Collectors.toList());
         log.setIncidents(summaries);
-        log.setAssignmentSelections(buildSelections(summaries));
         List<ServiceNowAssignmentResult> assignmentResults =
                 results != null ? results : List.of();
+        log.setAssignmentSelections(buildSelections(assignmentResults));
         log.setAssignmentResults(assignmentResults);
         log.setAssignmentConfirmation(buildConfirmationMessage(assignmentResults));
         log.setIncidentCount(summaries.size());
@@ -98,15 +98,15 @@ public class ServiceNowLogService {
         return summary;
     }
 
-    private List<ServiceNowAssignmentSelection> buildSelections(List<ServiceNowIncidentSummary> summaries) {
-        return summaries.stream()
-                .filter(summary -> summary.getSuggestedAssignee() != null && !summary.getSuggestedAssignee().isBlank())
-                .map(summary -> new ServiceNowAssignmentSelection(
-                        summary.getNumber(),
-                        summary.getSuggestedAssignee(),
-                        summary.getSuggestedAssigneeEmail(),
-                        summary.getSuggestedGeo(),
-                        summary.getSuggestedShift()))
+    private List<ServiceNowAssignmentSelection> buildSelections(List<ServiceNowAssignmentResult> results) {
+        return results.stream()
+                .filter(result -> result.getAssigneeName() != null && !result.getAssigneeName().isBlank())
+                .map(result -> new ServiceNowAssignmentSelection(
+                        result.getIncidentNumber(),
+                        result.getAssigneeName(),
+                        result.getAssigneeEmail(),
+                        result.getGeo(),
+                        result.getShift()))
                 .collect(Collectors.toList());
     }
 

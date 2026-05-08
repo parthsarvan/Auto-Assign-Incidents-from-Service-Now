@@ -38,6 +38,9 @@ public class ServiceNowIncidentAssigner {
                     .map(incident -> new ServiceNowAssignmentResult(
                             incident.getNumber(),
                             null,
+                            null,
+                            null,
+                            null,
                             "SKIPPED",
                             "Assignment is disabled in configuration."))
                     .collect(Collectors.toList());
@@ -51,7 +54,7 @@ public class ServiceNowIncidentAssigner {
         IncidentAssignmentDecision decision = assignmentService.determineAssignment(incident);
         if (!decision.hasSuggestion()) {
             return new ServiceNowAssignmentResult(
-                    incident.getNumber(), null, "SKIPPED", decision.getReason());
+                    incident.getNumber(), null, null, null, null, "SKIPPED", decision.getReason());
         }
         IncidentAssignmentSuggestion selected = decision.getSuggestion();
         if (selected.getAssigneeSysId() == null || selected.getAssigneeSysId().isBlank()) {
@@ -59,6 +62,9 @@ public class ServiceNowIncidentAssigner {
             return new ServiceNowAssignmentResult(
                     incident.getNumber(),
                     selected.getAssigneeName(),
+                    selected.getAssigneeEmail(),
+                    selected.getGeo(),
+                    selected.getShift(),
                     "FAILED",
                     "Missing ServiceNow assignee sys_id.");
         }
@@ -66,6 +72,9 @@ public class ServiceNowIncidentAssigner {
         return new ServiceNowAssignmentResult(
                 incident.getNumber(),
                 selected.getAssigneeName(),
+                selected.getAssigneeEmail(),
+                selected.getGeo(),
+                selected.getShift(),
                 success ? "SUCCESS" : "FAILED",
                 success ? "Assigned successfully." : "ServiceNow assignment failed.");
     }
