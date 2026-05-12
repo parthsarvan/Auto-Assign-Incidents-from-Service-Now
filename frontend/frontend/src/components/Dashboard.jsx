@@ -1,5 +1,5 @@
 // src/components/Dashboard.jsx
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { DateTime } from 'luxon';
 import axios from 'axios';
 import { Link, useOutletContext } from 'react-router-dom';
@@ -7,10 +7,13 @@ import { Link, useOutletContext } from 'react-router-dom';
 import AvailabilityGrid from './AvailabilityGrid';
 import LeaveList from './LeaveList';
 import BreakList from './BreakList';
+import CurrentRoutingWindow from './CurrentRoutingWindow';
 import { canManageCurrentTeam } from '../services/permissions';
 import { getCurrentUser } from '../services/auth';
 import { buildApiUrl } from '../services/api';
 import './Dashboard.css';
+
+const DASHBOARD_REFRESH_MS = 60000;
 
 export default function Dashboard() {
   const outletContext = useOutletContext() || {};
@@ -59,9 +62,15 @@ export default function Dashboard() {
   const hasAnyAvailabilityData =
     availabilityRecords.length > 0 || leaveRecords.length > 0 || breakRecords.length > 0;
 
+  const isBreakActiveNow = useCallback((record) => {
+    const nowUtc = DateTime.utc();
+    const startUtc = DateTime.fromISO(record.startTs, { zone: 'utc' });
+    const endUtc = DateTime.fromISO(record.endTs, { zone: 'utc' });
+    return nowUtc >= startUtc && nowUtc <= endUtc;
+  }, []);
+
   // ── 3) Fetch Availability & Leave Whenever startDate or viewMode Changes ──
-  useEffect(() => {
-    async function loadAllData() {
+  const loadAllData = useCallback(async () => {
       setLoading(true);
       setError('');
 
@@ -139,10 +148,11 @@ export default function Dashboard() {
             reason: rec.reason,
           };
         });
-        setBreakRecords(breakFlat);
+        const activeBreaks = breakFlat.filter(isBreakActiveNow);
+        setBreakRecords(activeBreaks);
 
         const breakKeySet = new Set();
-        breakFlat.forEach((r) => {
+        activeBreaks.forEach((r) => {
           const key = `${r.geoName}–${r.shiftName}||${r.date}||${r.fullName}`;
           breakKeySet.add(key);
         });
@@ -153,10 +163,13 @@ export default function Dashboard() {
       } finally {
         setLoading(false);
       }
-    }
+    }, [dayCount, isBreakActiveNow, startDate]);
 
+  useEffect(() => {
     loadAllData();
-  }, [startDate, viewMode, zone, dayCount]);
+    const intervalId = setInterval(loadAllData, DASHBOARD_REFRESH_MS);
+    return () => clearInterval(intervalId);
+  }, [loadAllData]);
 
   // ── 4) Handlers for Next/Prev & Toggle View Mode ──────────────────────────
 
@@ -264,6 +277,7 @@ export default function Dashboard() {
         </div>
       </div>
 
+      <CurrentRoutingWindow />
 
       {/* ─────────────── Loading Spinner / Error Message ──────────────────────── */}
       {loading && (

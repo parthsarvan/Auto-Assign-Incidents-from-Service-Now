@@ -42,6 +42,39 @@
   min-width: 760px;
 }
 
+.admin-crud-order-list {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.admin-crud-order-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid #e0e8f2;
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.admin-crud-order-rank {
+  width: 1.8rem;
+  height: 1.8rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #234bb5;
+  color: #ffffff;
+  font-weight: 800;
+}
+
+.admin-crud-order-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
 @media (max-width: 768px) {
   .admin-crud-page {
     padding-left: 0 !important;
@@ -64,5 +97,20 @@
   .admin-crud-form-grid .col-12.d-flex .btn,
   .admin-crud-table td.d-flex .btn {
     flex: 1 1 100%;
+  }
+
+  .admin-crud-order-item {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .admin-crud-order-item .ms-auto {
+    margin-left: 0 !important;
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .admin-crud-order-item .btn {
+    flex: 1 1 auto;
   }
 }

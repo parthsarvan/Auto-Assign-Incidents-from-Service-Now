@@ -11,6 +11,7 @@ import {
 } from '../services/admin';
 import { getCurrentUser } from '../services/auth';
 import { canManageCurrentTeam } from '../services/permissions';
+import CurrentRoutingWindow from './CurrentRoutingWindow';
 import SetupAssistBanner from './SetupAssistBanner';
 import './AdminCrud.css';
 
@@ -195,6 +196,7 @@ export default function AdminSchedules() {
         <h2 className="mb-1">Manage Shift Schedules</h2>
         <div className="text-muted">Define who covers each mapped shift window for the current team.</div>
       </div>
+      <CurrentRoutingWindow />
       {error && <div className="alert alert-danger">{error}</div>}
 
       {canManageTeam ? (

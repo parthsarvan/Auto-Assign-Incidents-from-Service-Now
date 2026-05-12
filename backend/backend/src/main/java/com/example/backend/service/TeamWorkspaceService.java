@@ -1,6 +1,7 @@
 package com.example.backend.service;
 
 import com.example.backend.dto.TeamSummary;
+import com.example.backend.dto.UnsupportedCiHandlingSettingsResponse;
 import com.example.backend.dto.WorkspaceSummary;
 import com.example.backend.entity.CiUserMapping;
 import com.example.backend.entity.ConfigurationItem;
@@ -11,6 +12,7 @@ import com.example.backend.entity.Shift;
 import com.example.backend.entity.Team;
 import com.example.backend.entity.TeamMember;
 import com.example.backend.entity.TeamMembership;
+import com.example.backend.entity.UnsupportedCiHandlingPolicy;
 import com.example.backend.entity.User;
 import com.example.backend.repository.CiUserMappingRepository;
 import com.example.backend.repository.ConfigurationItemRepository;
@@ -203,6 +205,13 @@ public class TeamWorkspaceService {
             clonedTeamMembers.put(sourceMember.getTm_id(), clonedMember);
         }
 
+        targetTeam.setUnsupportedCiPolicy(sourceTeam.getUnsupportedCiPolicy());
+        if (sourceTeam.getUnsupportedCiFallbackTeamMember() != null) {
+            targetTeam.setUnsupportedCiFallbackTeamMember(
+                    clonedTeamMembers.get(sourceTeam.getUnsupportedCiFallbackTeamMember().getTm_id()));
+        }
+        teamRepository.save(targetTeam);
+
         for (GeoShiftMapping sourceMapping : geoShiftMappingRepository.findAllByTeamWithGeoAndShift(sourceTeam)) {
             Geo clonedGeo = clonedGeos.get(sourceMapping.getGeo().getG_id());
             Shift clonedShift = clonedShifts.get(sourceMapping.getShift().getS_id());
@@ -291,6 +300,33 @@ public class TeamWorkspaceService {
                 savedTeam.getTimezone());
     }
 
+    @Transactional(readOnly = true)
+    public UnsupportedCiHandlingSettingsResponse getUnsupportedCiHandlingSettings() {
+        Team team = currentWorkspaceService.getCurrentTeam();
+        return buildUnsupportedCiHandlingSettingsResponse(team);
+    }
+
+    @Transactional
+    public UnsupportedCiHandlingSettingsResponse updateUnsupportedCiHandlingSettings(
+            String policy,
+            Long fallbackTeamMemberId) {
+        Team team = currentWorkspaceService.getCurrentTeam();
+        UnsupportedCiHandlingPolicy normalizedPolicy = normalizeUnsupportedCiPolicy(policy);
+        TeamMember fallbackTeamMember = null;
+        if (normalizedPolicy == UnsupportedCiHandlingPolicy.FALLBACK_TRIAGE_OWNER) {
+            if (fallbackTeamMemberId == null) {
+                throw new IllegalArgumentException("Select a fallback triage owner for unsupported CI incidents.");
+            }
+            fallbackTeamMember = teamMemberRepository.findByIdAndTeam(fallbackTeamMemberId, team)
+                    .orElseThrow(() -> new IllegalArgumentException(
+                            "Fallback triage owner must be a member of the current team."));
+        }
+        team.setUnsupportedCiPolicy(normalizedPolicy);
+        team.setUnsupportedCiFallbackTeamMember(fallbackTeamMember);
+        Team savedTeam = teamRepository.save(team);
+        return buildUnsupportedCiHandlingSettingsResponse(savedTeam);
+    }
+
     @Transactional
     public TeamSummary regenerateJoinCode(Long teamId) {
         User user = currentWorkspaceService.getCurrentUser();
@@ -357,5 +393,27 @@ public class TeamWorkspaceService {
             throw new IllegalArgumentException("Select a valid team timezone.");
         }
         return normalizedTimezone;
+    }
+
+    private UnsupportedCiHandlingPolicy normalizeUnsupportedCiPolicy(String policy) {
+        if (policy == null || policy.isBlank()) {
+            return UnsupportedCiHandlingPolicy.SKIP_AND_LOG;
+        }
+        try {
+            return UnsupportedCiHandlingPolicy.valueOf(policy.trim().toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            throw new IllegalArgumentException("Select a valid unsupported CI handling policy.");
+        }
+    }
+
+    private UnsupportedCiHandlingSettingsResponse buildUnsupportedCiHandlingSettingsResponse(Team team) {
+        TeamMember fallbackTeamMember = team.getUnsupportedCiFallbackTeamMember();
+        String fallbackTeamMemberName = fallbackTeamMember == null
+                ? null
+                : (fallbackTeamMember.getF_name() + " " + fallbackTeamMember.getL_name()).trim();
+        return new UnsupportedCiHandlingSettingsResponse(
+                team.getUnsupportedCiPolicy().name(),
+                fallbackTeamMember != null ? fallbackTeamMember.getTm_id() : null,
+                fallbackTeamMemberName);
     }
 }

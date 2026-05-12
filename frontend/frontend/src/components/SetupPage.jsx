@@ -1,12 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useOutletContext } from 'react-router-dom';
 import {
-  createCiUserMapping,
   createGeo,
   createConfigurationItem,
   createShift,
   createTeamMember,
-  deleteCiUserMapping,
   deleteConfigurationItem,
   deleteGeo,
   deleteShift,
@@ -18,7 +16,7 @@ import {
   fetchJoinedTeamUsers,
   fetchShifts,
   fetchTeamMembers,
-  updateCiUserMapping,
+  replaceCiUserMappingsForCi,
   updateGeo,
   updateConfigurationItem,
   updateShift,
@@ -27,7 +25,11 @@ import {
 import { fetchSetupStatus } from '../services/setup';
 import { getTimeZoneOptions } from '../services/timezones';
 import { fetchServiceNowConfig, updateServiceNowConfig } from '../services/servicenow';
-import { updateCurrentTeamTimezone } from '../services/workspace';
+import {
+  fetchUnsupportedCiHandlingSettings,
+  updateCurrentTeamTimezone,
+  updateUnsupportedCiHandlingSettings,
+} from '../services/workspace';
 import './SetupPage.css';
 
 const INLINE_STEP_KEYS = new Set([
@@ -89,9 +91,8 @@ export default function SetupPage() {
   const [teamMemberSaving, setTeamMemberSaving] = useState(false);
 
   const [mappingConfigurationItemId, setMappingConfigurationItemId] = useState('');
-  const [mappingTeamMemberId, setMappingTeamMemberId] = useState('');
-  const [mappingSortOrder, setMappingSortOrder] = useState('');
-  const [editingCiUserMappingId, setEditingCiUserMappingId] = useState(null);
+  const [mappingTeamMemberIds, setMappingTeamMemberIds] = useState([]);
+  const [mappingMemberToAddId, setMappingMemberToAddId] = useState('');
   const [ciUserError, setCiUserError] = useState('');
   const [ciUserSaving, setCiUserSaving] = useState(false);
 
@@ -99,8 +100,13 @@ export default function SetupPage() {
   const [serviceNowUsername, setServiceNowUsername] = useState('');
   const [serviceNowPassword, setServiceNowPassword] = useState('');
   const [serviceNowAssignmentGroups, setServiceNowAssignmentGroups] = useState('');
+  const [unsupportedCiPolicy, setUnsupportedCiPolicy] = useState('SKIP_AND_LOG');
+  const [unsupportedCiFallbackTeamMemberId, setUnsupportedCiFallbackTeamMemberId] = useState('');
   const [serviceNowError, setServiceNowError] = useState('');
   const [serviceNowSaving, setServiceNowSaving] = useState(false);
+  const [unsupportedCiError, setUnsupportedCiError] = useState('');
+  const [unsupportedCiMessage, setUnsupportedCiMessage] = useState('');
+  const [unsupportedCiSaving, setUnsupportedCiSaving] = useState(false);
   const timezoneOptions = getTimeZoneOptions();
 
   const describeRequestError = useCallback((err, fallbackMessage) => {
@@ -149,6 +155,7 @@ export default function SetupPage() {
         joinedUsersResult,
         geoShiftResult,
         ciUserResult,
+        unsupportedCiResult,
       ] = await Promise.allSettled([
         fetchServiceNowConfig(),
         fetchGeos(),
@@ -158,6 +165,7 @@ export default function SetupPage() {
         fetchJoinedTeamUsers(),
         fetchGeoShiftMappings(),
         fetchCiUserMappings(),
+        fetchUnsupportedCiHandlingSettings(),
       ]);
 
       if (configResult.status === 'rejected') {
@@ -170,6 +178,14 @@ export default function SetupPage() {
       setServiceNowUsername(configData?.username || '');
       setServiceNowPassword('');
       setServiceNowAssignmentGroups((configData?.assignmentGroups || []).join('\n'));
+      if (unsupportedCiResult.status === 'fulfilled') {
+        setUnsupportedCiPolicy(unsupportedCiResult.value?.policy || 'SKIP_AND_LOG');
+        setUnsupportedCiFallbackTeamMemberId(
+          unsupportedCiResult.value?.fallbackTeamMemberId
+            ? String(unsupportedCiResult.value.fallbackTeamMemberId)
+            : ''
+        );
+      }
       setTeamTimezone(currentTeamTimezone);
       setGeos(geoResult.status === 'fulfilled' ? geoResult.value : []);
       setShifts(shiftResult.status === 'fulfilled' ? shiftResult.value : []);
@@ -229,6 +245,25 @@ export default function SetupPage() {
     }
   }
 
+  async function handleUnsupportedCiSubmit(event) {
+    event.preventDefault();
+    setUnsupportedCiError('');
+    setUnsupportedCiMessage('');
+    setUnsupportedCiSaving(true);
+    try {
+      await updateUnsupportedCiHandlingSettings(
+        unsupportedCiPolicy,
+        unsupportedCiFallbackTeamMemberId ? Number(unsupportedCiFallbackTeamMemberId) : null
+      );
+      setUnsupportedCiMessage('Unsupported CI handling policy saved.');
+      await loadSetupData('servicenow_connection');
+    } catch (err) {
+      setUnsupportedCiError(describeRequestError(err, 'Failed to save unsupported CI handling policy.'));
+    } finally {
+      setUnsupportedCiSaving(false);
+    }
+  }
+
   function resetGeoForm() {
     setGeoName('');
     setEditingGeoId(null);
@@ -266,9 +301,8 @@ export default function SetupPage() {
 
   function resetCiUserForm() {
     setMappingConfigurationItemId('');
-    setMappingTeamMemberId('');
-    setMappingSortOrder('');
-    setEditingCiUserMappingId(null);
+    setMappingTeamMemberIds([]);
+    setMappingMemberToAddId('');
     setCiUserError('');
   }
 
@@ -514,45 +548,23 @@ export default function SetupPage() {
   async function handleCiUserSubmit(event) {
     event.preventDefault();
     setCiUserError('');
-    if (!mappingConfigurationItemId || !mappingTeamMemberId) {
-      setCiUserError('Configuration item and team member are required.');
+    if (!mappingConfigurationItemId || mappingTeamMemberIds.length === 0) {
+      setCiUserError('Configuration item and at least one team member are required.');
       return;
     }
 
     setCiUserSaving(true);
     try {
-      const payload = {
+      await replaceCiUserMappingsForCi({
         configurationItemId: Number(mappingConfigurationItemId),
-        teamMemberId: Number(mappingTeamMemberId),
-        sortOrder: mappingSortOrder === '' ? null : Number(mappingSortOrder),
-      };
-      if (editingCiUserMappingId) {
-        await updateCiUserMapping(editingCiUserMappingId, payload);
-      } else {
-        await createCiUserMapping(payload);
-      }
+        teamMemberIds: mappingTeamMemberIds.map(Number),
+      });
       resetCiUserForm();
       await loadSetupData('ci_user_mappings');
     } catch (err) {
       setCiUserError('Failed to save CI-user mapping.');
     } finally {
       setCiUserSaving(false);
-    }
-  }
-
-  async function handleCiUserDelete(id) {
-    if (!window.confirm('Delete this CI-user mapping?')) {
-      return;
-    }
-    setCiUserError('');
-    try {
-      await deleteCiUserMapping(id);
-      if (editingCiUserMappingId === id) {
-        resetCiUserForm();
-      }
-      await loadSetupData('ci_user_mappings');
-    } catch (err) {
-      setCiUserError('Failed to delete CI-user mapping.');
     }
   }
 
@@ -656,6 +668,18 @@ export default function SetupPage() {
           </div>
         </div>
       )}
+
+      <UnsupportedCiHandlingPanel
+        unsupportedCiPolicy={unsupportedCiPolicy}
+        unsupportedCiFallbackTeamMemberId={unsupportedCiFallbackTeamMemberId}
+        unsupportedCiError={unsupportedCiError}
+        unsupportedCiMessage={unsupportedCiMessage}
+        unsupportedCiSaving={unsupportedCiSaving}
+        teamMembers={teamMembers}
+        setUnsupportedCiPolicy={setUnsupportedCiPolicy}
+        setUnsupportedCiFallbackTeamMemberId={setUnsupportedCiFallbackTeamMemberId}
+        onUnsupportedCiSubmit={handleUnsupportedCiSubmit}
+      />
 
       <div className="row g-4">
         <div className="col-12 col-xl-4">
@@ -870,23 +894,20 @@ export default function SetupPage() {
                     teamMembers={teamMembers}
                     ciUserMappings={ciUserMappings}
                     mappingConfigurationItemId={mappingConfigurationItemId}
-                    mappingTeamMemberId={mappingTeamMemberId}
-                    mappingSortOrder={mappingSortOrder}
-                    editingCiUserMappingId={editingCiUserMappingId}
+                    mappingTeamMemberIds={mappingTeamMemberIds}
+                    mappingMemberToAddId={mappingMemberToAddId}
                     ciUserError={ciUserError}
                     ciUserSaving={ciUserSaving}
                     setMappingConfigurationItemId={setMappingConfigurationItemId}
-                    setMappingTeamMemberId={setMappingTeamMemberId}
-                    setMappingSortOrder={setMappingSortOrder}
+                    setMappingTeamMemberIds={setMappingTeamMemberIds}
+                    setMappingMemberToAddId={setMappingMemberToAddId}
                     onSubmit={handleCiUserSubmit}
-                    onEdit={(mapping) => {
-                      setEditingCiUserMappingId(mapping.mapping_id);
-                      setMappingConfigurationItemId(mapping.configurationItem?.ci_id ? String(mapping.configurationItem.ci_id) : '');
-                      setMappingTeamMemberId(mapping.teamMember?.tm_id ? String(mapping.teamMember.tm_id) : '');
-                      setMappingSortOrder(mapping.sortOrder ?? '');
+                    onEditGroup={(group) => {
+                      setMappingConfigurationItemId(group.configurationItemId ? String(group.configurationItemId) : '');
+                      setMappingTeamMemberIds(group.mappings.map((mapping) => String(mapping.teamMember?.tm_id)).filter(Boolean));
+                      setMappingMemberToAddId('');
                       setCiUserError('');
                     }}
-                    onDelete={handleCiUserDelete}
                     onCancel={resetCiUserForm}
                   />
                 )}
@@ -1582,19 +1603,46 @@ function InlineCiUserMappingStep({
   teamMembers,
   ciUserMappings,
   mappingConfigurationItemId,
-  mappingTeamMemberId,
-  mappingSortOrder,
-  editingCiUserMappingId,
+  mappingTeamMemberIds,
+  mappingMemberToAddId,
   ciUserError,
   ciUserSaving,
   setMappingConfigurationItemId,
-  setMappingTeamMemberId,
-  setMappingSortOrder,
+  setMappingTeamMemberIds,
+  setMappingMemberToAddId,
   onSubmit,
-  onEdit,
-  onDelete,
+  onEditGroup,
   onCancel,
 }) {
+  const groupedMappings = groupCiUserMappingsByCi(ciUserMappings);
+  const selectedMembers = mappingTeamMemberIds
+    .map((memberId) => teamMembers.find((member) => String(member.tm_id) === String(memberId)))
+    .filter(Boolean);
+  const availableMembers = teamMembers.filter((member) => !mappingTeamMemberIds.includes(String(member.tm_id)));
+
+  const addMember = () => {
+    if (!mappingMemberToAddId || mappingTeamMemberIds.includes(mappingMemberToAddId)) {
+      return;
+    }
+    setMappingTeamMemberIds([...mappingTeamMemberIds, mappingMemberToAddId]);
+    setMappingMemberToAddId('');
+  };
+
+  const removeMember = (memberId) => {
+    setMappingTeamMemberIds(mappingTeamMemberIds.filter((id) => id !== memberId));
+  };
+
+  const moveMember = (memberId, direction) => {
+    const currentIndex = mappingTeamMemberIds.indexOf(memberId);
+    const nextIndex = currentIndex + direction;
+    if (currentIndex < 0 || nextIndex < 0 || nextIndex >= mappingTeamMemberIds.length) {
+      return;
+    }
+    const next = [...mappingTeamMemberIds];
+    [next[currentIndex], next[nextIndex]] = [next[nextIndex], next[currentIndex]];
+    setMappingTeamMemberIds(next);
+  };
+
   return (
     <>
       {ciUserError && <div className="alert alert-danger">{ciUserError}</div>}
@@ -1615,40 +1663,75 @@ function InlineCiUserMappingStep({
             ))}
           </select>
         </div>
-        <div className="col-md-4">
-          <label className="form-label">Team Member</label>
+        <div className="col-md-5">
+          <label className="form-label">Add Team Member</label>
           <select
             className="form-select"
-            value={mappingTeamMemberId}
-            onChange={(event) => setMappingTeamMemberId(event.target.value)}
-            required
+            value={mappingMemberToAddId}
+            onChange={(event) => setMappingMemberToAddId(event.target.value)}
           >
             <option value="">Select Team Member</option>
-            {teamMembers.map((member) => (
+            {availableMembers.map((member) => (
               <option key={member.tm_id} value={member.tm_id}>
                 {member.f_name} {member.l_name}
               </option>
             ))}
           </select>
         </div>
-        <div className="col-md-2">
-          <label className="form-label">Sort Order</label>
-          <input
-            type="number"
-            className="form-control"
-            value={mappingSortOrder}
-            onChange={(event) => setMappingSortOrder(event.target.value)}
-          />
+        <div className="col-md-3 d-flex align-items-end">
+          <button type="button" className="btn btn-outline-primary w-100" onClick={addMember}>
+            Add to Order
+          </button>
+        </div>
+        <div className="col-12">
+          <label className="form-label">Assignment Order</label>
+          {selectedMembers.length === 0 ? (
+            <div className="alert alert-info mb-0">
+              Add one or more team members. Their order becomes the round-robin sort order.
+            </div>
+          ) : (
+            <div className="admin-crud-order-list">
+              {selectedMembers.map((member, index) => (
+                <div className="admin-crud-order-item" key={member.tm_id}>
+                  <span className="admin-crud-order-rank">{index + 1}</span>
+                  <span>{member.f_name} {member.l_name}</span>
+                  <div className="ms-auto d-flex gap-2">
+                    <button
+                      type="button"
+                      className="btn btn-outline-secondary btn-sm"
+                      disabled={index === 0}
+                      onClick={() => moveMember(String(member.tm_id), -1)}
+                    >
+                      Up
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-outline-secondary btn-sm"
+                      disabled={index === selectedMembers.length - 1}
+                      onClick={() => moveMember(String(member.tm_id), 1)}
+                    >
+                      Down
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-outline-danger btn-sm"
+                      onClick={() => removeMember(String(member.tm_id))}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
         <div className="col-12 d-flex gap-2">
           <button type="submit" className="btn btn-primary" disabled={ciUserSaving}>
-            {ciUserSaving ? 'Saving...' : editingCiUserMappingId ? 'Update Mapping' : 'Add Mapping'}
+            {ciUserSaving ? 'Saving...' : 'Save CI Owner Order'}
           </button>
-          {editingCiUserMappingId && (
-            <button type="button" className="btn btn-outline-secondary" onClick={onCancel}>
-              Cancel
-            </button>
-          )}
+          <button type="button" className="btn btn-outline-secondary" onClick={onCancel}>
+            Clear
+          </button>
         </div>
       </form>
 
@@ -1656,37 +1739,34 @@ function InlineCiUserMappingStep({
         <table className="table table-bordered align-middle mb-0 setup-inline-table">
           <thead className="table-light">
             <tr>
-              <th>ID</th>
               <th>Configuration Item</th>
-              <th>Team Member</th>
-              <th>Sort Order</th>
+              <th>Assignment Order</th>
               <th style={{ width: '180px' }}>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {ciUserMappings.map((mapping) => (
-              <tr key={mapping.mapping_id}>
-                <td>{mapping.mapping_id}</td>
-                <td>{mapping.configurationItem?.name || '-'}</td>
-                <td>{mapping.teamMember?.f_name} {mapping.teamMember?.l_name}</td>
-                <td>{mapping.sortOrder ?? '-'}</td>
+            {groupedMappings.map((group) => (
+              <tr key={group.configurationItemId}>
+                <td>{group.configurationItemName}</td>
+                <td>
+                  <div className="admin-crud-order-chips">
+                    {group.mappings.map((mapping, index) => (
+                      <span className="badge text-bg-light border" key={mapping.mapping_id}>
+                        {index + 1}. {mapping.teamMember?.f_name} {mapping.teamMember?.l_name}
+                      </span>
+                    ))}
+                  </div>
+                </td>
                 <td className="d-flex gap-2">
-                  <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => onEdit(mapping)}>
-                    Edit
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-outline-danger btn-sm"
-                    onClick={() => onDelete(mapping.mapping_id)}
-                  >
-                    Delete
+                  <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => onEditGroup(group)}>
+                    Update
                   </button>
                 </td>
               </tr>
             ))}
-            {ciUserMappings.length === 0 && (
+            {groupedMappings.length === 0 && (
               <tr>
-                <td colSpan={5} className="text-center">
+                <td colSpan={3} className="text-center">
                   No CI-user mappings yet. Link each CI to the team members who can own it.
                 </td>
               </tr>
@@ -1696,6 +1776,37 @@ function InlineCiUserMappingStep({
       </div>
     </>
   );
+}
+
+function groupCiUserMappingsByCi(mappings) {
+  const groups = new Map();
+  mappings.forEach((mapping) => {
+    const configurationItemId = mapping.configurationItem?.ci_id;
+    if (!configurationItemId) {
+      return;
+    }
+    if (!groups.has(configurationItemId)) {
+      groups.set(configurationItemId, {
+        configurationItemId,
+        configurationItemName: mapping.configurationItem?.name || '-',
+        mappings: [],
+      });
+    }
+    groups.get(configurationItemId).mappings.push(mapping);
+  });
+  return Array.from(groups.values())
+    .map((group) => ({
+      ...group,
+      mappings: group.mappings.sort((left, right) => {
+        const leftOrder = left.sortOrder ?? Number.MAX_SAFE_INTEGER;
+        const rightOrder = right.sortOrder ?? Number.MAX_SAFE_INTEGER;
+        if (leftOrder !== rightOrder) {
+          return leftOrder - rightOrder;
+        }
+        return String(left.teamMember?.f_name || '').localeCompare(String(right.teamMember?.f_name || ''));
+      }),
+    }))
+    .sort((left, right) => left.configurationItemName.localeCompare(right.configurationItemName));
 }
 
 function GuidedExternalStep({ step, onRefresh }) {
@@ -1713,6 +1824,80 @@ function GuidedExternalStep({ step, onRefresh }) {
         <button type="button" className="btn btn-outline-secondary" onClick={onRefresh}>
           Refresh Progress
         </button>
+      </div>
+    </div>
+  );
+}
+
+function UnsupportedCiHandlingPanel({
+  unsupportedCiPolicy,
+  unsupportedCiFallbackTeamMemberId,
+  unsupportedCiError,
+  unsupportedCiMessage,
+  unsupportedCiSaving,
+  teamMembers,
+  setUnsupportedCiPolicy,
+  setUnsupportedCiFallbackTeamMemberId,
+  onUnsupportedCiSubmit,
+}) {
+  return (
+    <div className="card setup-policy-card mb-4">
+      <div className="card-body">
+        <div className="setup-subsection__eyebrow">Exception Handling</div>
+        <div className="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-3">
+          <div>
+            <h5 className="mb-1">Unsupported CI Handling</h5>
+            <p className="text-muted mb-0">
+              Choose what InciTeam should do when an incident lands in this team’s assignment group,
+              but the CI is not configured for this team.
+            </p>
+          </div>
+          <span className="badge bg-light text-dark border">Team Policy</span>
+        </div>
+        {unsupportedCiMessage && <div className="alert alert-success">{unsupportedCiMessage}</div>}
+        {unsupportedCiError && <div className="alert alert-danger">{unsupportedCiError}</div>}
+        <form className="row g-3" onSubmit={onUnsupportedCiSubmit}>
+          <div className="col-md-7">
+            <label className="form-label">Policy</label>
+            <select
+              className="form-select"
+              value={unsupportedCiPolicy}
+              onChange={(event) => setUnsupportedCiPolicy(event.target.value)}
+            >
+              <option value="SKIP_AND_LOG">Skip and log only</option>
+              <option value="ROUTE_TO_CI_OWNER">Route to CI-owning team when known</option>
+              <option value="FALLBACK_TRIAGE_OWNER">Assign to team fallback triage owner</option>
+            </select>
+            <div className="form-text">
+              CI owner routing only searches teams inside this organization. It never crosses organization boundaries.
+            </div>
+          </div>
+          <div className="col-md-5">
+            <label className="form-label">Fallback Triage Owner</label>
+            <select
+              className="form-select"
+              value={unsupportedCiFallbackTeamMemberId}
+              onChange={(event) => setUnsupportedCiFallbackTeamMemberId(event.target.value)}
+              disabled={unsupportedCiPolicy !== 'FALLBACK_TRIAGE_OWNER'}
+              required={unsupportedCiPolicy === 'FALLBACK_TRIAGE_OWNER'}
+            >
+              <option value="">Select team member</option>
+              {teamMembers.map((member) => (
+                <option key={member.tm_id} value={member.tm_id}>
+                  {member.f_name} {member.l_name}
+                </option>
+              ))}
+            </select>
+            <div className="form-text">
+              Used only when the fallback triage owner policy is selected.
+            </div>
+          </div>
+          <div className="col-12 d-flex gap-2">
+            <button type="submit" className="btn btn-outline-primary" disabled={unsupportedCiSaving}>
+              {unsupportedCiSaving ? 'Saving Policy...' : 'Save Unsupported CI Policy'}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

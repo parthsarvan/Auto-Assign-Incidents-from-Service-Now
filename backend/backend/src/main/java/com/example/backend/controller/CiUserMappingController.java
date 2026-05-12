@@ -1,6 +1,7 @@
 package com.example.backend.controller;
 
 import com.example.backend.dto.CiUserMappingRequest;
+import com.example.backend.dto.CiUserMappingBulkRequest;
 import com.example.backend.entity.CiUserMapping;
 import com.example.backend.entity.ConfigurationItem;
 import com.example.backend.entity.TeamMember;
@@ -13,7 +14,12 @@ import com.example.backend.service.WorkspaceAccessService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/ci-user-mappings")
@@ -71,6 +77,59 @@ public class CiUserMappingController {
         CiUserMapping mapping = new CiUserMapping(ci, tm, sortOrder);
         mapping.setTeam(team);
         return ResponseEntity.ok(mappingRepository.save(mapping));
+    }
+
+    @PostMapping("/bulk")
+    public ResponseEntity<?> replaceForConfigurationItem(@RequestBody CiUserMappingBulkRequest request) {
+        workspaceAccessService.requireCurrentTeamManager();
+        Team team = currentWorkspaceService.getCurrentTeam();
+        if (request == null || request.getConfigurationItemId() == null) {
+            return ResponseEntity.badRequest().body("Configuration item is required.");
+        }
+
+        ConfigurationItem ci = configurationItemRepository.findByIdAndTeam(request.getConfigurationItemId(), team).orElse(null);
+        if (ci == null) {
+            return ResponseEntity.badRequest().body("Invalid configuration item id.");
+        }
+
+        List<Long> orderedMemberIds = new ArrayList<>(new LinkedHashSet<>(
+                request.getTeamMemberIds() != null ? request.getTeamMemberIds() : List.of()));
+        if (orderedMemberIds.isEmpty()) {
+            return ResponseEntity.badRequest().body("Select at least one team member.");
+        }
+
+        List<TeamMember> selectedMembers = new ArrayList<>();
+        for (Long teamMemberId : orderedMemberIds) {
+            TeamMember member = teamMemberRepository.findByIdAndTeam(teamMemberId, team).orElse(null);
+            if (member == null) {
+                return ResponseEntity.badRequest().body("Invalid team member id: " + teamMemberId);
+            }
+            selectedMembers.add(member);
+        }
+
+        List<CiUserMapping> existingMappings = mappingRepository.findByConfigurationItemAndTeamOrderBySortOrderAsc(ci, team);
+        Map<Long, CiUserMapping> existingByMemberId = existingMappings.stream()
+                .collect(Collectors.toMap(mapping -> mapping.getTeamMember().getTm_id(), mapping -> mapping));
+        Set<Long> selectedMemberIds = new LinkedHashSet<>(orderedMemberIds);
+
+        for (CiUserMapping existing : existingMappings) {
+            if (!selectedMemberIds.contains(existing.getTeamMember().getTm_id())) {
+                mappingRepository.delete(existing);
+            }
+        }
+
+        List<CiUserMapping> savedMappings = new ArrayList<>();
+        for (int index = 0; index < selectedMembers.size(); index++) {
+            TeamMember member = selectedMembers.get(index);
+            CiUserMapping mapping = existingByMemberId.getOrDefault(member.getTm_id(), new CiUserMapping());
+            mapping.setConfigurationItem(ci);
+            mapping.setTeamMember(member);
+            mapping.setSortOrder(index);
+            mapping.setTeam(team);
+            savedMappings.add(mappingRepository.save(mapping));
+        }
+
+        return ResponseEntity.ok(savedMappings);
     }
 
     @PutMapping("/{id}")

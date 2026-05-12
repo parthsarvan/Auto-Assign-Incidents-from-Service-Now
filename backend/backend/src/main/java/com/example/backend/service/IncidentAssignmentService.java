@@ -9,9 +9,11 @@ import com.example.backend.dto.ServiceNowReference;
 import com.example.backend.entity.CiUserMapping;
 import com.example.backend.entity.ConfigurationItem;
 import com.example.backend.entity.GeoShiftMapping;
+import com.example.backend.entity.Organization;
 import com.example.backend.entity.Team;
 import com.example.backend.entity.TeamMember;
 import com.example.backend.entity.TeamMemberSchedule;
+import com.example.backend.entity.UnsupportedCiHandlingPolicy;
 import com.example.backend.repository.BreakEntryRepository;
 import com.example.backend.repository.CiUserMappingRepository;
 import com.example.backend.repository.ConfigurationItemRepository;
@@ -70,6 +72,14 @@ public class IncidentAssignmentService {
 
     public IncidentAssignmentAnalysis analyzeAssignment(ServiceNowIncident incident, boolean advanceRoundRobin) {
         Team team = currentWorkspaceService.getCurrentTeam();
+        return analyzeAssignmentForTeam(team, incident, advanceRoundRobin, true);
+    }
+
+    private IncidentAssignmentAnalysis analyzeAssignmentForTeam(
+            Team team,
+            ServiceNowIncident incident,
+            boolean advanceRoundRobin,
+            boolean allowUnsupportedCiPolicy) {
         List<AssignmentCandidateCheck> candidateChecks = new ArrayList<>();
         String ciName = resolveDisplayValue(incident.getCmdb_ci());
         if (ciName == null || ciName.isBlank()) {
@@ -78,8 +88,12 @@ public class IncidentAssignmentService {
                     candidateChecks);
         }
 
-        Optional<ConfigurationItem> configurationItem = configurationItemRepository.findByNameAndTeam(ciName, team);
+        String ciSysId = resolveReferenceValue(incident.getCmdb_ci());
+        Optional<ConfigurationItem> configurationItem = findConfigurationItemForTeam(team, ciName, ciSysId);
         if (configurationItem.isEmpty()) {
+            if (allowUnsupportedCiPolicy) {
+                return handleUnsupportedCi(team, incident, ciName, ciSysId, advanceRoundRobin, candidateChecks);
+            }
             return new IncidentAssignmentAnalysis(
                     IncidentAssignmentDecision.skipped("CI not configured for this team: " + ciName + "."),
                     candidateChecks);
@@ -105,7 +119,6 @@ public class IncidentAssignmentService {
         }
 
         List<Candidate> eligible = new ArrayList<>();
-        List<Candidate> fallbackEligible = new ArrayList<>();
         for (CiUserMapping mapping : sortedMappings(mappings)) {
             TeamMember member = mapping.getTeamMember();
             List<TeamMemberSchedule> schedules = teamMemberScheduleRepository.findActiveSchedules(member, today);
@@ -130,16 +143,7 @@ public class IncidentAssignmentService {
             if (onBreak) {
                 continue;
             }
-            Candidate candidate = new Candidate(mapping, match.window());
-            if (match.matchType() == ShiftMatch.EXACT) {
-                eligible.add(candidate);
-            } else {
-                fallbackEligible.add(candidate);
-            }
-        }
-
-        if (eligible.isEmpty()) {
-            eligible = fallbackEligible;
+            eligible.add(new Candidate(mapping, match.window()));
         }
 
         if (eligible.isEmpty()) {
@@ -165,6 +169,114 @@ public class IncidentAssignmentService {
                 candidateChecks);
     }
 
+    private Optional<ConfigurationItem> findConfigurationItemForTeam(Team team, String ciName, String ciSysId) {
+        if (ciSysId != null && !ciSysId.isBlank()) {
+            Optional<ConfigurationItem> bySysId =
+                    configurationItemRepository.findByTeamAndNormalizedServiceNowSysId(team, ciSysId);
+            if (bySysId.isPresent()) {
+                return bySysId;
+            }
+        }
+        return configurationItemRepository.findByNameAndTeam(ciName, team);
+    }
+
+    private IncidentAssignmentAnalysis handleUnsupportedCi(
+            Team team,
+            ServiceNowIncident incident,
+            String ciName,
+            String ciSysId,
+            boolean advanceRoundRobin,
+            List<AssignmentCandidateCheck> candidateChecks) {
+        UnsupportedCiHandlingPolicy policy = team.getUnsupportedCiPolicy();
+        if (policy == UnsupportedCiHandlingPolicy.ROUTE_TO_CI_OWNER) {
+            Optional<ConfigurationItem> owningCi = findOwningConfigurationItem(team, ciName, ciSysId);
+            if (owningCi.isEmpty()) {
+                return new IncidentAssignmentAnalysis(
+                        IncidentAssignmentDecision.skipped(
+                                "CI not configured for this team and no owning team was found in this organization: "
+                                        + ciName + "."),
+                        candidateChecks);
+            }
+
+            Team owningTeam = owningCi.get().getTeam();
+            IncidentAssignmentAnalysis ownerAnalysis =
+                    analyzeAssignmentForTeam(owningTeam, incident, advanceRoundRobin, false);
+            if (!ownerAnalysis.getDecision().hasSuggestion()) {
+                return new IncidentAssignmentAnalysis(
+                        IncidentAssignmentDecision.skipped(
+                                "CI " + ciName + " is owned by " + owningTeam.getName()
+                                        + ", but that team could not assign it: "
+                                        + ownerAnalysis.getDecision().getReason()),
+                        ownerAnalysis.getCandidates());
+            }
+
+            IncidentAssignmentSuggestion suggestion = ownerAnalysis.getDecision().getSuggestion();
+            suggestion.setRoutedTeamName(owningTeam.getName());
+            suggestion.setRoutingNote(
+                    "InciTeam routed this incident to " + owningTeam.getName()
+                            + " because CI '" + ciName + "' is not configured for "
+                            + team.getName()
+                            + ". Please update the CI or assignment group if this incident should be handled by "
+                            + team.getName() + ".");
+            return ownerAnalysis;
+        }
+
+        if (policy == UnsupportedCiHandlingPolicy.FALLBACK_TRIAGE_OWNER) {
+            TeamMember fallbackTeamMember = team.getUnsupportedCiFallbackTeamMember();
+            if (fallbackTeamMember == null) {
+                return new IncidentAssignmentAnalysis(
+                        IncidentAssignmentDecision.skipped(
+                                "CI not configured for this team and no fallback triage owner is configured: "
+                                        + ciName + "."),
+                        candidateChecks);
+            }
+
+            String fullName = String.format("%s %s",
+                    fallbackTeamMember.getF_name(),
+                    fallbackTeamMember.getL_name()).trim();
+            IncidentAssignmentSuggestion suggestion = new IncidentAssignmentSuggestion(
+                    fullName,
+                    fallbackTeamMember.getEmail(),
+                    fallbackTeamMember.getSys_id(),
+                    fallbackTeamMember.getPhone(),
+                    fallbackTeamMember.getGeo() != null ? fallbackTeamMember.getGeo().getName() : null,
+                    "Unsupported CI triage");
+            suggestion.setRoutedTeamName(team.getName());
+            suggestion.setRoutingNote(
+                    "InciTeam assigned this incident to the unsupported-CI fallback triage owner because CI '"
+                            + ciName + "' is not configured for " + team.getName() + ".");
+            return new IncidentAssignmentAnalysis(
+                    IncidentAssignmentDecision.assigned(suggestion),
+                    candidateChecks);
+        }
+
+        return new IncidentAssignmentAnalysis(
+                IncidentAssignmentDecision.skipped("CI not configured for this team: " + ciName + "."),
+                candidateChecks);
+    }
+
+    private Optional<ConfigurationItem> findOwningConfigurationItem(Team currentTeam, String ciName, String ciSysId) {
+        Organization organization = currentTeam.getOrganization();
+        if (organization == null) {
+            return Optional.empty();
+        }
+        if (ciSysId != null && !ciSysId.isBlank()) {
+            List<ConfigurationItem> matches = configurationItemRepository.findOrganizationCiOwnersByServiceNowSysId(
+                    organization,
+                    currentTeam,
+                    ciSysId);
+            if (!matches.isEmpty()) {
+                return Optional.of(matches.get(0));
+            }
+        }
+        return configurationItemRepository.findOrganizationCiOwnersByName(
+                        organization,
+                        currentTeam,
+                        ciName)
+                .stream()
+                .findFirst();
+    }
+
     private List<CiUserMapping> sortedMappings(List<CiUserMapping> mappings) {
         return mappings.stream()
                 .sorted(Comparator.comparing(CiUserMapping::getSortOrder, Comparator.nullsLast(Integer::compareTo)))
@@ -175,9 +287,6 @@ public class IncidentAssignmentService {
         if (schedules.isEmpty()) {
             return new MatchResult(ShiftMatch.NONE, null);
         }
-        boolean geoMatch = false;
-        boolean shiftMatch = false;
-        ShiftWindow fallbackWindow = null;
         for (TeamMemberSchedule schedule : schedules) {
             String geoName = schedule.getGeo().getName();
             String shiftName = schedule.getShift().getName();
@@ -186,20 +295,7 @@ public class IncidentAssignmentService {
                         && window.shiftName().equalsIgnoreCase(shiftName)) {
                     return new MatchResult(ShiftMatch.EXACT, window);
                 }
-                if (window.geoName().equalsIgnoreCase(geoName)) {
-                    geoMatch = true;
-                    fallbackWindow = window;
-                }
-                if (window.shiftName().equalsIgnoreCase(shiftName)) {
-                    shiftMatch = true;
-                    if (fallbackWindow == null) {
-                        fallbackWindow = window;
-                    }
-                }
             }
-        }
-        if (geoMatch || shiftMatch) {
-            return new MatchResult(ShiftMatch.PARTIAL, fallbackWindow != null ? fallbackWindow : activeShifts.get(0));
         }
         return new MatchResult(ShiftMatch.NONE, null);
     }
@@ -240,7 +336,6 @@ public class IncidentAssignmentService {
     private String describeMatch(MatchResult match) {
         return switch (match.matchType()) {
             case EXACT -> "Exact active shift match";
-            case PARTIAL -> "Partial shift match";
             case NONE -> "No active shift match";
         };
     }
@@ -262,9 +357,6 @@ public class IncidentAssignmentService {
         }
         if (onBreak) {
             return "Team member is currently on break.";
-        }
-        if (eligible && match.matchType() == ShiftMatch.PARTIAL) {
-            return "Eligible through partial shift matching fallback.";
         }
         if (eligible) {
             return "Eligible for assignment.";
@@ -338,6 +430,13 @@ public class IncidentAssignmentService {
         return reference.getValue();
     }
 
+    private String resolveReferenceValue(ServiceNowReference reference) {
+        if (reference == null || reference.getValue() == null || reference.getValue().isBlank()) {
+            return null;
+        }
+        return reference.getValue().trim();
+    }
+
     private record ShiftWindow(String geoName, String shiftName, LocalTime start, LocalTime end) {
         boolean includes(LocalTime now) {
             if (start.equals(end)) {
@@ -356,7 +455,6 @@ public class IncidentAssignmentService {
 
     private enum ShiftMatch {
         NONE,
-        PARTIAL,
         EXACT
     }
 }

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
 import { getCurrentUser } from '../services/auth';
 import { fetchAssignmentDiagnostics } from '../services/servicenow';
+import CurrentRoutingWindow from './CurrentRoutingWindow';
 import './AssignmentDiagnostics.css';
 
 export default function AssignmentDiagnostics() {
@@ -47,6 +48,8 @@ export default function AssignmentDiagnostics() {
           </button>
         </div>
       </div>
+
+      <CurrentRoutingWindow />
 
       <div className="d-flex justify-content-between align-items-center mb-3">
         <div>

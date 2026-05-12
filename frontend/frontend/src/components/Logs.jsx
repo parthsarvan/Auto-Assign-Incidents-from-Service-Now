@@ -4,6 +4,8 @@ import axios from 'axios';
 import { Link, useOutletContext } from 'react-router-dom';
 import { getCurrentUser } from '../services/auth';
 import { buildApiUrl } from '../services/api';
+import { pollServiceNowNow } from '../services/servicenow';
+import CurrentRoutingWindow from './CurrentRoutingWindow';
 import './Logs.css';
 
 const POLL_REFRESH_BUFFER_MS = 303000;
@@ -19,6 +21,9 @@ export default function Logs() {
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [resultFilter, setResultFilter] = useState('ALL');
   const [searchTerm, setSearchTerm] = useState('');
+  const [pollNowLoading, setPollNowLoading] = useState(false);
+  const [pollNowMessage, setPollNowMessage] = useState('');
+  const [pollNowError, setPollNowError] = useState('');
 
   const fetchLogs = async () => {
     setLoading(true);
@@ -46,6 +51,22 @@ export default function Logs() {
   useEffect(() => {
     fetchLogs();
   }, []);
+
+  const handlePollNow = async () => {
+    setPollNowLoading(true);
+    setPollNowMessage('');
+    setPollNowError('');
+    try {
+      const response = await pollServiceNowNow();
+      setPollNowMessage(response?.message || 'Poll completed.');
+      await fetchLogs();
+    } catch (err) {
+      console.error('Failed to trigger ServiceNow poll:', err);
+      setPollNowError('Failed to trigger poll now. Please try again.');
+    } finally {
+      setPollNowLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!logs.length) {
@@ -149,6 +170,9 @@ export default function Logs() {
     if (normalized.includes('no eligible mapped team member')) {
       return 'No eligible scheduled user';
     }
+    if (normalized.includes('p0/p1c')) {
+      return 'Assignee busy on critical work';
+    }
     if (normalized.includes('missing a configuration item')) {
       return 'Missing CI on incident';
     }
@@ -171,6 +195,9 @@ export default function Logs() {
     }
     if (message.includes('no eligible mapped team member')) {
       return { to: '/schedules', label: 'Fix Schedules' };
+    }
+    if (message.includes('p0/p1c')) {
+      return { to: '/summary', label: 'Review Summary' };
     }
     if (message.includes('missing a configuration item')) {
       return { to: '/configuration-items', label: 'Fix CI Setup' };
@@ -208,11 +235,18 @@ export default function Logs() {
               Poll history and assignment outcomes for {teamName} in {organizationName}.
             </div>
           </div>
-          <button className="btn btn-outline-primary" onClick={fetchLogs} disabled={loading}>
-            {loading ? 'Refreshing...' : 'Refresh'}
-          </button>
+          <div className="logs-hero__actions d-flex gap-2 flex-wrap">
+            <button className="btn btn-primary" onClick={handlePollNow} disabled={pollNowLoading || loading}>
+              {pollNowLoading ? 'Polling...' : 'Poll Now'}
+            </button>
+            <button className="btn btn-outline-primary" onClick={fetchLogs} disabled={loading || pollNowLoading}>
+              {loading ? 'Refreshing...' : 'Refresh'}
+            </button>
+          </div>
         </div>
       </div>
+
+      <CurrentRoutingWindow />
 
       <div className="d-flex justify-content-between align-items-center mb-3">
         <div>
@@ -309,6 +343,8 @@ export default function Logs() {
         </div>
       </div>
 
+      {pollNowMessage && <div className="alert alert-success">{pollNowMessage}</div>}
+      {pollNowError && <div className="alert alert-danger">{pollNowError}</div>}
       {error && <div className="alert alert-danger">{error}</div>}
 
       {!error && logs.length === 0 && (

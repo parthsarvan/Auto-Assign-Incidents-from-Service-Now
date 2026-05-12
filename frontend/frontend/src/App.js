@@ -47,7 +47,7 @@ function TeamViewerRoute({ children }) {
       title="Team access required"
       message="This page is available to members of the current team."
       backTo="/dashboard"
-      backLabel="Go to Dashboard"
+      backLabel="Go to Roster"
     >
       {children}
     </RequirePermission>

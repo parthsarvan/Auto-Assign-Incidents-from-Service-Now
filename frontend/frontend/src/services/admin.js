@@ -122,6 +122,11 @@ export async function updateCiUserMapping(id, payload) {
   return response.data;
 }
 
+export async function replaceCiUserMappingsForCi(payload) {
+  const response = await api.post('/ci-user-mappings/bulk', payload, withAuth());
+  return response.data;
+}
+
 export async function deleteCiUserMapping(id) {
   return api.delete(`/ci-user-mappings/${id}`, withAuth());
 }

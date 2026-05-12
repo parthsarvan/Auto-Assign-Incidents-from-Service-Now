@@ -19,7 +19,7 @@ export default function AccessDeniedPage({
               {backLabel}
             </Link>
             <Link className="btn btn-outline-secondary" to="/dashboard">
-              Open Dashboard
+              Open Roster
             </Link>
           </div>
         </div>

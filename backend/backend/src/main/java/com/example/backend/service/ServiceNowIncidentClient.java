@@ -84,6 +84,13 @@ public class ServiceNowIncidentClient {
     }
 
     private List<ServiceNowIncident> fetchIncidents(ServiceNowConnectionSettings settings, String query) {
+        return fetchIncidents(settings, query, true);
+    }
+
+    private List<ServiceNowIncident> fetchIncidents(
+            ServiceNowConnectionSettings settings,
+            String query,
+            boolean requireUnassigned) {
         logger.info("ServiceNow incident query: {}", query);
         String url = UriComponentsBuilder.fromHttpUrl(settings.instanceUrl())
                 .path("/api/now/table/incident")
@@ -105,9 +112,11 @@ public class ServiceNowIncidentClient {
             List<ServiceNowIncident> incidents = payload != null && payload.getResult() != null
                     ? payload.getResult()
                     : Collections.emptyList();
-            incidents = incidents.stream()
-                    .filter(this::isUnassigned)
-                    .toList();
+            if (requireUnassigned) {
+                incidents = incidents.stream()
+                        .filter(this::isUnassigned)
+                        .toList();
+            }
             logIncidents(incidents);
             return incidents;
         } catch (HttpStatusCodeException ex) {
@@ -120,6 +129,22 @@ public class ServiceNowIncidentClient {
             logger.error("Failed to fetch ServiceNow incidents: {}", ex.getMessage());
             throw ex;
         }
+    }
+
+    public List<ServiceNowIncident> fetchActiveIncidentsAssignedTo(String assigneeSysId) {
+        if (assigneeSysId == null || assigneeSysId.isBlank()) {
+            return Collections.emptyList();
+        }
+        ServiceNowConnectionSettings settings = organizationServiceNowConfigService
+                .requireSettingsForTeam(currentWorkspaceService.getCurrentTeam());
+        String query = "assigned_to=" + assigneeSysId.trim() + "^stateNOT IN6,7";
+        return fetchIncidents(settings, query, false);
+    }
+
+    public List<ServiceNowIncident> fetchActiveCriticalIncidentsAssignedTo(String assigneeSysId) {
+        return fetchActiveIncidentsAssignedTo(assigneeSysId).stream()
+                .filter(this::isCriticalPriority)
+                .toList();
     }
 
     public boolean assignIncidentBySysId(String incidentSysId, String assigneeSysId) {
@@ -162,6 +187,45 @@ public class ServiceNowIncidentClient {
         }
     }
 
+    public boolean addWorkNote(String incidentSysId, String workNote) {
+        if (incidentSysId == null || incidentSysId.isBlank()) {
+            logger.warn("Cannot add ServiceNow work note: missing incident sys_id.");
+            return false;
+        }
+        if (workNote == null || workNote.isBlank()) {
+            return true;
+        }
+
+        ServiceNowConnectionSettings settings = organizationServiceNowConfigService
+                .requireSettingsForTeam(currentWorkspaceService.getCurrentTeam());
+        String url = UriComponentsBuilder.fromHttpUrl(settings.instanceUrl())
+                .pathSegment("api", "now", "table", "incident", incidentSysId)
+                .queryParam("sysparm_input_display_value", "false")
+                .queryParam("sysparm_exclude_reference_link", "true")
+                .toUriString();
+
+        HttpHeaders headers = authHeaderProvider.buildHeaders(settings.username(), settings.password());
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<Map<String, String>> request =
+                new HttpEntity<>(Map.of("work_notes", workNote), headers);
+
+        try {
+            restTemplate.exchange(url, HttpMethod.PATCH, request, String.class);
+            logger.info("Added ServiceNow work note to incident {}.", incidentSysId);
+            return true;
+        } catch (HttpStatusCodeException ex) {
+            logger.error(
+                    "Failed to add ServiceNow work note to incident {}: status={} body={}",
+                    incidentSysId,
+                    ex.getStatusCode(),
+                    ex.getResponseBodyAsString());
+            return false;
+        } catch (RestClientException ex) {
+            logger.error("Failed to add ServiceNow work note to incident {}: {}", incidentSysId, ex.getMessage());
+            return false;
+        }
+    }
+
     private ServiceNowIncidentResponse parseIncidentResponse(String body) {
         if (body == null || body.isBlank()) {
             return null;
@@ -197,6 +261,16 @@ public class ServiceNowIncidentClient {
 
     private String buildQuery() {
         return "assigned_toISEMPTY^stateNOT IN6,7";
+    }
+
+    private boolean isCriticalPriority(ServiceNowIncident incident) {
+        String normalized = normalizeValue(incident != null ? incident.getPriority() : null)
+                .replaceAll("[^a-z0-9]", "");
+        return normalized.startsWith("0")
+                || normalized.startsWith("p0")
+                || normalized.startsWith("1")
+                || normalized.startsWith("p1c")
+                || normalized.contains("critical");
     }
 
     private String normalizeValue(String value) {

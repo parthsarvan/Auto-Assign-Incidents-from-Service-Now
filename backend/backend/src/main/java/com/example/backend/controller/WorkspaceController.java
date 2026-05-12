@@ -4,6 +4,7 @@ import com.example.backend.dto.CreateTeamRequest;
 import com.example.backend.dto.SwitchTeamRequest;
 import com.example.backend.dto.TeamTimezoneRequest;
 import com.example.backend.dto.TeamSummary;
+import com.example.backend.dto.UnsupportedCiHandlingSettingsRequest;
 import com.example.backend.dto.WorkspaceSummary;
 import com.example.backend.service.TeamWorkspaceService;
 import com.example.backend.service.WorkspaceAccessService;
@@ -82,6 +83,26 @@ public class WorkspaceController {
             WorkspaceSummary workspace = teamWorkspaceService.updateCurrentTeamTimezone(
                     request != null ? request.getTimezone() : null);
             return ResponseEntity.ok(workspace);
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(ex.getMessage());
+        } catch (IllegalStateException ex) {
+            return ResponseEntity.status(403).body(ex.getMessage());
+        }
+    }
+
+    @GetMapping("/current-team/unsupported-ci")
+    public ResponseEntity<?> getUnsupportedCiHandlingSettings() {
+        return ResponseEntity.ok(teamWorkspaceService.getUnsupportedCiHandlingSettings());
+    }
+
+    @PostMapping("/current-team/unsupported-ci")
+    public ResponseEntity<?> updateUnsupportedCiHandlingSettings(
+            @RequestBody UnsupportedCiHandlingSettingsRequest request) {
+        try {
+            workspaceAccessService.requireCurrentTeamManager();
+            return ResponseEntity.ok(teamWorkspaceService.updateUnsupportedCiHandlingSettings(
+                    request != null ? request.getPolicy() : null,
+                    request != null ? request.getFallbackTeamMemberId() : null));
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.badRequest().body(ex.getMessage());
         } catch (IllegalStateException ex) {

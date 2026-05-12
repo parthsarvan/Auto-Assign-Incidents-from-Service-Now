@@ -1,11 +1,22 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import axios from 'axios';
 import { Link, useOutletContext } from 'react-router-dom';
 import { getCurrentUser } from '../services/auth';
 import { canManageCurrentTeam } from '../services/permissions';
-import { fetchCoverageSummary, fetchServiceNowHealth, fetchServiceNowValidation } from '../services/servicenow';
+import {
+  fetchCoverageSummary,
+  fetchLeaveHandoff,
+  fetchServiceNowHealth,
+  fetchServiceNowValidation,
+  pollServiceNowNow,
+} from '../services/servicenow';
 import { buildApiUrl } from '../services/api';
+import CurrentRoutingWindow from './CurrentRoutingWindow';
 import './Summary.css';
+
+function refreshSummaryAttentionBadge() {
+  window.dispatchEvent(new Event('incteam:summary-attention-refresh'));
+}
 
 export default function Summary() {
   const outletContext = useOutletContext() || {};
@@ -23,27 +34,89 @@ export default function Summary() {
   const [coverage, setCoverage] = useState(null);
   const [coverageLoading, setCoverageLoading] = useState(false);
   const [coverageError, setCoverageError] = useState('');
+  const [leaveHandoff, setLeaveHandoff] = useState(null);
+  const [leaveHandoffLoading, setLeaveHandoffLoading] = useState(false);
+  const [leaveHandoffError, setLeaveHandoffError] = useState('');
+  const [pollNowLoading, setPollNowLoading] = useState(false);
+  const [pollNowMessage, setPollNowMessage] = useState('');
+  const [pollNowError, setPollNowError] = useState('');
   const canManageTeam = canManageCurrentTeam(currentUser);
 
-  useEffect(() => {
-    async function loadHealth() {
-      if (!canManageTeam) {
+  const loadHealth = useCallback(async () => {
+    if (!canManageTeam) {
+      return;
+    }
+    setHealthLoading(true);
+    setHealthError('');
+    try {
+      const data = await fetchServiceNowHealth();
+      setHealth(data);
+    } catch (err) {
+      setHealthError('Failed to run ServiceNow health check.');
+    } finally {
+      setHealthLoading(false);
+    }
+  }, [canManageTeam]);
+
+  const loadRecentLogs = useCallback(async () => {
+    if (!canManageTeam) {
+      return;
+    }
+    setLogsLoading(true);
+    setLogsError('');
+    try {
+      const token = sessionStorage.getItem('token');
+      if (!token) {
+        setLogsError('No token found; please sign in again.');
         return;
       }
-      setHealthLoading(true);
-      setHealthError('');
-      try {
-        const data = await fetchServiceNowHealth();
-        setHealth(data);
-      } catch (err) {
-        setHealthError('Failed to run ServiceNow health check.');
-      } finally {
-        setHealthLoading(false);
-      }
+      const response = await axios.get(buildApiUrl('/logs/servicenow'), {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setRecentLogs(response.data || []);
+    } catch (err) {
+      setLogsError('Failed to load recent ServiceNow activity.');
+    } finally {
+      setLogsLoading(false);
     }
-
-    loadHealth();
   }, [canManageTeam]);
+
+  const loadLeaveHandoff = useCallback(async () => {
+    if (!canManageTeam) {
+      return;
+    }
+    setLeaveHandoffLoading(true);
+    setLeaveHandoffError('');
+    try {
+      const data = await fetchLeaveHandoff();
+      setLeaveHandoff(data);
+      refreshSummaryAttentionBadge();
+    } catch (err) {
+      setLeaveHandoffError('Failed to load leave handoff data.');
+    } finally {
+      setLeaveHandoffLoading(false);
+    }
+  }, [canManageTeam]);
+
+  const handlePollNow = async () => {
+    setPollNowLoading(true);
+    setPollNowMessage('');
+    setPollNowError('');
+    try {
+      const response = await pollServiceNowNow();
+      setPollNowMessage(response?.message || 'Poll completed.');
+      await Promise.all([loadRecentLogs(), loadHealth(), loadLeaveHandoff()]);
+      refreshSummaryAttentionBadge();
+    } catch (err) {
+      setPollNowError('Failed to trigger poll now. Please try again.');
+    } finally {
+      setPollNowLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadHealth();
+  }, [loadHealth]);
 
   useEffect(() => {
     async function loadValidation() {
@@ -55,6 +128,7 @@ export default function Summary() {
       try {
         const data = await fetchServiceNowValidation();
         setValidation(data);
+        refreshSummaryAttentionBadge();
       } catch (err) {
         setValidationError('Failed to validate stored ServiceNow sys IDs.');
       } finally {
@@ -66,31 +140,12 @@ export default function Summary() {
   }, [canManageTeam]);
 
   useEffect(() => {
-    async function loadRecentLogs() {
-      if (!canManageTeam) {
-        return;
-      }
-      setLogsLoading(true);
-      setLogsError('');
-      try {
-        const token = sessionStorage.getItem('token');
-        if (!token) {
-          setLogsError('No token found; please sign in again.');
-          return;
-        }
-        const response = await axios.get(buildApiUrl('/logs/servicenow'), {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setRecentLogs(response.data || []);
-      } catch (err) {
-        setLogsError('Failed to load recent ServiceNow activity.');
-      } finally {
-        setLogsLoading(false);
-      }
-    }
-
     loadRecentLogs();
-  }, [canManageTeam]);
+  }, [loadRecentLogs]);
+
+  useEffect(() => {
+    loadLeaveHandoff();
+  }, [loadLeaveHandoff]);
 
   useEffect(() => {
     async function loadCoverage() {
@@ -128,6 +183,9 @@ export default function Summary() {
   const latestTopIssue = validation?.issues?.[0];
   const teamName = currentUser?.workspace?.teamName || 'Current Team';
   const organizationName = currentUser?.workspace?.organizationName || 'Your Organization';
+  const leaveHandoffItems = leaveHandoff?.items || [];
+  const hasLeaveHandoffRisk = (leaveHandoff?.activeIncidentCount || 0) > 0;
+  const formatDateTime = (value) => (value ? new Date(value).toLocaleString() : '-');
   const coverageActionForIssue = (issue) => {
     if (!issue) {
       return { to: '/schedules', label: 'Review Coverage' };
@@ -153,6 +211,14 @@ export default function Summary() {
             </div>
           </div>
           <div className="summary-hero__actions d-flex gap-2 flex-wrap">
+            <button
+              type="button"
+              className="btn btn-light"
+              onClick={handlePollNow}
+              disabled={pollNowLoading}
+            >
+              {pollNowLoading ? 'Polling...' : 'Poll Now'}
+            </button>
             <Link className="btn btn-outline-primary" to="/logs">
               View Logs
             </Link>
@@ -162,6 +228,11 @@ export default function Summary() {
           </div>
         </div>
       </div>
+
+      <CurrentRoutingWindow />
+
+      {pollNowMessage && <div className="alert alert-success">{pollNowMessage}</div>}
+      {pollNowError && <div className="alert alert-danger">{pollNowError}</div>}
 
       <div className="summary-metrics row g-3 mb-4">
         <div className="col-lg-4">
@@ -200,6 +271,75 @@ export default function Summary() {
               </div>
             </div>
           </div>
+        </div>
+      </div>
+
+      <div className={`card summary-detail-card mb-4 ${hasLeaveHandoffRisk ? 'border-warning' : 'border-success'}`}>
+        <div className="card-body">
+          <div className="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-3">
+            <div>
+              <div className="summary-card__label">Leave Handoff</div>
+              <h5 className="mb-1">Assigned Work While Away</h5>
+              {leaveHandoffError && <div className="text-danger">{leaveHandoffError}</div>}
+              {!leaveHandoffError && leaveHandoff && (
+                <div className={hasLeaveHandoffRisk ? 'text-warning' : 'text-success'}>
+                  {hasLeaveHandoffRisk
+                    ? `${leaveHandoff.activeIncidentCount} active incident${leaveHandoff.activeIncidentCount === 1 ? '' : 's'} owned by ${leaveHandoff.impactedMemberCount} team member${leaveHandoff.impactedMemberCount === 1 ? '' : 's'} currently on leave.`
+                    : 'No active assigned incidents found for team members currently on leave.'}
+                </div>
+              )}
+              {!leaveHandoffError && !leaveHandoff && !leaveHandoffLoading && (
+                <div className="text-muted small">Leave handoff has not been checked yet.</div>
+              )}
+              {leaveHandoff?.checkedAt && (
+                <div className="text-muted small mt-1">
+                  Checked {formatDateTime(leaveHandoff.checkedAt)}
+                </div>
+              )}
+            </div>
+            <button
+              type="button"
+              className="btn btn-outline-primary"
+              disabled={leaveHandoffLoading}
+              onClick={loadLeaveHandoff}
+            >
+              {leaveHandoffLoading ? 'Checking...' : 'Refresh Handoff'}
+            </button>
+          </div>
+
+          {leaveHandoffItems.length > 0 && (
+            <div className="summary-issue-list">
+              {leaveHandoffItems.map((item) => (
+                <div className="summary-issue-item summary-issue-item--stacked" key={`${item.email}-${item.leaveEnd}`}>
+                  <div className="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+                    <div>
+                      <strong>{item.teamMemberName || item.email || 'Team member'}</strong>
+                      <div className="text-muted small">
+                        Leave ends {formatDateTime(item.leaveEnd)}
+                        {item.reason ? ` | ${item.reason}` : ''}
+                      </div>
+                    </div>
+                    <span className="badge text-bg-warning">
+                      {item.incidents?.length || 0} active
+                    </span>
+                  </div>
+                  <div className="summary-handoff-incidents mt-3">
+                    {(item.incidents || []).map((incident) => (
+                      <div className="summary-handoff-incident" key={`${item.email}-${incident.number}`}>
+                        <div>
+                          <strong>{incident.number}</strong>
+                          <span className="text-muted"> | {incident.priority || 'Priority unknown'}</span>
+                        </div>
+                        <div className="text-muted small">
+                          {incident.configurationItem || 'No CI'} | {incident.shortDescription || 'No description'}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -415,6 +555,7 @@ export default function Summary() {
                     try {
                       const data = await fetchCoverageSummary(7);
                       setCoverage(data);
+                      refreshSummaryAttentionBadge();
                     } catch (err) {
                       setCoverageError('Failed to load coverage summary.');
                     } finally {
@@ -480,6 +621,7 @@ export default function Summary() {
                   try {
                     const data = await fetchServiceNowValidation();
                     setValidation(data);
+                    refreshSummaryAttentionBadge();
                   } catch (err) {
                     setValidationError('Failed to validate stored ServiceNow sys IDs.');
                   } finally {

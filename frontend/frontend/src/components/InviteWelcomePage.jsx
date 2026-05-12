@@ -17,7 +17,7 @@ export default function InviteWelcomePage() {
   const teamName = currentUser.workspace.teamName || 'your team';
   const canManageTeam = canManageCurrentTeam(currentUser);
   const primaryDestination = canManageTeam ? '/summary' : '/dashboard';
-  const primaryLabel = canManageTeam ? 'Open Summary' : 'Open Availability';
+  const primaryLabel = canManageTeam ? 'Open Summary' : 'Open Roster';
 
   return (
     <div className="container py-4">
@@ -50,7 +50,7 @@ export default function InviteWelcomePage() {
             </Link>
             {canManageTeam && (
               <Link className="btn btn-outline-primary" to="/dashboard">
-                View Availability
+                View Roster
               </Link>
             )}
             {canManageTeam && (

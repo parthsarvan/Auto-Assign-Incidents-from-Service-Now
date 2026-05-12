@@ -35,6 +35,19 @@ export async function updateCurrentTeamTimezone(timezone) {
   return response.data;
 }
 
+export async function fetchUnsupportedCiHandlingSettings() {
+  const response = await api.get('/current-team/unsupported-ci', { headers: authHeader() });
+  return response.data;
+}
+
+export async function updateUnsupportedCiHandlingSettings(policy, fallbackTeamMemberId = null) {
+  const response = await api.post('/current-team/unsupported-ci', {
+    policy,
+    fallbackTeamMemberId,
+  }, { headers: authHeader() });
+  return response.data;
+}
+
 function updateWorkspace(workspace) {
   const user = getCurrentUser();
   if (!user) {

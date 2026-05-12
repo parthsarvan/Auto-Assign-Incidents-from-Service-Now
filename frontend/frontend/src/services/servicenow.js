@@ -29,6 +29,16 @@ export async function fetchServiceNowValidation() {
   return response.data;
 }
 
+export async function pollServiceNowNow() {
+  const response = await api.post('/poll-now', null, { headers: authHeader() });
+  return response.data;
+}
+
+export async function fetchLeaveHandoff() {
+  const response = await api.get('/leave-handoff', { headers: authHeader() });
+  return response.data;
+}
+
 export async function fetchCoverageSummary(days = 7) {
   const response = await axios.get(buildApiUrl('/coverage/summary'), {
     params: { days },

@@ -1,11 +1,14 @@
 // src/components/HomeLayout.jsx
 import React, { useEffect, useState } from 'react';
+import axios from 'axios';
 import { Outlet, useLocation, useNavigate, Link } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import { getCurrentUser } from '../services/auth';
 import { canManageCurrentTeam, INCOMPLETE_SETUP_ALLOWED_PATHS, isOrgAdmin } from '../services/permissions';
 import { fetchSetupStatus } from '../services/setup';
 import { fetchWorkspaceTeams, switchWorkspaceTeam } from '../services/workspace';
+import { fetchCoverageSummary, fetchLeaveHandoff, fetchServiceNowValidation } from '../services/servicenow';
+import { buildApiUrl } from '../services/api';
 import './HomeLayout.css';
 
 export default function HomeLayout() {
@@ -15,6 +18,7 @@ export default function HomeLayout() {
   const [teams, setTeams] = useState([]);
   const [teamLoading, setTeamLoading] = useState(false);
   const [teamError, setTeamError] = useState('');
+  const [summaryAttentionCount, setSummaryAttentionCount] = useState(0);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -62,6 +66,46 @@ export default function HomeLayout() {
 
     loadTeams();
   }, [user]);
+
+  useEffect(() => {
+    async function loadSummaryAttentionCount() {
+      if (!canManageCurrentTeam(user) || !setupStatus?.ready) {
+        setSummaryAttentionCount(0);
+        return;
+      }
+      try {
+        const token = sessionStorage.getItem('token');
+        const [coverage, validation, leaveHandoff, logsResponse] = await Promise.all([
+          fetchCoverageSummary(7).catch(() => null),
+          fetchServiceNowValidation().catch(() => null),
+          fetchLeaveHandoff().catch(() => null),
+          token
+            ? axios.get(buildApiUrl('/logs/servicenow'), {
+                headers: { Authorization: `Bearer ${token}` },
+              }).catch(() => null)
+            : Promise.resolve(null),
+        ]);
+        const latestPollLog = (logsResponse?.data || []).find((log) => log.type === 'POLL');
+        const latestFailedAssignments = (latestPollLog?.assignmentResults || [])
+          .filter((result) => result.status === 'FAILED').length;
+        const pollErrorCount = latestPollLog?.status === 'ERROR' ? 1 : 0;
+        const attentionCount =
+          (coverage?.gapCount || 0)
+          + (coverage?.ciRiskCount || 0)
+          + (validation?.issues?.length || 0)
+          + (leaveHandoff?.activeIncidentCount || 0)
+          + latestFailedAssignments
+          + pollErrorCount;
+        setSummaryAttentionCount(attentionCount);
+      } catch (err) {
+        setSummaryAttentionCount(0);
+      }
+    }
+
+    loadSummaryAttentionCount();
+    window.addEventListener('incteam:summary-attention-refresh', loadSummaryAttentionCount);
+    return () => window.removeEventListener('incteam:summary-attention-refresh', loadSummaryAttentionCount);
+  }, [setupStatus?.ready, user]);
 
   useEffect(() => {
     const syncUser = () => setUser(getCurrentUser());
@@ -114,6 +158,7 @@ export default function HomeLayout() {
         toggleSidebar={toggleSidebar}
         currentUser={user}
         setupStatus={setupStatus}
+        summaryAttentionCount={summaryAttentionCount}
       />
       {isSidebarOpen && (
         <button

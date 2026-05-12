@@ -7,6 +7,8 @@ public class IncidentAssignmentSuggestion {
     private String assigneePhone;
     private String geo;
     private String shift;
+    private String routingNote;
+    private String routedTeamName;
 
     public IncidentAssignmentSuggestion() {}
 
@@ -71,5 +73,21 @@ public class IncidentAssignmentSuggestion {
 
     public void setShift(String shift) {
         this.shift = shift;
+    }
+
+    public String getRoutingNote() {
+        return routingNote;
+    }
+
+    public void setRoutingNote(String routingNote) {
+        this.routingNote = routingNote;
+    }
+
+    public String getRoutedTeamName() {
+        return routedTeamName;
+    }
+
+    public void setRoutedTeamName(String routedTeamName) {
+        this.routedTeamName = routedTeamName;
     }
 }

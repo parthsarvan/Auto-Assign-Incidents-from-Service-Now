@@ -23,6 +23,17 @@ public interface CiUserMappingRepository extends JpaRepository<CiUserMapping, Lo
             "select c from CiUserMapping c "
                     + "join fetch c.configurationItem ci "
                     + "join fetch c.teamMember tm "
+                    + "left join fetch tm.geo "
+                    + "where c.configurationItem = :configurationItem and c.team = :team "
+                    + "order by c.sortOrder asc")
+    List<CiUserMapping> findByConfigurationItemAndTeamOrderBySortOrderAsc(
+            @Param("configurationItem") ConfigurationItem configurationItem,
+            @Param("team") Team team);
+
+    @Query(
+            "select c from CiUserMapping c "
+                    + "join fetch c.configurationItem ci "
+                    + "join fetch c.teamMember tm "
                     + "left join fetch tm.geo")
     List<CiUserMapping> findAllWithConfigurationItemAndTeamMember();
 

@@ -31,6 +31,14 @@ public class Team {
     @Column(name = "servicenow_assignment_groups", length = 4000)
     private String serviceNowAssignmentGroups;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "unsupported_ci_policy", nullable = false)
+    private UnsupportedCiHandlingPolicy unsupportedCiPolicy = UnsupportedCiHandlingPolicy.SKIP_AND_LOG;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "unsupported_ci_fallback_tm_id")
+    private TeamMember unsupportedCiFallbackTeamMember;
+
     @Column(nullable = false, updatable = false)
     private Instant created_at;
 
@@ -96,5 +104,23 @@ public class Team {
 
     public void setServiceNowAssignmentGroups(String serviceNowAssignmentGroups) {
         this.serviceNowAssignmentGroups = serviceNowAssignmentGroups;
+    }
+
+    public UnsupportedCiHandlingPolicy getUnsupportedCiPolicy() {
+        return unsupportedCiPolicy == null ? UnsupportedCiHandlingPolicy.SKIP_AND_LOG : unsupportedCiPolicy;
+    }
+
+    public void setUnsupportedCiPolicy(UnsupportedCiHandlingPolicy unsupportedCiPolicy) {
+        this.unsupportedCiPolicy = unsupportedCiPolicy == null
+                ? UnsupportedCiHandlingPolicy.SKIP_AND_LOG
+                : unsupportedCiPolicy;
+    }
+
+    public TeamMember getUnsupportedCiFallbackTeamMember() {
+        return unsupportedCiFallbackTeamMember;
+    }
+
+    public void setUnsupportedCiFallbackTeamMember(TeamMember unsupportedCiFallbackTeamMember) {
+        this.unsupportedCiFallbackTeamMember = unsupportedCiFallbackTeamMember;
     }
 }

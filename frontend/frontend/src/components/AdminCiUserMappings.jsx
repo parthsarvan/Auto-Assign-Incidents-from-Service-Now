@@ -1,11 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import {
-  createCiUserMapping,
-  deleteCiUserMapping,
   fetchCiUserMappings,
   fetchConfigurationItems,
   fetchTeamMembers,
-  updateCiUserMapping,
+  replaceCiUserMappingsForCi,
 } from '../services/admin';
 import { getCurrentUser } from '../services/auth';
 import { canManageCurrentTeam } from '../services/permissions';
@@ -17,9 +15,8 @@ export default function AdminCiUserMappings() {
   const [items, setItems] = useState([]);
   const [members, setMembers] = useState([]);
   const [configurationItemId, setConfigurationItemId] = useState('');
-  const [teamMemberId, setTeamMemberId] = useState('');
-  const [sortOrder, setSortOrder] = useState('');
-  const [editingId, setEditingId] = useState(null);
+  const [selectedMemberIds, setSelectedMemberIds] = useState([]);
+  const [memberToAddId, setMemberToAddId] = useState('');
   const [error, setError] = useState('');
   const canManageTeam = canManageCurrentTeam(getCurrentUser());
 
@@ -42,64 +39,71 @@ export default function AdminCiUserMappings() {
     loadData();
   }, []);
 
+  const groupedMappings = groupMappingsByCi(mappings);
+
+  const resetForm = () => {
+    setConfigurationItemId('');
+    setSelectedMemberIds([]);
+    setMemberToAddId('');
+  };
+
+  const handleAddMember = () => {
+    if (!memberToAddId || selectedMemberIds.includes(memberToAddId)) {
+      return;
+    }
+    setSelectedMemberIds((previous) => [...previous, memberToAddId]);
+    setMemberToAddId('');
+  };
+
+  const handleRemoveMember = (memberId) => {
+    setSelectedMemberIds((previous) => previous.filter((id) => id !== memberId));
+  };
+
+  const handleMoveMember = (memberId, direction) => {
+    setSelectedMemberIds((previous) => {
+      const currentIndex = previous.indexOf(memberId);
+      const nextIndex = currentIndex + direction;
+      if (currentIndex < 0 || nextIndex < 0 || nextIndex >= previous.length) {
+        return previous;
+      }
+      const next = [...previous];
+      [next[currentIndex], next[nextIndex]] = [next[nextIndex], next[currentIndex]];
+      return next;
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    try {
-      if (editingId) {
-        if (!window.confirm('Update this CI-user mapping?')) {
-          return;
-        }
-        await updateCiUserMapping(editingId, {
-          configurationItemId,
-          teamMemberId,
-          sortOrder: sortOrder === '' ? null : Number(sortOrder),
-        });
-        setEditingId(null);
-        setConfigurationItemId('');
-        setTeamMemberId('');
-        setSortOrder('');
-        loadData();
-        return;
-      }
-      if (!window.confirm('Add this CI-user mapping?')) {
-        return;
-      }
-      await createCiUserMapping({
-        configurationItemId,
-        teamMemberId,
-        sortOrder: sortOrder === '' ? null : Number(sortOrder),
-      });
-      setConfigurationItemId('');
-      setTeamMemberId('');
-      setSortOrder('');
-      loadData();
-    } catch (err) {
-      setError('Failed to create mapping.');
-    }
-  };
-
-  const handleDelete = async (id) => {
-    if (!window.confirm('Delete this CI-user mapping?')) {
+    if (!configurationItemId || selectedMemberIds.length === 0) {
+      setError('Select a CI and at least one team member.');
       return;
     }
-    await deleteCiUserMapping(id);
-    loadData();
+    try {
+      if (!window.confirm('Save this ordered CI owner list?')) {
+        return;
+      }
+      await replaceCiUserMappingsForCi({
+        configurationItemId: Number(configurationItemId),
+        teamMemberIds: selectedMemberIds.map(Number),
+      });
+      resetForm();
+      await loadData();
+    } catch (err) {
+      setError('Failed to save CI-user mappings.');
+    }
   };
 
-  const handleEdit = (mapping) => {
-    setEditingId(mapping.mapping_id);
-    setConfigurationItemId(mapping.configurationItem?.ci_id || '');
-    setTeamMemberId(mapping.teamMember?.tm_id || '');
-    setSortOrder(mapping.sortOrder ?? '');
+  const handleEditGroup = (group) => {
+    setConfigurationItemId(group.configurationItemId ? String(group.configurationItemId) : '');
+    setSelectedMemberIds(group.mappings.map((mapping) => String(mapping.teamMember?.tm_id)).filter(Boolean));
+    setMemberToAddId('');
   };
 
-  const handleCancel = () => {
-    setEditingId(null);
-    setConfigurationItemId('');
-    setTeamMemberId('');
-    setSortOrder('');
-  };
+  const selectedMembers = selectedMemberIds
+    .map((memberId) => members.find((member) => String(member.tm_id) === String(memberId)))
+    .filter(Boolean);
+  const availableMembers = members.filter((member) => !selectedMemberIds.includes(String(member.tm_id)));
 
   return (
     <div className="container admin-crud-page">
@@ -131,40 +135,75 @@ export default function AdminCiUserMappings() {
                 ))}
               </select>
             </div>
-            <div className="col-md-4">
-              <label className="form-label">Team Member</label>
+            <div className="col-md-5">
+              <label className="form-label">Add Team Member</label>
               <select
                 className="form-select"
-                value={teamMemberId}
-                onChange={(e) => setTeamMemberId(e.target.value)}
-                required
+                value={memberToAddId}
+                onChange={(e) => setMemberToAddId(e.target.value)}
               >
                 <option value="">Select Member</option>
-                {members.map((member) => (
+                {availableMembers.map((member) => (
                   <option key={member.tm_id} value={member.tm_id}>
                     {member.f_name} {member.l_name}
                   </option>
                 ))}
               </select>
             </div>
-            <div className="col-md-2">
-              <label className="form-label">Sort Order</label>
-              <input
-                type="number"
-                className="form-control"
-                value={sortOrder}
-                onChange={(e) => setSortOrder(e.target.value)}
-              />
+            <div className="col-md-3 d-flex align-items-end">
+              <button type="button" className="btn btn-outline-primary w-100" onClick={handleAddMember}>
+                Add to Order
+              </button>
+            </div>
+            <div className="col-12">
+              <label className="form-label">Assignment Order</label>
+              {selectedMembers.length === 0 ? (
+                <div className="alert alert-info mb-0">
+                  Add one or more team members. The list order becomes the round-robin sort order.
+                </div>
+              ) : (
+                <div className="admin-crud-order-list">
+                  {selectedMembers.map((member, index) => (
+                    <div className="admin-crud-order-item" key={member.tm_id}>
+                      <span className="admin-crud-order-rank">{index + 1}</span>
+                      <span>{member.f_name} {member.l_name}</span>
+                      <div className="ms-auto d-flex gap-2">
+                        <button
+                          type="button"
+                          className="btn btn-outline-secondary btn-sm"
+                          disabled={index === 0}
+                          onClick={() => handleMoveMember(String(member.tm_id), -1)}
+                        >
+                          Up
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-outline-secondary btn-sm"
+                          disabled={index === selectedMembers.length - 1}
+                          onClick={() => handleMoveMember(String(member.tm_id), 1)}
+                        >
+                          Down
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-outline-danger btn-sm"
+                          onClick={() => handleRemoveMember(String(member.tm_id))}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             <div className="col-12 d-flex gap-2">
               <button type="submit" className="btn btn-primary">
-                {editingId ? 'Update Mapping' : 'Add Mapping'}
+                Save CI Owner Order
               </button>
-              {editingId && (
-                <button type="button" className="btn btn-outline-secondary" onClick={handleCancel}>
-                  Cancel
-                </button>
-              )}
+              <button type="button" className="btn btn-outline-secondary" onClick={resetForm}>
+                Clear
+              </button>
             </div>
           </form>
         </div>
@@ -178,43 +217,39 @@ export default function AdminCiUserMappings() {
         <table className="table table-bordered admin-crud-table">
           <thead className="table-light">
             <tr>
-              <th>ID</th>
               <th>CI</th>
-              <th>Team Member</th>
-              <th>Sort Order</th>
+              <th>Assignment Order</th>
               {canManageTeam && <th style={{ width: '180px' }}>Actions</th>}
             </tr>
           </thead>
           <tbody>
-            {mappings.map((mapping) => (
-              <tr key={mapping.mapping_id}>
-                <td>{mapping.mapping_id}</td>
-                <td>{mapping.configurationItem?.name}</td>
+            {groupedMappings.map((group) => (
+              <tr key={group.configurationItemId}>
+                <td>{group.configurationItemName}</td>
                 <td>
-                  {mapping.teamMember?.f_name} {mapping.teamMember?.l_name}
+                  <div className="admin-crud-order-chips">
+                    {group.mappings.map((mapping, index) => (
+                      <span className="badge text-bg-light border" key={mapping.mapping_id}>
+                        {index + 1}. {mapping.teamMember?.f_name} {mapping.teamMember?.l_name}
+                      </span>
+                    ))}
+                  </div>
                 </td>
-                <td>{mapping.sortOrder ?? '-'}</td>
                 {canManageTeam && (
                   <td className="d-flex gap-2">
                     <button
                       className="btn btn-outline-primary btn-sm"
-                      onClick={() => handleEdit(mapping)}
+                      onClick={() => handleEditGroup(group)}
                     >
                       Update
-                    </button>
-                    <button
-                      className="btn btn-outline-danger btn-sm"
-                      onClick={() => handleDelete(mapping.mapping_id)}
-                    >
-                      Delete
                     </button>
                   </td>
                 )}
               </tr>
             ))}
-            {mappings.length === 0 && (
+            {groupedMappings.length === 0 && (
               <tr>
-                <td colSpan={canManageTeam ? 5 : 4} className="text-center">No mappings yet.</td>
+                <td colSpan={canManageTeam ? 3 : 2} className="text-center">No mappings yet.</td>
               </tr>
             )}
           </tbody>
@@ -224,4 +259,35 @@ export default function AdminCiUserMappings() {
       </div>
     </div>
   );
+}
+
+function groupMappingsByCi(mappings) {
+  const groups = new Map();
+  mappings.forEach((mapping) => {
+    const configurationItemId = mapping.configurationItem?.ci_id;
+    if (!configurationItemId) {
+      return;
+    }
+    if (!groups.has(configurationItemId)) {
+      groups.set(configurationItemId, {
+        configurationItemId,
+        configurationItemName: mapping.configurationItem?.name || '-',
+        mappings: [],
+      });
+    }
+    groups.get(configurationItemId).mappings.push(mapping);
+  });
+  return Array.from(groups.values())
+    .map((group) => ({
+      ...group,
+      mappings: group.mappings.sort((left, right) => {
+        const leftOrder = left.sortOrder ?? Number.MAX_SAFE_INTEGER;
+        const rightOrder = right.sortOrder ?? Number.MAX_SAFE_INTEGER;
+        if (leftOrder !== rightOrder) {
+          return leftOrder - rightOrder;
+        }
+        return String(left.teamMember?.f_name || '').localeCompare(String(right.teamMember?.f_name || ''));
+      }),
+    }))
+    .sort((left, right) => left.configurationItemName.localeCompare(right.configurationItemName));
 }

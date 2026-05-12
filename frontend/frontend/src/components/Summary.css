@@ -115,6 +115,18 @@
   display: block;
 }
 
+.summary-handoff-incidents {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.summary-handoff-incident {
+  padding: 0.7rem 0.8rem;
+  border: 1px solid #eef2f7;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
 @media (max-width: 768px) {
   .summary-page {
     padding-left: 0 !important;

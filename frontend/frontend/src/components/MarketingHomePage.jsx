@@ -4,65 +4,72 @@ import { getCurrentUser } from '../services/auth';
 import { getDefaultRouteForUser } from '../services/permissions';
 import './MarketingHomePage.css';
 
-const comparisonRows = [
-  {
-    category: 'Team-aware ServiceNow routing',
-    incteam: 'Built into setup and ownership mapping.',
-    traditional: 'Often spread across several modules or custom process work.',
-  },
-  {
-    category: 'Organization-first onboarding',
-    incteam: 'Create an org, connect ServiceNow, then onboard teams cleanly.',
-    traditional: 'Usually designed around larger platform setup before team-level ownership.',
-  },
-  {
-    category: 'Manager handoff model',
-    incteam: 'Org admins can invite team managers before setup is finished.',
-    traditional: 'Role setup is often possible, but rarely shaped around staged incident-team rollout.',
-  },
-  {
-    category: 'Operational visibility',
-    incteam: 'Availability, mapping, diagnostics, and logs stay in one focused workspace.',
-    traditional: 'Capabilities may exist, but teams often jump across multiple surfaces to get context.',
-  },
-];
-
 const featureHighlights = [
   {
-    eyebrow: 'CI-User mapping',
-    title: 'InciTeam routes incidents without manual triage.',
+    eyebrow: 'Organization and Team Management',
+    title: 'Model real organizations with multiple teams.',
     description:
-      'Map configuration items to the right owners so incident assignment happens automatically instead of depending on someone to manually decide where each incident should go.',
+      'Create an organization, add teams inside it, and manage each team’s ServiceNow setup, schedules, CI ownership, and incident routing independently.',
   },
   {
-    eyebrow: 'Leaves and breaks',
-    title: 'Coverage stays smart when someone is away.',
+    eyebrow: 'Multi-Team User Access',
+    title: 'Manage users across teams without duplicate accounts.',
     description:
-      'If a teammate is on leave or currently on break, InciTeam avoids assigning new incidents to them and keeps routing aligned with the people who are actually available.',
+      'Invite users into the organization and assign them to one or more teams with the right access level. Org admins can move people across teams as responsibilities change.',
   },
   {
-    eyebrow: 'Schedules',
-    title: 'Plan shifts clearly, including exceptions like holidays.',
+    eyebrow: 'CI Ownership Mapping',
+    title: 'Route incidents to the right owners in the right order.',
     description:
-      'Managers can define who is on shift, when they are covering, and adjust schedules when special calendars or holiday rotations need something different.',
+      'Map each configuration item to the users who support it. Add multiple owners to one CI and arrange them in the exact order InciTeam should follow for round-robin assignment.',
   },
   {
-    eyebrow: 'Dashboard',
-    title: 'See team coverage day by day or week by week.',
+    eyebrow: 'Geo, Shift, and Schedule Coverage',
+    title: 'Build 24-hour coverage across teams and regions.',
     description:
-      'The dashboard gives a clear view of who is on shift, who is on leave, and who is on break so teams can understand current and upcoming coverage fast.',
+      'Create geos, shifts, and user schedules so incidents route only to people actually scheduled for the active geo and shift.',
   },
   {
-    eyebrow: 'Logs',
+    eyebrow: 'Roster View',
+    title: 'See who is on shift daily or weekly.',
+    description:
+      'InciTeam automatically generates a roster from schedules, leaves, and breaks so teams can quickly understand current and upcoming coverage.',
+  },
+  {
+    eyebrow: 'Leaves, Breaks, and Handoff Awareness',
+    title: 'Keep work visible when someone is unavailable.',
+    description:
+      'Record planned leaves and short breaks with date/time ranges. InciTeam avoids unavailable users during assignment and highlights active incidents sitting with someone who is away.',
+  },
+  {
+    eyebrow: 'Smart Incident Assignment',
+    title: 'Check ownership, availability, and critical workload before assigning.',
+    description:
+      'Before assigning, InciTeam checks CI ownership, active geo, active shift, schedules, breaks, leaves, and whether the selected user is already handling P0/P1C work.',
+  },
+  {
+    eyebrow: 'Round-Robin Workload Distribution',
+    title: 'Distribute work fairly across mapped owners.',
+    description:
+      'For each CI, InciTeam distributes incidents across mapped owners in configured order, reducing manual triage and preventing one person from becoming the default owner.',
+  },
+  {
+    eyebrow: 'Automatic and Manual Polling',
+    title: 'Catch eligible incidents quickly.',
+    description:
+      'InciTeam polls ServiceNow automatically on a fixed schedule and also provides a manual Poll Now option when teams need an immediate refresh, helping protect SLA response windows.',
+  },
+  {
+    eyebrow: 'Operational Logs',
     title: 'Understand what happened to every incident.',
     description:
-      'Operational logs show whether an incident was assigned, skipped, or blocked, giving teams a simple timeline of what the system actually did.',
+      'Every poll, selection, skip, failure, and assignment is recorded so managers can see exactly what happened and why.',
   },
   {
-    eyebrow: 'Diagnostics',
-    title: 'Explain why InciTeam chose a particular owner.',
+    eyebrow: 'Diagnostics and Summary',
+    title: 'Validate setup and focus attention fast.',
     description:
-      'Diagnostics help teams understand the routing logic behind each assignment so managers can trust the decision path and refine setup when needed.',
+      'Dry-run diagnostics explain assignment decisions, while Summary highlights connection health, latest poll results, validation risks, coverage gaps, and handoff items.',
   },
 ];
 
@@ -76,12 +83,11 @@ export default function MarketingHomePage() {
     <div className="marketing-page">
       <header className="marketing-nav">
         <div className="marketing-nav__brand">
-          <div className="marketing-nav__eyebrow">Incident and Team Management Tool for Service Now</div>
+          <div className="marketing-nav__eyebrow">Incident and Team Management Platform for Service Now</div>
           <div className="marketing-nav__name">InciTeam</div>
         </div>
         <nav className="marketing-nav__links">
-          <a href="#why">Why InciTeam</a>
-          <a href="#compare">Comparison</a>
+          <a href="#why">Features</a>
           <a href="#workflow">How It Works</a>
         </nav>
       </header>
@@ -91,20 +97,20 @@ export default function MarketingHomePage() {
           <div className="marketing-hero__copy">
             <div className="marketing-tag">Built for ServiceNow-connected incident operations</div>
             <h1>
-              Make incident ownership visible, predictable, and easier to trust.
+              Automate ServiceNow incident assignment with team-aware routing.
             </h1>
             <p>
-              InciTeam helps organizations connect ServiceNow, onboard teams, manage coverage,
-              and automate assignment decisions in one focused workspace built for real operational use.
+              InciTeam helps organizations create teams, map CIs to owners, manage schedules,
+              leaves, and breaks, then assign incidents through explainable round-robin logic.
             </p>
             <div className="marketing-proof">
               <div>
-                <strong>Structured onboarding</strong>
-                <span>Create the organization, connect ServiceNow, then invite managers and teams in the right order.</span>
+                <strong>No manual triage</strong>
+                <span>Route incidents using CI ownership, active shift, leaves, breaks, and P0/P1C workload checks.</span>
               </div>
               <div>
-                <strong>Clear operational visibility</strong>
-                <span>Availability, logs, diagnostics, and routing rules stay connected in one workflow.</span>
+                <strong>Built for teams</strong>
+                <span>Create organizations, manage teams, assign users across teams, and keep routing rules separate.</span>
               </div>
             </div>
           </div>
@@ -117,23 +123,33 @@ export default function MarketingHomePage() {
                 <span />
               </div>
               <div className="marketing-console__title">InciTeam Operations View</div>
-              <div className="marketing-console__grid">
-                <div className="marketing-console__metric">
-                  <div className="marketing-console__label">Routing model</div>
-                  <div className="marketing-console__value">CI to owner</div>
+              <div className="marketing-decision-card">
+                <div className="marketing-console__label">Incident received</div>
+                <div className="marketing-decision-card__incident">INC0010042</div>
+                <div className="marketing-decision-card__meta">
+                  <span>CI: Sales Force Automation</span>
+                  <span>Group: Software</span>
                 </div>
-                <div className="marketing-console__metric">
-                  <div className="marketing-console__label">Availability logic</div>
-                  <div className="marketing-console__value">Shift-aware</div>
-                </div>
-                <div className="marketing-console__metric marketing-console__metric--wide">
-                  <div className="marketing-console__label">What teams can do inside InciTeam</div>
-                  <ul>
-                    <li>Connect ServiceNow before setup to avoid broken downstream configuration</li>
-                    <li>Manage schedules, leaves, and breaks with assignment awareness</li>
-                    <li>See operational logs and diagnostics when a routing decision needs explanation</li>
-                    <li>Invite admins, managers, and team members into a shared org model</li>
-                  </ul>
+              </div>
+              <div className="marketing-decision-flow">
+                {[
+                  'CI owner list found',
+                  'Active geo and shift checked',
+                  'Leave and break checked',
+                  'P0/P1C workload checked',
+                  'Assigned by round-robin',
+                ].map((step, index) => (
+                  <div className="marketing-decision-step" key={step}>
+                    <span>{index + 1}</span>
+                    <strong>{step}</strong>
+                  </div>
+                ))}
+              </div>
+              <div className="marketing-decision-result">
+                <div>
+                  <div className="marketing-console__label">Result</div>
+                  <strong>Assigned to Ava King</strong>
+                  <span>Decision logged for review</span>
                 </div>
               </div>
             </div>
@@ -156,31 +172,6 @@ export default function MarketingHomePage() {
                 <h3>{pillar.title}</h3>
                 <p>{pillar.description}</p>
               </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="marketing-section" id="compare">
-          <div className="marketing-section__heading">
-            <div className="marketing-section__eyebrow">Comparison</div>
-            <h2>InciTeam is designed for focused incident-team execution, not generic platform sprawl.</h2>
-            <p>
-              This is a positioning view, not a blanket claim that other platforms lack these capabilities.
-              The difference is how directly InciTeam packages them for ServiceNow-connected team operations.
-            </p>
-          </div>
-          <div className="marketing-compare">
-            <div className="marketing-compare__header marketing-compare__row">
-              <div>Capability</div>
-              <div>InciTeam</div>
-              <div>Traditional incident suites</div>
-            </div>
-            {comparisonRows.map((row) => (
-              <div key={row.category} className="marketing-compare__row">
-                <div className="marketing-compare__category" data-label="Capability">{row.category}</div>
-                <div className="marketing-compare__incteam" data-label="InciTeam">{row.incteam}</div>
-                <div data-label="Traditional incident suites">{row.traditional}</div>
-              </div>
             ))}
           </div>
         </section>
