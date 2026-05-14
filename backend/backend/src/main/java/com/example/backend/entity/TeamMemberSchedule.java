@@ -4,6 +4,9 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 
 import java.time.LocalDate;
+import java.util.Arrays;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Entity
 @Table(name = "team_member_schedule")
@@ -35,6 +38,9 @@ public class TeamMemberSchedule {
 
     @Column(name = "end_date", nullable = false)
     private LocalDate endDate;
+
+    @Column(name = "coverage_days", nullable = false, length = 128)
+    private String coverageDays = "MONDAY,TUESDAY,WEDNESDAY,THURSDAY,FRIDAY,SATURDAY,SUNDAY";
 
     public TeamMemberSchedule() {}
 
@@ -100,5 +106,30 @@ public class TeamMemberSchedule {
 
     public void setEndDate(LocalDate endDate) {
         this.endDate = endDate;
+    }
+
+    public String getCoverageDays() {
+        return coverageDays;
+    }
+
+    public void setCoverageDays(String coverageDays) {
+        this.coverageDays = coverageDays;
+    }
+
+    public boolean isActiveOn(LocalDate date) {
+        if (date == null || date.isBefore(startDate) || date.isAfter(endDate)) {
+            return false;
+        }
+        return getCoverageDaySet().contains(date.getDayOfWeek().name());
+    }
+
+    public Set<String> getCoverageDaySet() {
+        if (coverageDays == null || coverageDays.isBlank()) {
+            return Set.of("MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY");
+        }
+        return Arrays.stream(coverageDays.split(","))
+                .map(String::trim)
+                .filter(value -> !value.isBlank())
+                .collect(Collectors.toSet());
     }
 }

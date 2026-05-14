@@ -121,7 +121,10 @@ public class IncidentAssignmentService {
         List<Candidate> eligible = new ArrayList<>();
         for (CiUserMapping mapping : sortedMappings(mappings)) {
             TeamMember member = mapping.getTeamMember();
-            List<TeamMemberSchedule> schedules = teamMemberScheduleRepository.findActiveSchedules(member, today);
+            List<TeamMemberSchedule> schedules = teamMemberScheduleRepository.findActiveSchedules(member, today)
+                    .stream()
+                    .filter(schedule -> schedule.isActiveOn(today))
+                    .toList();
             MatchResult match = resolveShiftMatch(schedules, activeShifts);
             boolean onLeave = leaveEntryRepository.existsByTeamMemberAndStartTsLessThanEqualAndEndTsGreaterThanEqual(
                     member, now, now);

@@ -54,6 +54,9 @@ public class AvailabilityService {
             "JOIN LATERAL generate_series(tms.start_date, tms.end_date, interval '1 day') " +
             "  AS gs(date_value) ON true " +
             "WHERE gs.date_value BETWEEN :startDate AND :endDate " +
+            "  AND (tms.coverage_days IS NULL " +
+            "       OR trim(tms.coverage_days) = '' " +
+            "       OR position(upper(to_char(gs.date_value, 'FMDay')) in tms.coverage_days) > 0) " +
             "  AND tms.team_id = :teamId " +
             "  AND tm.team_id = :teamId " +
             "  AND gsm.team_id = :teamId";

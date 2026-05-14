@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { DateTime } from 'luxon';
 import {
   createSchedule,
   deleteSchedule,
+  fetchGeos,
   fetchGeoShiftMappings,
   fetchSchedules,
   fetchShifts,
@@ -28,31 +29,52 @@ export default function AdminSchedules() {
   const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState('');
   const canManageTeam = canManageCurrentTeam(getCurrentUser());
-  const selectedMember = members.find((member) => String(member.tm_id) === String(teamMemberId));
-  const selectedGeoName = selectedMember?.geo?.name || '';
-  const allowedShiftIdsForGeo = geoShiftMappings
-    .filter((mapping) => String(mapping.geo?.g_id) === String(geoId))
-    .map((mapping) => String(mapping.shift?.s_id));
-  const uniqueAllowedShiftIds = Array.from(new Set(allowedShiftIdsForGeo));
-  const allowedShifts = shifts.filter((shift) =>
-    uniqueAllowedShiftIds.includes(String(shift.s_id))
-  );
+  const [geos, setGeos] = useState([]);
+  const [teamMemberIds, setTeamMemberIds] = useState([]);
+  const [coveragePreset, setCoveragePreset] = useState('EVERY_DAY');
+  const [coverageDays, setCoverageDays] = useState([
+    'MONDAY',
+    'TUESDAY',
+    'WEDNESDAY',
+    'THURSDAY',
+    'FRIDAY',
+    'SATURDAY',
+    'SUNDAY',
+  ]);
+  const selectedGeo = geos.find((geo) => String(geo.g_id) === String(geoId));
+  const selectedGeoName = selectedGeo?.name || '';
+  const filteredMembers = useMemo(() => (
+    geoId
+      ? members.filter((member) => String(member.geo?.g_id) === String(geoId))
+      : []
+  ), [geoId, members]);
+  const uniqueAllowedShiftIds = useMemo(() => {
+    const allowedShiftIdsForGeo = geoShiftMappings
+      .filter((mapping) => String(mapping.geo?.g_id) === String(geoId))
+      .map((mapping) => String(mapping.shift?.s_id));
+    return Array.from(new Set(allowedShiftIdsForGeo));
+  }, [geoId, geoShiftMappings]);
+  const allowedShifts = useMemo(() => (
+    shifts.filter((shift) => uniqueAllowedShiftIds.includes(String(shift.s_id)))
+  ), [shifts, uniqueAllowedShiftIds]);
   const hasSingleMappedShift = uniqueAllowedShiftIds.length === 1;
   const hasMultipleMappedShifts = uniqueAllowedShiftIds.length > 1;
   const autoSelectedShiftName = allowedShifts[0]?.name || '';
 
   const loadData = async () => {
     try {
-      const [scheduleData, memberData, shiftData, geoShiftData] = await Promise.all([
+      const [scheduleData, memberData, shiftData, geoShiftData, geoData] = await Promise.all([
         fetchSchedules(),
         fetchTeamMembers(),
         fetchShifts(),
         fetchGeoShiftMappings(),
+        fetchGeos(),
       ]);
       setSchedules(scheduleData);
       setMembers(memberData);
       setShifts(shiftData);
       setGeoShiftMappings(geoShiftData);
+      setGeos(geoData);
     } catch (err) {
       setError('Failed to load schedules.');
     }
@@ -63,36 +85,54 @@ export default function AdminSchedules() {
   }, []);
 
   useEffect(() => {
-    const member = members.find((m) => String(m.tm_id) === String(teamMemberId));
-    const memberGeoId = member?.geo?.g_id ? String(member.geo.g_id) : '';
-    if (geoId !== memberGeoId) {
-      setGeoId(memberGeoId);
-    }
-
-    if (!memberGeoId) {
+    if (!geoId) {
       if (shiftId !== '') {
         setShiftId('');
+      }
+      if (teamMemberIds.length > 0) {
+        setTeamMemberIds([]);
       }
       return;
     }
 
-    const allowedShiftIds = geoShiftMappings
-      .filter((mapping) => String(mapping.geo?.g_id) === String(memberGeoId))
-      .map((mapping) => String(mapping.shift?.s_id));
+    const filteredMemberIds = new Set(filteredMembers.map((member) => String(member.tm_id)));
+    const validSelectedMemberIds = teamMemberIds.filter((id) => filteredMemberIds.has(String(id)));
+    if (validSelectedMemberIds.length !== teamMemberIds.length) {
+      setTeamMemberIds(validSelectedMemberIds);
+    }
 
-    const uniqueShiftIds = Array.from(new Set(allowedShiftIds));
-    if (uniqueShiftIds.length === 1) {
-      if (shiftId !== uniqueShiftIds[0]) {
-        setShiftId(uniqueShiftIds[0]);
+    if (uniqueAllowedShiftIds.length === 1) {
+      if (shiftId !== uniqueAllowedShiftIds[0]) {
+        setShiftId(uniqueAllowedShiftIds[0]);
       }
-    } else if (uniqueShiftIds.length > 1) {
-      if (!uniqueShiftIds.includes(String(shiftId))) {
+    } else if (uniqueAllowedShiftIds.length > 1) {
+      if (!uniqueAllowedShiftIds.includes(String(shiftId))) {
         setShiftId('');
       }
     } else if (shiftId !== '') {
       setShiftId('');
     }
-  }, [teamMemberId, members, geoShiftMappings, shiftId, geoId]);
+  }, [filteredMembers, geoId, shiftId, teamMemberIds, uniqueAllowedShiftIds]);
+
+  const resetForm = () => {
+    setEditingId(null);
+    setTeamMemberId('');
+    setTeamMemberIds([]);
+    setGeoId('');
+    setShiftId('');
+    setStartDate('');
+    setEndDate('');
+    setCoveragePreset('EVERY_DAY');
+    setCoverageDays([
+      'MONDAY',
+      'TUESDAY',
+      'WEDNESDAY',
+      'THURSDAY',
+      'FRIDAY',
+      'SATURDAY',
+      'SUNDAY',
+    ]);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -102,8 +142,12 @@ export default function AdminSchedules() {
         if (!window.confirm('Update this schedule?')) {
           return;
         }
+        if (!teamMemberId) {
+          setError('Please select a team member before saving.');
+          return;
+        }
         if (!geoId) {
-          setError('Selected team member does not have a geo assigned.');
+          setError('Please select a geo before saving.');
           return;
         }
         if (uniqueAllowedShiftIds.length === 0) {
@@ -114,21 +158,20 @@ export default function AdminSchedules() {
           setError('Please select a shift before saving.');
           return;
         }
-        await updateSchedule(editingId, { teamMemberId, geoId, shiftId, startDate, endDate });
-        setEditingId(null);
-        setTeamMemberId('');
-        setGeoId('');
-        setShiftId('');
-        setStartDate('');
-        setEndDate('');
+        await updateSchedule(editingId, { teamMemberId, geoId, shiftId, startDate, endDate, coverageDays });
+        resetForm();
         loadData();
         return;
       }
       if (!window.confirm('Add this schedule?')) {
         return;
       }
+      if (teamMemberIds.length === 0) {
+        setError('Please select at least one team member before saving.');
+        return;
+      }
       if (!geoId) {
-        setError('Selected team member does not have a geo assigned.');
+        setError('Please select a geo before saving.');
         return;
       }
       if (uniqueAllowedShiftIds.length === 0) {
@@ -139,15 +182,15 @@ export default function AdminSchedules() {
         setError('Please select a shift before saving.');
         return;
       }
-      await createSchedule({ teamMemberId, geoId, shiftId, startDate, endDate });
-      setTeamMemberId('');
-      setGeoId('');
-      setShiftId('');
-      setStartDate('');
-      setEndDate('');
+      if (coverageDays.length === 0) {
+        setError('Select at least one coverage day.');
+        return;
+      }
+      await createSchedule({ teamMemberIds, geoId, shiftId, startDate, endDate, coverageDays });
+      resetForm();
       loadData();
     } catch (err) {
-      setError('Failed to create schedule.');
+      setError(typeof err?.response?.data === 'string' ? err.response.data : 'Failed to save schedule.');
     }
   };
 
@@ -170,19 +213,84 @@ export default function AdminSchedules() {
   const handleEdit = (schedule) => {
     setEditingId(schedule.tms_id);
     setTeamMemberId(schedule.teamMember?.tm_id || '');
+    setTeamMemberIds(schedule.teamMember?.tm_id ? [String(schedule.teamMember.tm_id)] : []);
     setGeoId(schedule.geo?.g_id || '');
     setShiftId(schedule.shift?.s_id || '');
     setStartDate(schedule.startDate || '');
     setEndDate(schedule.endDate || '');
+    const scheduleCoverageDays = parseCoverageDays(schedule.coverageDays);
+    setCoverageDays(scheduleCoverageDays);
+    setCoveragePreset(resolveCoveragePreset(scheduleCoverageDays));
   };
 
   const handleCancel = () => {
-    setEditingId(null);
-    setTeamMemberId('');
-    setGeoId('');
-    setShiftId('');
-    setStartDate('');
-    setEndDate('');
+    resetForm();
+  };
+
+  const coveragePresets = {
+    EVERY_DAY: ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'],
+    WEEKDAYS: ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'],
+    SATURDAY: ['SATURDAY'],
+    SUNDAY: ['SUNDAY'],
+    WEEKEND: ['SATURDAY', 'SUNDAY'],
+  };
+  const dayLabels = [
+    ['MONDAY', 'Mon'],
+    ['TUESDAY', 'Tue'],
+    ['WEDNESDAY', 'Wed'],
+    ['THURSDAY', 'Thu'],
+    ['FRIDAY', 'Fri'],
+    ['SATURDAY', 'Sat'],
+    ['SUNDAY', 'Sun'],
+  ];
+
+  function parseCoverageDays(value) {
+    if (!value || typeof value !== 'string') {
+      return coveragePresets.EVERY_DAY;
+    }
+    return value.split(',').map((day) => day.trim()).filter(Boolean);
+  }
+
+  function resolveCoveragePreset(days) {
+    const normalized = [...days].sort().join(',');
+    const match = Object.entries(coveragePresets).find(([, presetDays]) =>
+      [...presetDays].sort().join(',') === normalized
+    );
+    return match?.[0] || 'CUSTOM';
+  }
+
+  function formatCoverageDays(value) {
+    const days = parseCoverageDays(value);
+    const preset = resolveCoveragePreset(days);
+    if (preset === 'EVERY_DAY') return 'Every day';
+    if (preset === 'WEEKDAYS') return 'Weekdays';
+    if (preset === 'WEEKEND') return 'Weekend';
+    if (preset === 'SATURDAY') return 'Saturday';
+    if (preset === 'SUNDAY') return 'Sunday';
+    return days
+      .map((day) => dayLabels.find(([value]) => value === day)?.[1] || day)
+      .join(', ');
+  }
+
+  const handleCoveragePresetChange = (preset) => {
+    setCoveragePreset(preset);
+    if (preset !== 'CUSTOM') {
+      setCoverageDays(coveragePresets[preset]);
+    }
+  };
+
+  const toggleCoverageDay = (day) => {
+    const nextDays = coverageDays.includes(day)
+      ? coverageDays.filter((value) => value !== day)
+      : [...coverageDays, day];
+    setCoverageDays(nextDays);
+    setCoveragePreset(resolveCoveragePreset(nextDays));
+  };
+
+  const handleMemberSelectionChange = (event) => {
+    const selectedIds = Array.from(event.target.selectedOptions).map((option) => option.value);
+    setTeamMemberIds(selectedIds);
+    setTeamMemberId(selectedIds[0] || '');
   };
 
   return (
@@ -203,38 +311,76 @@ export default function AdminSchedules() {
         <div className="card p-3 mb-4 admin-crud-card">
           <form className="row g-3 admin-crud-form-grid" onSubmit={handleSubmit}>
           <div className="col-md-3">
-            <label className="form-label">Team Member</label>
+            <label className="form-label">Geo</label>
             <select
               className="form-select"
-              value={teamMemberId}
-              onChange={(e) => setTeamMemberId(e.target.value)}
+              value={geoId}
+              onChange={(e) => setGeoId(e.target.value)}
               required
             >
-              <option value="">Select Member</option>
-              {members.map((member) => (
-                <option key={member.tm_id} value={member.tm_id}>
-                  {member.f_name} {member.l_name}
-                </option>
+              <option value="">Select Geo</option>
+              {geos.map((geo) => (
+                <option key={geo.g_id} value={geo.g_id}>{geo.name}</option>
               ))}
             </select>
           </div>
           <div className="col-md-3">
-            <label className="form-label">Geo</label>
-            <input
-              type="text"
-              className="form-control"
-              value={selectedGeoName}
-              readOnly
-            />
-          </div>
-          <div className="col-md-3">
-            <label className="form-label">{hasMultipleMappedShifts ? 'Shift' : 'Mapped Shift'}</label>
-            {!teamMemberId ? (
+            <label className="form-label">{editingId ? 'Team Member' : 'Team Members'}</label>
+            {!geoId ? (
               <input
                 type="text"
                 className="form-control"
                 value=""
-                placeholder="Select a team member first"
+                placeholder="Select geo first"
+                readOnly
+              />
+            ) : editingId ? (
+              <select
+                className="form-select"
+                value={teamMemberId}
+                onChange={(e) => {
+                  setTeamMemberId(e.target.value);
+                  setTeamMemberIds(e.target.value ? [e.target.value] : []);
+                }}
+                required
+              >
+                <option value="">Select Member</option>
+                {filteredMembers.map((member) => (
+                  <option key={member.tm_id} value={member.tm_id}>
+                    {member.f_name} {member.l_name}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <>
+                <select
+                  className="form-select"
+                  value={teamMemberIds}
+                  onChange={handleMemberSelectionChange}
+                  multiple
+                  size={Math.min(Math.max(filteredMembers.length, 3), 6)}
+                  required
+                >
+                  {filteredMembers.map((member) => (
+                    <option key={member.tm_id} value={member.tm_id}>
+                      {member.f_name} {member.l_name}
+                    </option>
+                  ))}
+                </select>
+                <div className="form-text">
+                  Select one or more {selectedGeoName} team members.
+                </div>
+              </>
+            )}
+          </div>
+          <div className="col-md-3">
+            <label className="form-label">{hasMultipleMappedShifts ? 'Shift' : 'Mapped Shift'}</label>
+            {!geoId ? (
+              <input
+                type="text"
+                className="form-control"
+                value=""
+                placeholder="Select geo first"
                 readOnly
               />
             ) : uniqueAllowedShiftIds.length === 0 ? (
@@ -301,6 +447,42 @@ export default function AdminSchedules() {
               required
             />
           </div>
+          <div className="col-md-4">
+            <label className="form-label">Repeat</label>
+            <select
+              className="form-select"
+              value={coveragePreset}
+              onChange={(e) => handleCoveragePresetChange(e.target.value)}
+            >
+              <option value="EVERY_DAY">Every day</option>
+              <option value="WEEKDAYS">Weekdays (Mon-Fri)</option>
+              <option value="WEEKEND">Weekend (Sat-Sun)</option>
+              <option value="SATURDAY">Saturday only</option>
+              <option value="SUNDAY">Sunday only</option>
+              <option value="CUSTOM">Custom days</option>
+            </select>
+          </div>
+          <div className="col-md-8">
+            <label className="form-label">Coverage Days</label>
+            <div className="admin-crud-day-picker">
+              {dayLabels.map(([day, label]) => (
+                <label
+                  className={`admin-crud-day-pill ${coverageDays.includes(day) ? 'admin-crud-day-pill--selected' : ''}`}
+                  key={day}
+                >
+                  <input
+                    type="checkbox"
+                    checked={coverageDays.includes(day)}
+                    onChange={() => toggleCoverageDay(day)}
+                  />
+                  {label}
+                </label>
+              ))}
+            </div>
+            <div className="form-text">
+              Use presets for weekdays/weekends, or pick exact days like Saturday only or Sunday only.
+            </div>
+          </div>
             <div className="col-12 d-flex gap-2">
               <button type="submit" className="btn btn-primary">
                 {editingId ? 'Update Schedule' : 'Add Schedule'}
@@ -327,6 +509,7 @@ export default function AdminSchedules() {
               <th>Team Member</th>
               <th>Geo</th>
               <th>Shift</th>
+              <th>Coverage Days</th>
               <th>Start Date</th>
               <th>End Date</th>
               <th>Duration</th>
@@ -340,6 +523,7 @@ export default function AdminSchedules() {
                 <td>{schedule.teamMember?.f_name} {schedule.teamMember?.l_name}</td>
                 <td>{schedule.geo?.name}</td>
                 <td>{schedule.shift?.name}</td>
+                <td>{formatCoverageDays(schedule.coverageDays)}</td>
                 <td>{schedule.startDate}</td>
                 <td>{schedule.endDate}</td>
                 <td>{formatDurationDays(schedule.startDate, schedule.endDate)}</td>
@@ -363,7 +547,7 @@ export default function AdminSchedules() {
             ))}
             {schedules.length === 0 && (
               <tr>
-                <td colSpan={canManageTeam ? 8 : 7} className="text-center">No schedules yet.</td>
+                <td colSpan={canManageTeam ? 9 : 8} className="text-center">No schedules yet.</td>
               </tr>
             )}
           </tbody>

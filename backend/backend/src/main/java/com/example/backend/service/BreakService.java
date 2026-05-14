@@ -53,6 +53,9 @@ public class BreakService {
             "  b.start_ts <= :tsUpper " +
             "  AND " +
             "  (b.start_ts AT TIME ZONE 'UTC')::date BETWEEN tms.start_date AND tms.end_date " +
+            "  AND (tms.coverage_days IS NULL " +
+            "       OR trim(tms.coverage_days) = '' " +
+            "       OR position(upper(to_char((b.start_ts AT TIME ZONE 'UTC')::date, 'FMDay')) in tms.coverage_days) > 0) " +
             "  AND b.team_id = :teamId " +
             "  AND tm.team_id = :teamId " +
             "  AND tms.team_id = :teamId " +

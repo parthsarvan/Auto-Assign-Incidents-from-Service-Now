@@ -39,6 +39,22 @@ public interface TeamMemberScheduleRepository extends JpaRepository<TeamMemberSc
             @Param("endDate") LocalDate endDate,
             @Param("excludeId") Long excludeId);
 
+    @Query("""
+            select t
+            from TeamMemberSchedule t
+            join fetch t.geo
+            join fetch t.shift
+            where t.teamMember = :teamMember
+              and t.startDate <= :endDate
+              and t.endDate >= :startDate
+              and (:excludeId is null or t.tms_id <> :excludeId)
+            """)
+    List<TeamMemberSchedule> findOverlappingSchedules(
+            @Param("teamMember") TeamMember teamMember,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate,
+            @Param("excludeId") Long excludeId);
+
     @Query(
             "select t from TeamMemberSchedule t "
                     + "join fetch t.teamMember tm "
