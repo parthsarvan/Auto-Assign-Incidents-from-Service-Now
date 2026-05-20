@@ -15,6 +15,8 @@ Today the product includes:
 
 - `backend/backend`: Spring Boot API
 - `frontend/frontend`: React app
+- `ios`: native iOS companion app workspace
+- `docs`: shared product and API notes
 
 ## Local Development
 
@@ -43,6 +45,12 @@ By default the frontend talks to the same origin. For local split frontend/backe
 ```bash
 REACT_APP_API_BASE_URL=http://localhost:8080
 ```
+
+### iOS Companion App
+
+The iOS app is planned as a post-setup operations companion for InciTeam. Admin setup remains in the web app; mobile focuses on login, roster/current shift, summary alerts, assignment logs, manual polling, leave/break quick actions, and push notifications.
+
+The Xcode project should live under `ios/`. See [ios/README.md](ios/README.md) and [docs/mobile-api.md](docs/mobile-api.md).
 
 ## Environment Variables
 

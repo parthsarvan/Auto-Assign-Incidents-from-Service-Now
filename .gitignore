@@ -5,6 +5,10 @@ node_modules/
 **/.env.local
 
 .DS_Store
+*.xcuserstate
+xcuserdata/
+DerivedData/
+ios/**/build/
 
 frontend/frontend/build/
 backend/backend/target/
