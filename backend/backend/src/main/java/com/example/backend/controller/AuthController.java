@@ -215,6 +215,8 @@ public class AuthController {
                     jwt,
                     user.getU_id(),
                     user.getUsername(),
+                    user.getFirstName(),
+                    user.getLastName(),
                     user.getWorkEmail(),
                     user.getRole(),
                     workspace
