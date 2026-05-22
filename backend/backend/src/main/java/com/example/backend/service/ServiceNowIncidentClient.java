@@ -91,12 +91,21 @@ public class ServiceNowIncidentClient {
             ServiceNowConnectionSettings settings,
             String query,
             boolean requireUnassigned) {
+        return fetchIncidents(settings, query, requireUnassigned, "true");
+    }
+
+    private List<ServiceNowIncident> fetchIncidents(
+            ServiceNowConnectionSettings settings,
+            String query,
+            boolean requireUnassigned,
+            String displayValueMode) {
         logger.info("ServiceNow incident query: {}", query);
         String url = UriComponentsBuilder.fromHttpUrl(settings.instanceUrl())
                 .path("/api/now/table/incident")
                 .queryParam("sysparm_query", query)
                 .queryParam("sysparm_fields", INCIDENT_FIELDS)
-                .queryParam("sysparm_display_value", "true")
+                .queryParam("sysparm_display_value", displayValueMode)
+                .queryParam("sysparm_exclude_reference_link", "true")
                 .queryParam("sysparm_limit", "100")
                 .toUriString();
         HttpHeaders headers = authHeaderProvider.buildHeaders(settings.username(), settings.password());
@@ -138,7 +147,10 @@ public class ServiceNowIncidentClient {
         ServiceNowConnectionSettings settings = organizationServiceNowConfigService
                 .requireSettingsForTeam(currentWorkspaceService.getCurrentTeam());
         String query = "assigned_to=" + assigneeSysId.trim() + "^stateNOT IN6,7";
-        return fetchIncidents(settings, query, false);
+        return fetchIncidents(settings, query, false, "all").stream()
+                .filter(incident -> isAssignedTo(incident, assigneeSysId))
+                .filter(this::isActiveState)
+                .toList();
     }
 
     public List<ServiceNowIncident> fetchActiveCriticalIncidentsAssignedTo(String assigneeSysId) {
@@ -271,6 +283,28 @@ public class ServiceNowIncidentClient {
                 || normalized.startsWith("1")
                 || normalized.startsWith("p1c")
                 || normalized.contains("critical");
+    }
+
+    private boolean isAssignedTo(ServiceNowIncident incident, String assigneeSysId) {
+        if (incident == null || incident.getAssigned_to() == null || assigneeSysId == null) {
+            return false;
+        }
+        String normalizedAssigneeSysId = normalizeValue(assigneeSysId);
+        String assignedToValue = normalizeValue(incident.getAssigned_to().getValue());
+        String assignedToDisplay = normalizeValue(incident.getAssigned_to().getDisplayValue());
+        return normalizedAssigneeSysId.equals(assignedToValue)
+                || normalizedAssigneeSysId.equals(assignedToDisplay);
+    }
+
+    private boolean isActiveState(ServiceNowIncident incident) {
+        String normalized = normalizeValue(incident != null ? incident.getState() : null)
+                .replaceAll("[^a-z0-9]", "");
+        return !normalized.equals("6")
+                && !normalized.equals("7")
+                && !normalized.contains("resolved")
+                && !normalized.contains("closed")
+                && !normalized.contains("cancelled")
+                && !normalized.contains("canceled");
     }
 
     private String normalizeValue(String value) {
