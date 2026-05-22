@@ -147,7 +147,7 @@ public class ServiceNowIncidentClient {
         ServiceNowConnectionSettings settings = organizationServiceNowConfigService
                 .requireSettingsForTeam(currentWorkspaceService.getCurrentTeam());
         String query = "assigned_to=" + assigneeSysId.trim() + "^stateNOT IN6,7";
-        return fetchIncidents(settings, query, false, "all").stream()
+        return fetchIncidents(settings, query, false, "false").stream()
                 .filter(incident -> isAssignedTo(incident, assigneeSysId))
                 .filter(this::isActiveState)
                 .toList();
