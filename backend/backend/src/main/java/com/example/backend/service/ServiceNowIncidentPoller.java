@@ -21,6 +21,7 @@ public class ServiceNowIncidentPoller {
     private final ServiceNowIncidentClient incidentClient;
     private final ServiceNowIncidentAssigner incidentAssigner;
     private final ServiceNowLogService logService;
+    private final IncidentAssignmentNotificationService notificationService;
     private final TeamRepository teamRepository;
     private final CurrentWorkspaceService currentWorkspaceService;
     private final OrganizationServiceNowConfigService organizationServiceNowConfigService;
@@ -29,12 +30,14 @@ public class ServiceNowIncidentPoller {
             ServiceNowIncidentClient incidentClient,
             ServiceNowIncidentAssigner incidentAssigner,
             ServiceNowLogService logService,
+            IncidentAssignmentNotificationService notificationService,
             TeamRepository teamRepository,
             CurrentWorkspaceService currentWorkspaceService,
             OrganizationServiceNowConfigService organizationServiceNowConfigService) {
         this.incidentClient = incidentClient;
         this.incidentAssigner = incidentAssigner;
         this.logService = logService;
+        this.notificationService = notificationService;
         this.teamRepository = teamRepository;
         this.currentWorkspaceService = currentWorkspaceService;
         this.organizationServiceNowConfigService = organizationServiceNowConfigService;
@@ -78,6 +81,7 @@ public class ServiceNowIncidentPoller {
                 logger.info("ServiceNow assignment applied to {} incidents for team {}.", successCount, team.getName());
             }
             logService.recordPollSuccess(team, incidents, results);
+            notificationService.notifyAssignmentResults(incidents, results);
             return new ServiceNowPollNowResponse(
                     Instant.now(),
                     "OK",

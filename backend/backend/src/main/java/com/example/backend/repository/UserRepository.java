@@ -35,5 +35,15 @@ public interface UserRepository extends JpaRepository<User, Long> {
             nativeQuery = true)
     boolean existsByNormalizedWorkEmail(@Param("workEmail") String workEmail);
 
+    @Query(
+            value = """
+                    select *
+                    from users
+                    where lower(trim(work_email)) = lower(trim(:workEmail))
+                    limit 1
+                    """,
+            nativeQuery = true)
+    Optional<User> findByNormalizedWorkEmail(@Param("workEmail") String workEmail);
+
     long countByRole(String role);
 }
