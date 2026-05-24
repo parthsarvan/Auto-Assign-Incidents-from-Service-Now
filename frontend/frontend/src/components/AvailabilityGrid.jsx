@@ -3,6 +3,13 @@ import React, { useMemo } from 'react';
 import { DateTime } from 'luxon';
 import './AvailabilityGrid.css';
 
+function getMemberKey(record) {
+  if (record?.tmId !== null && record?.tmId !== undefined) {
+    return `id:${record.tmId}`;
+  }
+  return `name:${record?.fullName || ''}`;
+}
+
 export default function AvailabilityGrid({
   records,     // flat array of { fullName, geoName, shiftName, date, … }
   onLeaveSet,  // Set of strings: "geo–shift||YYYY-MM-DD||fullName"
@@ -38,7 +45,10 @@ export default function AvailabilityGrid({
       const key = `${r.geoName}–${r.shiftName}`;
       if (!m[key]) m[key] = {};
       if (!m[key][r.date]) m[key][r.date] = [];
-      m[key][r.date].push(r.fullName);
+      m[key][r.date].push({
+        fullName: r.fullName,
+        tmId: r.tmId,
+      });
     });
     return m;
   }, [records]);
@@ -75,9 +85,10 @@ export default function AvailabilityGrid({
                   return (
                     <td key={date}>
                       <div className="cell-content">
-                        {namesOnShift.map((fullName) => {
+                        {namesOnShift.map((member) => {
                           // 3b) Build the exact key to check if they are on leave
-                          const leaveKey = `${geoShift}||${date}||${fullName}`;
+                          const memberKey = getMemberKey(member);
+                          const leaveKey = `${geoShift}||${date}||${memberKey}`;
                           const isOnLeave = onLeaveSet.has(leaveKey);
                           const isOnBreak = onBreakSet.has(leaveKey);
                           const availabilityClass = isOnLeave
@@ -88,10 +99,10 @@ export default function AvailabilityGrid({
 
                           return (
                             <div
-                              key={fullName}
+                              key={`${memberKey}-${member.fullName}`}
                               className={`cell-name${availabilityClass}`}
                             >
-                              {fullName}
+                              {member.fullName}
                             </div>
                           );
                         })}

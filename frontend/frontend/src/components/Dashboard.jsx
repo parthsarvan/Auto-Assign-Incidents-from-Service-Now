@@ -15,6 +15,66 @@ import './Dashboard.css';
 
 const DASHBOARD_REFRESH_MS = 60000;
 
+function getMemberKeys(record) {
+  const keys = [];
+  if (record?.tmId !== null && record?.tmId !== undefined) {
+    keys.push(`id:${record.tmId}`);
+  }
+  if (record?.fullName) {
+    keys.push(`name:${record.fullName}`);
+  }
+  return keys;
+}
+
+function getPrimaryMemberKey(record) {
+  return getMemberKeys(record)[0] || '';
+}
+
+function makeAvailabilityStatusKey(record) {
+  return `${record.geoName}–${record.shiftName}||${record.date}||${getPrimaryMemberKey(record)}`;
+}
+
+function recordOverlapsRosterDate(record, date, zone) {
+  const start = DateTime.fromISO(record.startTs, { zone: 'utc' }).setZone(zone);
+  const end = DateTime.fromISO(record.endTs, { zone: 'utc' }).setZone(zone);
+  const dayStart = DateTime.fromISO(date, { zone }).startOf('day');
+  const dayEnd = dayStart.endOf('day');
+
+  if (!start.isValid || !end.isValid || !dayStart.isValid) {
+    return false;
+  }
+
+  return start <= dayEnd && end >= dayStart;
+}
+
+function buildImpactSet(availabilityRecords, impactRecords, zone) {
+  const recordsByMember = new Map();
+
+  impactRecords.forEach((record) => {
+    getMemberKeys(record).forEach((memberKey) => {
+      if (!recordsByMember.has(memberKey)) {
+        recordsByMember.set(memberKey, []);
+      }
+      recordsByMember.get(memberKey).push(record);
+    });
+  });
+
+  const impactSet = new Set();
+  availabilityRecords.forEach((availabilityRecord) => {
+    const relatedImpactRecords = getMemberKeys(availabilityRecord)
+      .flatMap((memberKey) => recordsByMember.get(memberKey) || []);
+    const impacted = relatedImpactRecords.some((impactRecord) =>
+      recordOverlapsRosterDate(impactRecord, availabilityRecord.date, zone)
+    );
+
+    if (impacted) {
+      impactSet.add(makeAvailabilityStatusKey(availabilityRecord));
+    }
+  });
+
+  return impactSet;
+}
+
 export default function Dashboard() {
   const outletContext = useOutletContext() || {};
   const currentUser = outletContext.currentUser || getCurrentUser();
@@ -62,13 +122,6 @@ export default function Dashboard() {
   const hasAnyAvailabilityData =
     availabilityRecords.length > 0 || leaveRecords.length > 0 || breakRecords.length > 0;
 
-  const isBreakActiveNow = useCallback((record) => {
-    const nowUtc = DateTime.utc();
-    const startUtc = DateTime.fromISO(record.startTs, { zone: 'utc' });
-    const endUtc = DateTime.fromISO(record.endTs, { zone: 'utc' });
-    return nowUtc >= startUtc && nowUtc <= endUtc;
-  }, []);
-
   // ── 3) Fetch Availability & Leave Whenever startDate or viewMode Changes ──
   const loadAllData = useCallback(async () => {
       setLoading(true);
@@ -91,7 +144,8 @@ export default function Dashboard() {
             headers: { Authorization: `Bearer ${token}` },
           }
         );
-        setAvailabilityRecords(availResp.data);
+        const availabilityFlat = availResp.data || [];
+        setAvailabilityRecords(availabilityFlat);
 
         // 3b) Fetch “on‐leave” records from the backend
         //    (this returns flat objects: { fullName, geoName, shiftName, startTs, endTs, reason })
@@ -103,11 +157,10 @@ export default function Dashboard() {
           }
         );
 
-        // Convert each leave to include an explicit “date” field based on its UTC startTs
-        const leaveFlat = leaveResp.data.map((rec) => {
-          // Parse as UTC, then extract just the date portion (YYYY-MM-DD)
+        const leaveFlat = (leaveResp.data || []).map((rec) => {
           const utcDate = DateTime.fromISO(rec.startTs, { zone: 'utc' }).toISODate();
           return {
+            tmId:      rec.tmId,
             fullName:  rec.fullName,
             geoName:   rec.geoName,
             shiftName: rec.shiftName,
@@ -118,14 +171,7 @@ export default function Dashboard() {
           };
         });
         setLeaveRecords(leaveFlat);
-
-        // 3c) Build the Set of keys: "geo–shift||YYYY-MM-DD||fullName"
-        const leaveKeySet = new Set();
-        leaveFlat.forEach((r) => {
-          const key = `${r.geoName}–${r.shiftName}||${r.date}||${r.fullName}`;
-          leaveKeySet.add(key);
-        });
-        setOnLeaveSet(leaveKeySet);
+        setOnLeaveSet(buildImpactSet(availabilityFlat, leaveFlat, zone));
 
         // 3d) Fetch “on‐break” records from the backend
         const breakResp = await axios.get(
@@ -136,9 +182,10 @@ export default function Dashboard() {
           }
         );
 
-        const breakFlat = breakResp.data.map((rec) => {
+        const breakFlat = (breakResp.data || []).map((rec) => {
           const utcDate = DateTime.fromISO(rec.startTs, { zone: 'utc' }).toISODate();
           return {
+            tmId: rec.tmId,
             fullName: rec.fullName,
             geoName: rec.geoName,
             shiftName: rec.shiftName,
@@ -148,22 +195,15 @@ export default function Dashboard() {
             reason: rec.reason,
           };
         });
-        const activeBreaks = breakFlat.filter(isBreakActiveNow);
-        setBreakRecords(activeBreaks);
-
-        const breakKeySet = new Set();
-        activeBreaks.forEach((r) => {
-          const key = `${r.geoName}–${r.shiftName}||${r.date}||${r.fullName}`;
-          breakKeySet.add(key);
-        });
-        setOnBreakSet(breakKeySet);
+        setBreakRecords(breakFlat);
+        setOnBreakSet(buildImpactSet(availabilityFlat, breakFlat, zone));
       } catch (err) {
         console.error('Error loading data:', err);
         setError('Failed to load availability, leave, or break data. Please try again.');
       } finally {
         setLoading(false);
       }
-    }, [dayCount, isBreakActiveNow, startDate]);
+    }, [dayCount, startDate, zone]);
 
   useEffect(() => {
     loadAllData();

@@ -3,6 +3,7 @@ package com.example.backend.dto;
 import java.time.LocalDateTime;
 
 public class BreakRecord {
+    private Long tmId;
     private String fullName;
     private String geoName;
     private String shiftName;
@@ -18,12 +19,33 @@ public class BreakRecord {
         LocalDateTime endTs,
         String reason
     ) {
+        this(null, fullName, geoName, shiftName, startTs, endTs, reason);
+    }
+
+    public BreakRecord(
+        Long tmId,
+        String fullName,
+        String geoName,
+        String shiftName,
+        LocalDateTime startTs,
+        LocalDateTime endTs,
+        String reason
+    ) {
+        this.tmId = tmId;
         this.fullName = fullName;
         this.geoName = geoName;
         this.shiftName = shiftName;
         this.startTs = startTs;
         this.endTs = endTs;
         this.reason = reason;
+    }
+
+    public Long getTmId() {
+        return tmId;
+    }
+
+    public void setTmId(Long tmId) {
+        this.tmId = tmId;
     }
 
     public String getFullName() {

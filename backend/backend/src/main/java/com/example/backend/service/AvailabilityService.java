@@ -45,6 +45,7 @@ public class AvailabilityService {
             "  g.name AS geo_name, " +
             "  s.name AS shift_name, " +
             "  gs.date_value AS schedule_date, " +
+            "  tm.tm_id AS tm_id, " +
             "  CONCAT(tm.f_name, ' ', tm.l_name) AS full_name " +
             "FROM team_member_schedule tms " +
             "JOIN team_member tm        ON tm.tm_id = tms.tm_id " +
@@ -74,13 +75,15 @@ public class AvailabilityService {
             // row[0] = geo_name (String)
             // row[1] = shift_name (String)
             // row[2] = schedule_date (java.sql.Timestamp or java.sql.Date)
-            // row[3] = full_name (String)
+            // row[3] = tm_id (Number)
+            // row[4] = full_name (String)
             String geoName   = (String) row[0];
             String shiftName = (String) row[1];
-            String fullName  = (String) row[3];
+            Long tmId = row[3] == null ? null : ((Number) row[3]).longValue();
+            String fullName  = (String) row[4];
 
             LocalDate dateLocal = convertToLocalDate(row[2]);
-            result.add(new AvailabilityRecord(geoName, shiftName, dateLocal, fullName));
+            result.add(new AvailabilityRecord(tmId, geoName, shiftName, dateLocal, fullName));
         }
 
         return result;

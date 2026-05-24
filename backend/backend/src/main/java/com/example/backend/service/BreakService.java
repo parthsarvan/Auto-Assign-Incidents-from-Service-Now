@@ -34,6 +34,7 @@ public class BreakService {
 
         String sql =
             "SELECT " +
+            "  tm.tm_id, " +
             "  tm.f_name, " +
             "  tm.l_name, " +
             "  g.name       AS geo_name, " +
@@ -71,19 +72,21 @@ public class BreakService {
         List<BreakRecord> result = new ArrayList<>(rows.size());
 
         for (Object[] row : rows) {
-            String fName = (String) row[0];
-            String lName = (String) row[1];
-            String geoName = (String) row[2];
-            String shiftName = (String) row[3];
-            Object startObj = row[4];
-            Object endObj = row[5];
-            String reason = (String) row[6];
+            Long tmId = row[0] == null ? null : ((Number) row[0]).longValue();
+            String fName = (String) row[1];
+            String lName = (String) row[2];
+            String geoName = (String) row[3];
+            String shiftName = (String) row[4];
+            Object startObj = row[5];
+            Object endObj = row[6];
+            String reason = (String) row[7];
 
             LocalDateTime startLdt = convertToLocalDateTime(startObj);
             LocalDateTime endLdt = convertToLocalDateTime(endObj);
 
             String fullName = fName + " " + lName;
             result.add(new BreakRecord(
+                tmId,
                 fullName,
                 geoName,
                 shiftName,

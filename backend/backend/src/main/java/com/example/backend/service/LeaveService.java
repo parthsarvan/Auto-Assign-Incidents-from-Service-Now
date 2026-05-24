@@ -43,6 +43,7 @@ public class LeaveService {
 
         String sql =
             "SELECT " +
+            "  tm.tm_id, " +
             "  tm.f_name, " +
             "  tm.l_name, " +
             "  g.name       AS geo_name, " +
@@ -80,21 +81,23 @@ public class LeaveService {
         List<LeaveRecord> result = new ArrayList<>(rows.size());
 
         for (Object[] row : rows) {
-            // row[0] = f_name       (String)
-            // row[1] = l_name       (String)
-            // row[2] = geo_name     (String)
-            // row[3] = shift_name   (String)
-            // row[4] = start_ts     (Instant or Timestamp)
-            // row[5] = end_ts       (Instant or Timestamp)
-            // row[6] = reason       (String)
+            // row[0] = tm_id        (Number)
+            // row[1] = f_name       (String)
+            // row[2] = l_name       (String)
+            // row[3] = geo_name     (String)
+            // row[4] = shift_name   (String)
+            // row[5] = start_ts     (Instant or Timestamp)
+            // row[6] = end_ts       (Instant or Timestamp)
+            // row[7] = reason       (String)
 
-            String fName     = (String) row[0];
-            String lName     = (String) row[1];
-            String geoName   = (String) row[2];
-            String shiftName = (String) row[3];
-            Object  startObj = row[4];
-            Object  endObj   = row[5];
-            String  reason    = (String) row[6];
+            Long tmId = row[0] == null ? null : ((Number) row[0]).longValue();
+            String fName     = (String) row[1];
+            String lName     = (String) row[2];
+            String geoName   = (String) row[3];
+            String shiftName = (String) row[4];
+            Object  startObj = row[5];
+            Object  endObj   = row[6];
+            String  reason    = (String) row[7];
 
             // Convert startObj to LocalDateTime (in UTC). Then front end can zone‐convert.
             LocalDateTime startLdt = convertToLocalDateTime(startObj);
@@ -102,6 +105,7 @@ public class LeaveService {
 
             String fullName = fName + " " + lName;
             result.add(new LeaveRecord(
+                tmId,
                 fullName,
                 geoName,
                 shiftName,

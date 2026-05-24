@@ -6,6 +6,7 @@ import java.time.LocalDateTime;
  * DTO for leave entries. Now includes fullName instead of separate f_name/l_name.
  */
 public class LeaveRecord {
+    private Long tmId;
     private String fullName;
     private String geoName;
     private String shiftName;
@@ -21,6 +22,19 @@ public class LeaveRecord {
         LocalDateTime endTs,
         String reason
     ) {
+        this(null, fullName, geoName, shiftName, startTs, endTs, reason);
+    }
+
+    public LeaveRecord(
+        Long tmId,
+        String fullName,
+        String geoName,
+        String shiftName,
+        LocalDateTime startTs,
+        LocalDateTime endTs,
+        String reason
+    ) {
+        this.tmId      = tmId;
         this.fullName  = fullName;
         this.geoName   = geoName;
         this.shiftName = shiftName;
@@ -30,6 +44,9 @@ public class LeaveRecord {
     }
 
     // Getters & setters:
+    public Long getTmId()                 { return tmId; }
+    public void setTmId(Long tmId)        { this.tmId = tmId; }
+
     public String getFullName()           { return fullName; }
     public void setFullName(String fullName) { this.fullName = fullName; }
 

@@ -10,16 +10,30 @@ import java.time.LocalDate;
  *   - fullName   (e.g. “Parth Sarvan”)
  */
 public class AvailabilityRecord {
+    private Long tmId;
     private String geoName;
     private String shiftName;
     private LocalDate date;
     private String fullName;
 
     public AvailabilityRecord(String geoName, String shiftName, LocalDate date, String fullName) {
+        this(null, geoName, shiftName, date, fullName);
+    }
+
+    public AvailabilityRecord(Long tmId, String geoName, String shiftName, LocalDate date, String fullName) {
+        this.tmId      = tmId;
         this.geoName   = geoName;
         this.shiftName = shiftName;
         this.date      = date;
         this.fullName  = fullName;
+    }
+
+    public Long getTmId() {
+        return tmId;
+    }
+
+    public void setTmId(Long tmId) {
+        this.tmId = tmId;
     }
 
     public String getGeoName() {
