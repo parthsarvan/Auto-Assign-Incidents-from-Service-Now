@@ -8,6 +8,7 @@ import com.example.backend.entity.TeamMember;
 import com.example.backend.repository.GeoRepository;
 import com.example.backend.repository.TeamMemberRepository;
 import com.example.backend.repository.TeamMembershipRepository;
+import com.example.backend.service.AccountDeletionService;
 import com.example.backend.service.CurrentWorkspaceService;
 import com.example.backend.service.WorkspaceAccessService;
 import org.springframework.http.ResponseEntity;
@@ -26,19 +27,22 @@ public class TeamMemberController {
     private final TeamMembershipRepository teamMembershipRepository;
     private final CurrentWorkspaceService currentWorkspaceService;
     private final WorkspaceAccessService workspaceAccessService;
+    private final AccountDeletionService accountDeletionService;
 
     public TeamMemberController(
         TeamMemberRepository teamMemberRepository,
         GeoRepository geoRepository,
         TeamMembershipRepository teamMembershipRepository,
         CurrentWorkspaceService currentWorkspaceService,
-        WorkspaceAccessService workspaceAccessService
+        WorkspaceAccessService workspaceAccessService,
+        AccountDeletionService accountDeletionService
     ) {
         this.teamMemberRepository = teamMemberRepository;
         this.geoRepository = geoRepository;
         this.teamMembershipRepository = teamMembershipRepository;
         this.currentWorkspaceService = currentWorkspaceService;
         this.workspaceAccessService = workspaceAccessService;
+        this.accountDeletionService = accountDeletionService;
     }
 
     @GetMapping
@@ -172,15 +176,14 @@ public class TeamMemberController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-        workspaceAccessService.requireCurrentTeamManager();
-        Team team = currentWorkspaceService.getCurrentTeam();
-        var member = teamMemberRepository.findByIdAndTeam(id, team);
-        if (member.isEmpty()) {
-            return ResponseEntity.notFound().build();
+    public ResponseEntity<?> delete(@PathVariable Long id) {
+        try {
+            return ResponseEntity.ok(accountDeletionService.deleteTeamMemberFromCurrentTeam(id));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(ex.getMessage());
+        } catch (IllegalStateException ex) {
+            return ResponseEntity.status(403).body(ex.getMessage());
         }
-        teamMemberRepository.delete(member.get());
-        return ResponseEntity.noContent().build();
     }
 
     private String normalizeText(String value) {

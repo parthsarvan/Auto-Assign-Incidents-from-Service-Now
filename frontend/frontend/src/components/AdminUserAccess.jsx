@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { assignUserToTeam, fetchUsers, removeUserFromTeam, updateUserRole, updateUserTeamRole } from '../services/admin';
-import { getCurrentUser, setCurrentUser } from '../services/auth';
+import { assignUserToTeam, deleteUserAccount, fetchUsers, removeUserFromTeam, updateUserRole, updateUserTeamRole } from '../services/admin';
+import { getCurrentUser, setCurrentUser, signOut } from '../services/auth';
 import { resolveLandingRoute } from '../services/permissions';
 import { fetchWorkspaceTeams } from '../services/workspace';
 import { useNavigate } from 'react-router-dom';
@@ -18,6 +18,7 @@ export default function AdminUserAccess() {
   const [pendingTeamRoles, setPendingTeamRoles] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
 
   const syncCurrentUserSession = useCallback((userData) => {
     const sessionUser = getCurrentUser();
@@ -96,6 +97,7 @@ export default function AdminUserAccess() {
 
   const handleUpdateRole = async (id) => {
     setError('');
+    setMessage('');
     const role = pendingRoles[id];
     if (!role) {
       setError('Please select a role before saving.');
@@ -117,6 +119,7 @@ export default function AdminUserAccess() {
 
   const handleAssignTeam = async (id) => {
     setError('');
+    setMessage('');
     const teamId = pendingTeamSelections[id];
     if (!teamId) {
       setError('Select a team before assigning access.');
@@ -133,6 +136,7 @@ export default function AdminUserAccess() {
 
   const handleRemoveTeam = async (id, teamId, teamName) => {
     setError('');
+    setMessage('');
     if (!window.confirm(`Remove access to ${teamName}?`)) {
       return;
     }
@@ -149,6 +153,7 @@ export default function AdminUserAccess() {
 
   const handleUpdateTeamRole = async (userId, teamId) => {
     setError('');
+    setMessage('');
     const role = pendingTeamRoles[`${userId}-${teamId}`];
     if (!role) {
       setError('Please select a team role before saving.');
@@ -162,6 +167,33 @@ export default function AdminUserAccess() {
       }
     } catch (err) {
       setError(typeof err?.response?.data === 'string' ? err.response.data : 'Failed to update team role.');
+    }
+  };
+
+  const handleDeleteUser = async (user) => {
+    setError('');
+    setMessage('');
+    const displayName = [user.firstName, user.lastName].filter(Boolean).join(' ').trim()
+      || user.username
+      || 'this user';
+    const selfDelete = user.id === getCurrentUser()?.u_id;
+    const promptText = selfDelete
+      ? 'Delete your own account? You will be signed out immediately.'
+      : `Delete ${displayName}'s account? This removes team access, roster records, routing mappings, schedules, leaves, breaks, and push tokens.`;
+    if (!window.confirm(promptText)) {
+      return;
+    }
+    try {
+      const response = await deleteUserAccount(user.id);
+      if (selfDelete) {
+        signOut();
+        navigate('/signin', { replace: true });
+        return;
+      }
+      await loadData();
+      setMessage(response?.message || 'Account deleted.');
+    } catch (err) {
+      setError(typeof err?.response?.data === 'string' ? err.response.data : 'Failed to delete account.');
     }
   };
 
@@ -204,6 +236,7 @@ export default function AdminUserAccess() {
         </div>
       </div>
       {error && <div className="alert alert-danger">{error}</div>}
+      {message && <div className="alert alert-success">{message}</div>}
       {!isAdmin && (
         <div className="alert alert-info">Read-only access. Contact an admin to make changes.</div>
       )}
@@ -321,6 +354,13 @@ export default function AdminUserAccess() {
                         disabled={loading || !pendingTeamSelections[user.id]}
                       >
                         Assign Team
+                      </button>
+                      <button
+                        className="btn btn-outline-danger btn-sm"
+                        onClick={() => handleDeleteUser(user)}
+                        disabled={loading}
+                      >
+                        Delete Account
                       </button>
                     </div>
                   </td>

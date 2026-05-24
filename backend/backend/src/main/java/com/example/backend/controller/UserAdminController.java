@@ -10,6 +10,7 @@ import com.example.backend.dto.TeamMembershipUpdateRequest;
 import com.example.backend.dto.TeamMembershipRoleUpdateRequest;
 import com.example.backend.dto.UserRoleUpdateRequest;
 import com.example.backend.dto.UserSummary;
+import com.example.backend.service.AccountDeletionService;
 import com.example.backend.service.CurrentWorkspaceService;
 import com.example.backend.service.UserAccessAdminService;
 import com.example.backend.service.WorkspaceAccessService;
@@ -22,16 +23,19 @@ public class UserAdminController {
 
     private final UserRepository userRepository;
     private final UserAccessAdminService userAccessAdminService;
+    private final AccountDeletionService accountDeletionService;
     private final CurrentWorkspaceService currentWorkspaceService;
     private final WorkspaceAccessService workspaceAccessService;
 
     public UserAdminController(
             UserRepository userRepository,
             UserAccessAdminService userAccessAdminService,
+            AccountDeletionService accountDeletionService,
             CurrentWorkspaceService currentWorkspaceService,
             WorkspaceAccessService workspaceAccessService) {
         this.userRepository = userRepository;
         this.userAccessAdminService = userAccessAdminService;
+        this.accountDeletionService = accountDeletionService;
         this.currentWorkspaceService = currentWorkspaceService;
         this.workspaceAccessService = workspaceAccessService;
     }
@@ -103,6 +107,17 @@ public class UserAdminController {
         try {
             workspaceAccessService.requireGlobalAdmin();
             return ResponseEntity.ok(userAccessAdminService.removeUserFromTeam(id, teamId));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(ex.getMessage());
+        } catch (IllegalStateException ex) {
+            return ResponseEntity.status(403).body(ex.getMessage());
+        }
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteUser(@PathVariable Long id) {
+        try {
+            return ResponseEntity.ok(accountDeletionService.deleteUserAsOrganizationAdmin(id));
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.badRequest().body(ex.getMessage());
         } catch (IllegalStateException ex) {

@@ -30,4 +30,6 @@ public interface LeaveEntryRepository extends JpaRepository<LeaveEntry, Long> {
                     + "left join fetch tm.geo "
                     + "where l.leave_id = :id and l.team = :team")
     Optional<LeaveEntry> findByIdAndTeam(@Param("id") Long id, @Param("team") Team team);
+
+    long deleteByTeamMember(TeamMember teamMember);
 }

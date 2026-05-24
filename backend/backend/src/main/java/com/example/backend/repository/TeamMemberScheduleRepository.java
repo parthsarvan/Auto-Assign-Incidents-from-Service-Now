@@ -72,5 +72,7 @@ public interface TeamMemberScheduleRepository extends JpaRepository<TeamMemberSc
                     + "where t.tms_id = :id and t.team = :team")
     Optional<TeamMemberSchedule> findByIdAndTeam(@Param("id") Long id, @Param("team") Team team);
 
+    long deleteByTeamMember(TeamMember teamMember);
+
     long countByTeam(Team team);
 }

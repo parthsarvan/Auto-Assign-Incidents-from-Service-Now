@@ -1,0 +1,53 @@
+.account-settings-page {
+  max-width: 1160px;
+}
+
+.account-settings-page__name {
+  margin: 0.35rem 0 1.25rem;
+  color: var(--incteam-primary-deep);
+  font-size: 1.55rem;
+}
+
+.account-settings-page__details {
+  display: grid;
+  gap: 0.9rem;
+  margin: 0;
+}
+
+.account-settings-page__details div {
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid rgba(191, 208, 228, 0.7);
+}
+
+.account-settings-page__details div:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.account-settings-page__details dt {
+  color: #6b7d92;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.account-settings-page__details dd {
+  margin: 0.2rem 0 0;
+  color: var(--incteam-text);
+  font-weight: 700;
+}
+
+.account-settings-page__danger {
+  border-color: rgba(214, 63, 63, 0.32);
+}
+
+.account-settings-page__danger h3 {
+  color: #9b1c1c;
+  font-size: 1.35rem;
+}
+
+.account-settings-page__danger p {
+  color: var(--incteam-muted);
+  line-height: 1.65;
+}

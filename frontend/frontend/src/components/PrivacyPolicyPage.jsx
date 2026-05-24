@@ -69,9 +69,10 @@ const policySections = [
     id: 'deletion',
     title: 'Account Deletion Requests',
     body: [
-      `To request deletion of your InciTeam account or personal data, contact ${contactEmail} from the email address associated with your account.`,
-      'We may need to verify the request and coordinate with your organization administrator before deleting data that affects team schedules, routing rules, logs, or operational audit history.',
-      'Self-service account deletion controls are planned for the web app. Once available, this policy will be updated to describe the in-product deletion flow.',
+      'Signed-in users can request account deletion from the Account page in the InciTeam web app.',
+      'Organization administrators can delete user accounts from User Access or by deleting a linked team member record.',
+      `You can also contact ${contactEmail} from the email address associated with your account if you need help with deletion.`,
+      'Deletion removes the login, team access, push notification tokens, and roster records linked to the account, including routing mappings, schedules, leaves, and breaks. Some operational logs may be retained where needed for security, audit history, legal obligations, or troubleshooting.',
     ],
   },
   {

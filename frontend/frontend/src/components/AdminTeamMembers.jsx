@@ -32,6 +32,7 @@ export default function AdminTeamMembers() {
   const [geoId, setGeoId] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
   const canManageTeam = canManageCurrentTeam(getCurrentUser());
 
   const resetForm = () => {
@@ -158,6 +159,7 @@ export default function AdminTeamMembers() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setMessage('');
     try {
       if (!geoId) {
         setError('Please select a geo.');
@@ -198,12 +200,20 @@ export default function AdminTeamMembers() {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Delete this team member?')) {
+  const handleDelete = async (member) => {
+    setError('');
+    setMessage('');
+    const memberName = `${member.f_name || ''} ${member.l_name || ''}`.trim() || member.email || 'this team member';
+    if (!window.confirm(`Delete ${memberName}? This removes roster routing, schedules, leaves, and breaks. If a linked InciTeam account exists, that account will also be deleted.`)) {
       return;
     }
-    await deleteTeamMember(id);
-    loadTeamMembers();
+    try {
+      const response = await deleteTeamMember(member.tm_id);
+      setMessage(response?.message || 'Team member deleted.');
+      loadTeamMembers();
+    } catch (err) {
+      setError(typeof err?.response?.data === 'string' ? err.response.data : 'Failed to delete team member.');
+    }
   };
 
   const handleEdit = (member) => {
@@ -252,6 +262,7 @@ export default function AdminTeamMembers() {
         <div className="text-muted">Maintain the team roster, geo ownership, and ServiceNow user identities.</div>
       </div>
       {error && <div className="alert alert-danger">{error}</div>}
+      {message && <div className="alert alert-success">{message}</div>}
 
       {canManageTeam ? (
         <div className="card p-3 mb-4 admin-crud-card">
@@ -436,7 +447,7 @@ export default function AdminTeamMembers() {
                         </button>
                         <button
                           className="btn btn-outline-danger btn-sm"
-                          onClick={() => handleDelete(member.tm_id)}
+                          onClick={() => handleDelete(member)}
                         >
                           Delete
                         </button>

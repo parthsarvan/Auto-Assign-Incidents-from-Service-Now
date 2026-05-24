@@ -87,6 +87,7 @@ export default function Sidebar({
         key: 'access',
         label: 'Access',
         items: compact([
+          { label: 'Account', path: '/account' },
           orgAdmin && { label: 'User Access', path: '/user-access' },
         ]),
       },

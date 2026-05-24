@@ -1,6 +1,7 @@
 package com.example.backend.repository;
 
 import com.example.backend.entity.TeamMember;
+import com.example.backend.entity.Organization;
 import com.example.backend.entity.Team;
 import java.util.List;
 import java.util.Optional;
@@ -14,6 +15,18 @@ public interface TeamMemberRepository extends JpaRepository<TeamMember, Long> {
 
     @Query("select tm from TeamMember tm left join fetch tm.geo where tm.tm_id = :id and tm.team = :team")
     Optional<TeamMember> findByIdAndTeam(@Param("id") Long id, @Param("team") Team team);
+
+    @Query("""
+            select tm
+            from TeamMember tm
+            join fetch tm.team t
+            left join fetch tm.geo
+            where t.organization = :organization
+              and lower(trim(tm.email)) = lower(trim(:email))
+            """)
+    List<TeamMember> findAllByOrganizationAndNormalizedEmail(
+            @Param("organization") Organization organization,
+            @Param("email") String email);
 
     @Query("""
             select tm

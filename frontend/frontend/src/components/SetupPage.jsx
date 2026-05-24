@@ -641,7 +641,7 @@ export default function SetupPage() {
   }
 
   async function handleTeamMemberDelete(id) {
-    if (!window.confirm('Delete this team member?')) {
+    if (!window.confirm('Delete this team member? If a linked InciTeam account exists, that account will also be deleted.')) {
       return;
     }
     setTeamMemberError('');
@@ -652,7 +652,7 @@ export default function SetupPage() {
       }
       await loadSetupData('team_members');
     } catch (err) {
-      setTeamMemberError('Failed to delete team member.');
+      setTeamMemberError(describeRequestError(err, 'Failed to delete team member.'));
     }
   }
 

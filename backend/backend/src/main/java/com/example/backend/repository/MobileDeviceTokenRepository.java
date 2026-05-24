@@ -10,4 +10,6 @@ public interface MobileDeviceTokenRepository extends JpaRepository<MobileDeviceT
     Optional<MobileDeviceToken> findByUserAndDeviceToken(User user, String deviceToken);
 
     List<MobileDeviceToken> findAllByUserAndActiveTrue(User user);
+
+    long deleteByUser(User user);
 }

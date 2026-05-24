@@ -3,6 +3,7 @@ package com.example.backend.repository;
 import com.example.backend.entity.CiUserMapping;
 import com.example.backend.entity.ConfigurationItem;
 import com.example.backend.entity.Team;
+import com.example.backend.entity.TeamMember;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -56,8 +57,10 @@ public interface CiUserMappingRepository extends JpaRepository<CiUserMapping, Lo
 
     boolean existsByConfigurationItemAndTeamMemberAndTeam(
             ConfigurationItem configurationItem,
-            com.example.backend.entity.TeamMember teamMember,
+            TeamMember teamMember,
             Team team);
+
+    long deleteByTeamMember(TeamMember teamMember);
 
     long countByTeam(Team team);
 }

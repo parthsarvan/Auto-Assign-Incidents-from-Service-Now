@@ -30,4 +30,6 @@ public interface BreakEntryRepository extends JpaRepository<BreakEntry, Long> {
                     + "left join fetch tm.geo "
                     + "where b.break_id = :id and b.team = :team")
     Optional<BreakEntry> findByIdAndTeam(@Param("id") Long id, @Param("team") Team team);
+
+    long deleteByTeamMember(TeamMember teamMember);
 }

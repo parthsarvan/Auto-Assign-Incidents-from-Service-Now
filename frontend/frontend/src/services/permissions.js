@@ -4,6 +4,7 @@ export function isOrgAdmin(user) {
 
 export const INCOMPLETE_SETUP_ALLOWED_PATHS = new Set([
   '/setup',
+  '/account',
   '/teams',
   '/user-access',
 ]);

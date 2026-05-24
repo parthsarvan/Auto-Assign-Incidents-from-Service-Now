@@ -3,6 +3,7 @@ package com.example.backend.repository;
 import com.example.backend.entity.Team;
 import com.example.backend.entity.TeamMembership;
 import com.example.backend.entity.User;
+import com.example.backend.entity.Organization;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -13,6 +14,7 @@ public interface TeamMembershipRepository extends JpaRepository<TeamMembership, 
     boolean existsByUserAndTeam(User user, Team team);
     Optional<TeamMembership> findByUserAndTeam(User user, Team team);
     long countByTeamAndRole(Team team, String role);
+    long deleteByUser(User user);
 
     @Query("select tm from TeamMembership tm join fetch tm.team t where tm.user = :user order by t.name asc")
     List<TeamMembership> findAllByUserWithTeam(@Param("user") User user);
@@ -31,4 +33,14 @@ public interface TeamMembershipRepository extends JpaRepository<TeamMembership, 
                     + "where tm.team = :team "
                     + "order by u.firstName asc, u.lastName asc, u.username asc")
     List<TeamMembership> findAllByTeamWithUser(@Param("team") Team team);
+
+    @Query("""
+            select count(distinct tm.user)
+            from TeamMembership tm
+            where tm.team.organization = :organization
+              and lower(tm.user.role) = lower(:role)
+            """)
+    long countDistinctUsersByOrganizationAndUserRole(
+            @Param("organization") Organization organization,
+            @Param("role") String role);
 }

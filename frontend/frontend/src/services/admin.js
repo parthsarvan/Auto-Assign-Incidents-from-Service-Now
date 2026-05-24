@@ -66,7 +66,8 @@ export async function updateTeamMember(id, payload) {
 }
 
 export async function deleteTeamMember(id) {
-  return api.delete(`/team-members/${id}`, withAuth());
+  const response = await api.delete(`/team-members/${id}`, withAuth());
+  return response.data;
 }
 
 export async function fetchConfigurationItems() {
@@ -190,6 +191,11 @@ export async function deleteBreak(id) {
 
 export async function fetchUsers() {
   const response = await api.get('/users', withAuth());
+  return response.data;
+}
+
+export async function deleteUserAccount(id) {
+  const response = await api.delete(`/users/${id}`, withAuth());
   return response.data;
 }
 
