@@ -59,6 +59,14 @@ public class SecurityConfig {
               .anyRequest().authenticated()
           )
 
+          .exceptionHandling(exceptions -> exceptions
+              .authenticationEntryPoint((request, response, authException) -> {
+                  response.setStatus(401);
+                  response.setContentType("text/plain;charset=UTF-8");
+                  response.getWriter().write("Please sign in to continue.");
+              })
+          )
+
           // 5) Register our custom JwtAuthFilter before the UsernamePasswordAuthenticationFilter
           .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 

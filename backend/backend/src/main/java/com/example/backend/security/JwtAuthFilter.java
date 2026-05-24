@@ -16,6 +16,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 @Component
 public class JwtAuthFilter extends OncePerRequestFilter {
@@ -46,21 +47,36 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             try {
                 username = jwtUtils.getUsernameFromToken(jwtToken);
             } catch (JwtException e) {
-                // Invalid token
+                sendUnauthorized(response);
+                return;
             }
         }
 
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-            if (jwtUtils.validateToken(jwtToken)) {
+            try {
+                if (!jwtUtils.validateToken(jwtToken)) {
+                    sendUnauthorized(response);
+                    return;
+                }
                 UsernamePasswordAuthenticationToken authToken =
                     new UsernamePasswordAuthenticationToken(
                         userDetails, null, userDetails.getAuthorities()
                     );
                 SecurityContextHolder.getContext().setAuthentication(authToken);
+            } catch (JwtException e) {
+                sendUnauthorized(response);
+                return;
             }
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private void sendUnauthorized(HttpServletResponse response) throws IOException {
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.setContentType("text/plain;charset=UTF-8");
+        response.getOutputStream().write(
+                "Your session expired. Please sign in again.".getBytes(StandardCharsets.UTF_8));
     }
 }

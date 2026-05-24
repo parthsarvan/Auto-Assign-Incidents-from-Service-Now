@@ -8,6 +8,7 @@ export default function SignInPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
   const navigate = useNavigate();
   const location = useLocation();
   const from = location.state?.from?.pathname || '/dashboard'; // default redirect after login
@@ -17,11 +18,15 @@ export default function SignInPage() {
     if (location.state?.username) {
       setUsername(location.state.username);
     }
+    if (location.state?.sessionMessage) {
+      setNotice(location.state.sessionMessage);
+    }
   }, [location.state]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setNotice('');
     try {
       await signIn(username, password);
       const signedInUser = getCurrentUser();
@@ -55,6 +60,7 @@ export default function SignInPage() {
         <p className="text-muted text-center small mb-3">
           Sign in to access your organization and active team workspace.
         </p>
+        {notice && <div className="alert alert-warning">{notice}</div>}
         {error && <div className="alert alert-danger">{error}</div>}
         <form onSubmit={handleSubmit}>
           <div className="mb-3">

@@ -113,6 +113,27 @@ export default function HomeLayout() {
     return () => window.removeEventListener('incteam:user-session-changed', syncUser);
   }, []);
 
+  useEffect(() => {
+    const handleAuthExpired = (event) => {
+      const message = event.detail?.message || 'Your session expired. Please sign in again.';
+      setUser(null);
+      navigate('/signin', {
+        replace: true,
+        state: {
+          from: {
+            pathname: location.pathname,
+            search: location.search,
+            hash: location.hash,
+          },
+          sessionMessage: message,
+        },
+      });
+    };
+
+    window.addEventListener('incteam:auth-expired', handleAuthExpired);
+    return () => window.removeEventListener('incteam:auth-expired', handleAuthExpired);
+  }, [location.hash, location.pathname, location.search, navigate]);
+
   const handleLogout = () => {
     sessionStorage.removeItem('token');
     sessionStorage.removeItem('user');

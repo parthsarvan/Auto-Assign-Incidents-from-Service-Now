@@ -687,7 +687,7 @@ export default function SetupPage() {
       resetCiUserForm();
       await loadSetupData('ci_user_mappings');
     } catch (err) {
-      setCiUserError('Failed to save CI-user mapping.');
+      setCiUserError(describeRequestError(err, 'Failed to save CI-user mapping.'));
     } finally {
       setCiUserSaving(false);
     }
