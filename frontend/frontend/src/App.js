@@ -24,6 +24,7 @@ import AssignmentDiagnostics from './components/AssignmentDiagnostics';
 import Summary from './components/Summary';
 import InviteWelcomePage from './components/InviteWelcomePage';
 import MarketingHomePage from './components/MarketingHomePage';
+import PrivacyPolicyPage from './components/PrivacyPolicyPage';
 import { canManageCurrentTeam, canViewCurrentTeam, isOrgAdmin } from './services/permissions';
 
 function TeamManagerRoute({ children }) {
@@ -74,6 +75,7 @@ export default function App() {
       <Routes>
         {/* Public */}
         <Route path="/" element={<MarketingHomePage />} />
+        <Route path="/privacy" element={<PrivacyPolicyPage />} />
         <Route path="/signin" element={<SignInPage />} />
         <Route path="/signup" element={<SignUpPage />} />
         <Route path="/app" element={<Navigate to="/dashboard" replace />} />
