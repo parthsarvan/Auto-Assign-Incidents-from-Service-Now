@@ -88,13 +88,13 @@ public class TeamMemberController {
             return ResponseEntity.badRequest().body("Email is required for team members.");
         }
         if (sysId.isBlank()) {
-            return ResponseEntity.badRequest().body("ServiceNow user sys_id is required for team members.");
+            return ResponseEntity.badRequest().body("Select the matching ServiceNow user for this team member.");
         }
         if (teamMemberRepository.existsByTeamAndNormalizedEmail(email, team)) {
             return ResponseEntity.badRequest().body("A team member with that email already exists in this team.");
         }
         if (teamMemberRepository.existsByTeamAndNormalizedSysId(sysId, team)) {
-            return ResponseEntity.badRequest().body("That ServiceNow user sys_id already exists in this team.");
+            return ResponseEntity.badRequest().body("That ServiceNow user is already linked in this team.");
         }
         Optional<Geo> geo = geoRepository.findByIdAndTeam(request.getGeoId(), team);
         if (geo.isEmpty()) {
@@ -140,7 +140,7 @@ public class TeamMemberController {
             return ResponseEntity.badRequest().body("Email is required for team members.");
         }
         if (sysId.isBlank()) {
-            return ResponseEntity.badRequest().body("ServiceNow user sys_id is required for team members.");
+            return ResponseEntity.badRequest().body("Select the matching ServiceNow user for this team member.");
         }
         Optional<Geo> geo = geoRepository.findByIdAndTeam(request.getGeoId(), team);
         if (geo.isEmpty()) {
@@ -157,7 +157,7 @@ public class TeamMemberController {
                 String existingSysId = normalizeCompactText(member.getSys_id());
                 if (!existingSysId.equalsIgnoreCase(sysId)
                         && teamMemberRepository.existsByTeamAndNormalizedSysId(sysId, team)) {
-                    return ResponseEntity.badRequest().body("That ServiceNow user sys_id already exists in this team.");
+                    return ResponseEntity.badRequest().body("That ServiceNow user is already linked in this team.");
                 }
                 member.setF_name(firstName);
                 member.setL_name(lastName);

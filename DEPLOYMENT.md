@@ -62,7 +62,23 @@ SERVICENOW_PASSWORD=<servicenow-password>
 SERVICENOW_POLL_INTERVAL_MS=300000
 SERVICENOW_LOG_RETENTION=100
 SERVICENOW_ASSIGNMENT_ENABLED=true
+
+INCITEAM_EMAIL_ENABLED=false
+INCITEAM_EMAIL_FROM=no-reply@psarvans.com
+INCITEAM_EMAIL_REPLY_TO=
+INCITEAM_EMAIL_SANDBOX_MODE=true
+INCITEAM_EMAIL_VERIFIED_RECIPIENTS=parthsarvan@psarvans.com
+INCITEAM_EMAIL_SMTP_HOST=email-smtp.<aws-region>.amazonaws.com
+INCITEAM_EMAIL_SMTP_PORT=587
+INCITEAM_EMAIL_SMTP_USERNAME=<ses-smtp-username>
+INCITEAM_EMAIL_SMTP_PASSWORD=<ses-smtp-password>
+INCITEAM_EMAIL_SMTP_AUTH=true
+INCITEAM_EMAIL_SMTP_STARTTLS_ENABLED=true
 ```
+
+For SES sandbox testing, keep `INCITEAM_EMAIL_SANDBOX_MODE=true` and only use verified recipients.
+After SES production access is approved, set `INCITEAM_EMAIL_SANDBOX_MODE=false` before sending to arbitrary recipients.
+On the current EC2 layout, put the backend values in `/home/ubuntu/incteam/backend.env`.
 
 ### Frontend
 

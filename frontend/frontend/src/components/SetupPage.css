@@ -185,6 +185,62 @@
   text-transform: uppercase;
 }
 
+.notification-option-card {
+  border: 1px solid #dde7f1;
+  border-radius: 18px;
+  padding: 1rem;
+  background:
+    radial-gradient(circle at top right, rgba(35, 75, 181, 0.07), transparent 28%),
+    rgba(248, 251, 255, 0.86);
+  height: 100%;
+}
+
+.notification-option-card--active {
+  border-color: #91b8ff;
+  box-shadow: 0 16px 34px rgba(35, 75, 181, 0.1);
+  background:
+    radial-gradient(circle at top right, rgba(32, 201, 151, 0.1), transparent 30%),
+    #ffffff;
+}
+
+.notification-rule-panel {
+  border: 1px solid #dde7f1;
+  border-radius: 18px;
+  padding: 1rem;
+  background: rgba(248, 251, 255, 0.86);
+}
+
+.notification-rule-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 0.75rem;
+}
+
+.notification-rule-card {
+  align-items: flex-start;
+  border: 1px solid #dbe4ee;
+  border-radius: 14px;
+  cursor: pointer;
+  display: flex;
+  gap: 0.75rem;
+  min-height: 104px;
+  padding: 0.85rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.notification-rule-card--active {
+  background: #ffffff;
+  border-color: #91b8ff;
+  box-shadow: 0 12px 28px rgba(35, 75, 181, 0.08);
+}
+
+.notification-rule-card small {
+  color: #66758a;
+  display: block;
+  line-height: 1.35;
+  margin-top: 0.25rem;
+}
+
 @media (max-width: 768px) {
   .setup-hero {
     padding: 18px;

@@ -23,6 +23,7 @@ public class SetupStatusService {
     private final TeamMemberScheduleRepository teamMemberScheduleRepository;
     private final CurrentWorkspaceService currentWorkspaceService;
     private final OrganizationServiceNowConfigService organizationServiceNowConfigService;
+    private final NotificationSettingsService notificationSettingsService;
 
     public SetupStatusService(
             GeoRepository geoRepository,
@@ -32,7 +33,8 @@ public class SetupStatusService {
             CiUserMappingRepository ciUserMappingRepository,
             TeamMemberScheduleRepository teamMemberScheduleRepository,
             CurrentWorkspaceService currentWorkspaceService,
-            OrganizationServiceNowConfigService organizationServiceNowConfigService) {
+            OrganizationServiceNowConfigService organizationServiceNowConfigService,
+            NotificationSettingsService notificationSettingsService) {
         this.geoRepository = geoRepository;
         this.shiftRepository = shiftRepository;
         this.configurationItemRepository = configurationItemRepository;
@@ -41,6 +43,7 @@ public class SetupStatusService {
         this.teamMemberScheduleRepository = teamMemberScheduleRepository;
         this.currentWorkspaceService = currentWorkspaceService;
         this.organizationServiceNowConfigService = organizationServiceNowConfigService;
+        this.notificationSettingsService = notificationSettingsService;
     }
 
     public SetupStatusResponse getStatus() {
@@ -64,13 +67,15 @@ public class SetupStatusService {
                         "/shifts",
                         "Set one team timezone and create the shift hours used across your geos."),
                 requiredStep("configuration_items", "Configuration Items", configurationItemRepository.countByTeam(team), "/configuration-items",
-                        "Add your supported CIs and their ServiceNow CI sys IDs."),
+                        "Search and link the ServiceNow CIs this team supports."),
                 requiredStep("team_members", "Team Members", teamMemberRepository.countByTeam(team), "/team-members",
-                        "Add team members and their ServiceNow user sys IDs."),
+                        "Add team members and link them to ServiceNow users."),
                 requiredStep("ci_user_mappings", "CI User Mappings", ciUserMappingRepository.countByTeam(team), "/ci-user-mappings",
                         "Map each CI to the team members who can own it."),
                 optionalStep("schedules", "Schedules", teamMemberScheduleRepository.countByTeam(team), "/schedules",
-                        "Optional but recommended: assign team members to geos and shifts over time."));
+                        "Optional but recommended: assign team members to geos and shifts over time."),
+                optionalStep("notifications", "Notifications", notificationSettingsService.countConfiguredForTeam(team), "/setup",
+                        "Optional: choose Slack and email channels for assignment and operational notifications."));
 
         List<SetupStepStatus> requiredSteps = steps.stream().filter(SetupStepStatus::isRequired).toList();
         int completedSteps = (int) requiredSteps.stream().filter(SetupStepStatus::isComplete).count();

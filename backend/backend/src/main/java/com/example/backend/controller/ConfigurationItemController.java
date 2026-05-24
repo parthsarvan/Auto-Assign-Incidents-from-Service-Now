@@ -46,13 +46,13 @@ public class ConfigurationItemController {
             return ResponseEntity.badRequest().body("Name is required for configuration items.");
         }
         if (normalizedServiceNowSysId.isBlank()) {
-            return ResponseEntity.badRequest().body("ServiceNow CI sys ID is required for configuration items.");
+            return ResponseEntity.badRequest().body("Select the matching ServiceNow CI record.");
         }
         if (configurationItemRepository.existsByTeamAndNormalizedName(team, normalizedName)) {
             return ResponseEntity.badRequest().body("A configuration item with that name already exists in this team.");
         }
         if (configurationItemRepository.existsByTeamAndNormalizedServiceNowSysId(team, normalizedServiceNowSysId)) {
-            return ResponseEntity.badRequest().body("That ServiceNow CI sys ID already exists in this team.");
+            return ResponseEntity.badRequest().body("That ServiceNow CI is already linked in this team.");
         }
         configurationItem.setName(normalizedName);
         configurationItem.setDescription(normalizedDescription);
@@ -78,7 +78,7 @@ public class ConfigurationItemController {
             return ResponseEntity.badRequest().body("Name is required for configuration items.");
         }
         if (normalizedServiceNowSysId.isBlank()) {
-            return ResponseEntity.badRequest().body("ServiceNow CI sys ID is required for configuration items.");
+            return ResponseEntity.badRequest().body("Select the matching ServiceNow CI record.");
         }
         return configurationItemRepository.findByIdAndTeam(id, team)
             .map(existing -> {
@@ -89,7 +89,7 @@ public class ConfigurationItemController {
                 String existingSysId = normalizeCompactText(existing.getServiceNowSysId());
                 if (!existingSysId.equalsIgnoreCase(normalizedServiceNowSysId)
                         && configurationItemRepository.existsByTeamAndNormalizedServiceNowSysId(team, normalizedServiceNowSysId)) {
-                    return ResponseEntity.badRequest().body("That ServiceNow CI sys ID already exists in this team.");
+                    return ResponseEntity.badRequest().body("That ServiceNow CI is already linked in this team.");
                 }
                 existing.setName(normalizedName);
                 existing.setDescription(normalizedDescription);

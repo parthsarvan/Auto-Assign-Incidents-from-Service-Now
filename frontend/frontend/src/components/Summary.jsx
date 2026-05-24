@@ -130,7 +130,7 @@ export default function Summary() {
         setValidation(data);
         refreshSummaryAttentionBadge();
       } catch (err) {
-        setValidationError('Failed to validate stored ServiceNow sys IDs.');
+        setValidationError('Failed to validate linked ServiceNow records.');
       } finally {
         setValidationLoading(false);
       }
@@ -267,7 +267,7 @@ export default function Summary() {
                 {validation?.valid ? 'Clear' : `${validation?.issues?.length || 0} Issues`}
               </div>
               <div className="text-muted">
-                {validation?.valid ? 'No known ServiceNow sys ID mismatches.' : 'Stored CI or user IDs need review.'}
+                {validation?.valid ? 'No known ServiceNow link issues.' : 'Linked CIs or users need review.'}
               </div>
             </div>
           </div>
@@ -419,14 +419,14 @@ export default function Summary() {
                   {!validationError && validation && (
                     <>
                       <div className={validation.valid ? 'text-success' : 'text-warning'}>
-                        {validation.valid ? 'No known sys ID issues' : `${validation.issues?.length || 0} issues need attention`}
+                        {validation.valid ? 'No known ServiceNow link issues' : `${validation.issues?.length || 0} issues need attention`}
                       </div>
                       <div className="text-muted small mt-2">
                         {validation.checkedAt ? `Checked ${new Date(validation.checkedAt).toLocaleString()}` : 'Not checked yet'}
                       </div>
                       {latestTopIssue && (
                         <div className="small mt-2">
-                          <strong>Top issue:</strong> {latestTopIssue.localName} ({latestTopIssue.localSysId})
+                          <strong>Top issue:</strong> {latestTopIssue.localName}
                         </div>
                       )}
                     </>
@@ -578,7 +578,7 @@ export default function Summary() {
             <div className="card-body d-flex justify-content-between align-items-start gap-3 flex-wrap">
               <div>
                 <div className="summary-card__label">ServiceNow Record Validation</div>
-                <h5 className="mb-1">Stored Sys ID Audit</h5>
+                <h5 className="mb-1">Linked Record Audit</h5>
                 {validationError && <div className="text-danger">{validationError}</div>}
                 {!validationError && validation && (
                   <>
@@ -599,7 +599,7 @@ export default function Summary() {
                         {validation.issues.slice(0, 5).map((issue, index) => (
                           <div className="summary-issue-item summary-issue-item--stacked" key={`${issue.type}-${issue.localSysId}-${index}`}>
                             <div className="small text-muted">
-                              {issue.type === 'CONFIGURATION_ITEM' ? 'CI' : 'User'} {issue.localName} ({issue.localSysId}): {issue.message}
+                              {issue.type === 'CONFIGURATION_ITEM' ? 'CI' : 'User'} {issue.localName}: {issue.message}
                             </div>
                           </div>
                         ))}
@@ -623,7 +623,7 @@ export default function Summary() {
                     setValidation(data);
                     refreshSummaryAttentionBadge();
                   } catch (err) {
-                    setValidationError('Failed to validate stored ServiceNow sys IDs.');
+                    setValidationError('Failed to validate linked ServiceNow records.');
                   } finally {
                     setValidationLoading(false);
                   }

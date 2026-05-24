@@ -29,6 +29,22 @@ export async function fetchServiceNowValidation() {
   return response.data;
 }
 
+export async function searchServiceNowUsers(query) {
+  const response = await api.get('/lookup/users', {
+    params: { query },
+    headers: authHeader(),
+  });
+  return response.data;
+}
+
+export async function searchServiceNowConfigurationItems(query) {
+  const response = await api.get('/lookup/configuration-items', {
+    params: { query },
+    headers: authHeader(),
+  });
+  return response.data;
+}
+
 export async function pollServiceNowNow() {
   const response = await api.post('/poll-now', null, { headers: authHeader() });
   return response.data;

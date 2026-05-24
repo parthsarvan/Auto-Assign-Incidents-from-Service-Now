@@ -81,7 +81,7 @@ public class ServiceNowIncidentPoller {
                 logger.info("ServiceNow assignment applied to {} incidents for team {}.", successCount, team.getName());
             }
             logService.recordPollSuccess(team, incidents, results);
-            notificationService.notifyAssignmentResults(incidents, results);
+            notificationService.notifyAssignmentResults(team, incidents, results);
             return new ServiceNowPollNowResponse(
                     Instant.now(),
                     "OK",
@@ -98,6 +98,7 @@ public class ServiceNowIncidentPoller {
         } catch (Exception ex) {
             logger.error("ServiceNow polling failed for team {}: {}", team.getName(), ex.getMessage());
             logService.recordPollFailure(team, ex);
+            notificationService.notifyPollFailure(team, ex);
             return new ServiceNowPollNowResponse(
                     Instant.now(),
                     "ERROR",

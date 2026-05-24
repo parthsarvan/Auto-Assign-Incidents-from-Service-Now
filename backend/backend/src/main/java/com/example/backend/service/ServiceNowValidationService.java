@@ -86,7 +86,7 @@ public class ServiceNowValidationService {
                             "CONFIGURATION_ITEM",
                             item.getName(),
                             item.getServiceNowSysId(),
-                            "CI sys_id was not found in ServiceNow."));
+                            "Linked ServiceNow CI record was not found."));
                 }
             }
             for (TeamMember member : teamMembers) {
@@ -96,14 +96,14 @@ public class ServiceNowValidationService {
                             "TEAM_MEMBER",
                             fullName,
                             member.getSys_id(),
-                            "User sys_id was not found in ServiceNow."));
+                            "Linked ServiceNow user record was not found."));
                 }
             }
 
             boolean valid = issues.isEmpty();
             String message = valid
-                    ? "All stored ServiceNow sys IDs were validated successfully."
-                    : "Some stored ServiceNow sys IDs could not be found.";
+                    ? "All linked ServiceNow records were validated successfully."
+                    : "Some linked ServiceNow records could not be found.";
             return new ServiceNowValidationResponse(
                     checkedAt,
                     valid,

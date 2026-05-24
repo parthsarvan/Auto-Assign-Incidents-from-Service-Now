@@ -24,12 +24,22 @@ import {
 } from '../services/admin';
 import { fetchSetupStatus } from '../services/setup';
 import { getTimeZoneOptions } from '../services/timezones';
-import { fetchServiceNowConfig, updateServiceNowConfig } from '../services/servicenow';
+import {
+  fetchServiceNowConfig,
+  searchServiceNowConfigurationItems,
+  searchServiceNowUsers,
+  updateServiceNowConfig,
+} from '../services/servicenow';
 import {
   fetchUnsupportedCiHandlingSettings,
   updateCurrentTeamTimezone,
   updateUnsupportedCiHandlingSettings,
 } from '../services/workspace';
+import {
+  fetchNotificationSettings,
+  sendNotificationTestEmail,
+  updateNotificationSettings,
+} from '../services/notifications';
 import './SetupPage.css';
 
 const INLINE_STEP_KEYS = new Set([
@@ -38,7 +48,38 @@ const INLINE_STEP_KEYS = new Set([
   'configuration_items',
   'team_members',
   'ci_user_mappings',
+  'notifications',
 ]);
+
+const DEFAULT_NOTIFICATION_EVENTS = {
+  notifyAssignmentSuccess: true,
+  notifyAssignmentSkipped: true,
+  notifyUnsupportedCi: true,
+  notifyPollerFailure: true,
+};
+
+const NOTIFICATION_EVENT_OPTIONS = [
+  {
+    key: 'notifyAssignmentSuccess',
+    label: 'Assignment success',
+    description: 'Incident was assigned to a selected team member.',
+  },
+  {
+    key: 'notifyAssignmentSkipped',
+    label: 'Assignment skipped',
+    description: 'Mapped users are busy or unavailable for the current shift.',
+  },
+  {
+    key: 'notifyUnsupportedCi',
+    label: 'Unsupported CI incident',
+    description: 'An incident arrived for a CI this team does not own or has not configured.',
+  },
+  {
+    key: 'notifyPollerFailure',
+    label: 'Poller or ServiceNow issue',
+    description: 'The poller failed or could not connect to ServiceNow.',
+  },
+];
 
 export default function SetupPage() {
   const navigate = useNavigate();
@@ -107,6 +148,17 @@ export default function SetupPage() {
   const [unsupportedCiError, setUnsupportedCiError] = useState('');
   const [unsupportedCiMessage, setUnsupportedCiMessage] = useState('');
   const [unsupportedCiSaving, setUnsupportedCiSaving] = useState(false);
+  const [notificationSettings, setNotificationSettings] = useState(null);
+  const [slackNotificationsEnabled, setSlackNotificationsEnabled] = useState(false);
+  const [emailNotificationsEnabled, setEmailNotificationsEnabled] = useState(false);
+  const [slackWebhookUrl, setSlackWebhookUrl] = useState('');
+  const [slackDestination, setSlackDestination] = useState('');
+  const [emailRecipients, setEmailRecipients] = useState('');
+  const [notificationEventRules, setNotificationEventRules] = useState(DEFAULT_NOTIFICATION_EVENTS);
+  const [notificationError, setNotificationError] = useState('');
+  const [notificationMessage, setNotificationMessage] = useState('');
+  const [notificationSaving, setNotificationSaving] = useState(false);
+  const [notificationTestSending, setNotificationTestSending] = useState(false);
   const timezoneOptions = getTimeZoneOptions();
 
   const describeRequestError = useCallback((err, fallbackMessage) => {
@@ -125,7 +177,7 @@ export default function SetupPage() {
     if (index <= 0) {
       return true;
     }
-    return steps.slice(0, index).every((step) => step.complete);
+    return steps.slice(0, index).every((step) => !step.required || step.complete);
   }, []);
 
   const resolveStepKey = useCallback((steps, preferredStepKey) => {
@@ -156,6 +208,7 @@ export default function SetupPage() {
         geoShiftResult,
         ciUserResult,
         unsupportedCiResult,
+        notificationResult,
       ] = await Promise.allSettled([
         fetchServiceNowConfig(),
         fetchGeos(),
@@ -166,6 +219,7 @@ export default function SetupPage() {
         fetchGeoShiftMappings(),
         fetchCiUserMappings(),
         fetchUnsupportedCiHandlingSettings(),
+        fetchNotificationSettings(),
       ]);
 
       if (configResult.status === 'rejected') {
@@ -185,6 +239,21 @@ export default function SetupPage() {
             ? String(unsupportedCiResult.value.fallbackTeamMemberId)
             : ''
         );
+      }
+      if (notificationResult.status === 'fulfilled') {
+        const notificationData = notificationResult.value || {};
+        setNotificationSettings(notificationData);
+        setSlackNotificationsEnabled(Boolean(notificationData.slackEnabled));
+        setEmailNotificationsEnabled(Boolean(notificationData.emailEnabled));
+        setSlackDestination(notificationData.slackDestination || '');
+        setEmailRecipients(notificationData.emailRecipients || '');
+        setNotificationEventRules({
+          notifyAssignmentSuccess: notificationData.notifyAssignmentSuccess ?? true,
+          notifyAssignmentSkipped: notificationData.notifyAssignmentSkipped ?? true,
+          notifyUnsupportedCi: notificationData.notifyUnsupportedCi ?? true,
+          notifyPollerFailure: notificationData.notifyPollerFailure ?? true,
+        });
+        setSlackWebhookUrl('');
       }
       setTeamTimezone(currentTeamTimezone);
       setGeos(geoResult.status === 'fulfilled' ? geoResult.value : []);
@@ -261,6 +330,62 @@ export default function SetupPage() {
       setUnsupportedCiError(describeRequestError(err, 'Failed to save unsupported CI handling policy.'));
     } finally {
       setUnsupportedCiSaving(false);
+    }
+  }
+
+  async function handleNotificationSubmit(event) {
+    event.preventDefault();
+    setNotificationError('');
+    setNotificationMessage('');
+    if (slackNotificationsEnabled && !slackWebhookUrl.trim() && !notificationSettings?.slackWebhookConfigured) {
+      setNotificationError('Slack webhook URL is required when Slack notifications are enabled.');
+      return;
+    }
+    if (emailNotificationsEnabled && !emailRecipients.trim()) {
+      setNotificationError('Email recipients are required when email notifications are enabled.');
+      return;
+    }
+    const hasNotificationEvent = Object.values(notificationEventRules).some(Boolean);
+    if ((slackNotificationsEnabled || emailNotificationsEnabled) && !hasNotificationEvent) {
+      setNotificationError('Select at least one notification scenario.');
+      return;
+    }
+
+    setNotificationSaving(true);
+    try {
+      const data = await updateNotificationSettings({
+        slackEnabled: slackNotificationsEnabled,
+        emailEnabled: emailNotificationsEnabled,
+        slackWebhookUrl: slackWebhookUrl.trim(),
+        slackDestination: slackDestination.trim(),
+        emailRecipients: emailRecipients.trim(),
+        ...notificationEventRules,
+      });
+      setNotificationSettings(data);
+      setSlackWebhookUrl('');
+      setNotificationMessage('Notification settings saved.');
+      await loadSetupData('notifications');
+    } catch (err) {
+      setNotificationError(describeRequestError(err, 'Failed to save notification settings.'));
+    } finally {
+      setNotificationSaving(false);
+    }
+  }
+
+  async function handleNotificationTestEmail() {
+    setNotificationError('');
+    setNotificationMessage('');
+    setNotificationTestSending(true);
+    try {
+      const data = await sendNotificationTestEmail();
+      const recipients = Array.isArray(data?.recipients) && data.recipients.length > 0
+        ? ` Recipients: ${data.recipients.join(', ')}.`
+        : '';
+      setNotificationMessage(`${data?.message || 'Test email sent.'}${recipients}`);
+    } catch (err) {
+      setNotificationError(describeRequestError(err, 'Failed to send test email.'));
+    } finally {
+      setNotificationTestSending(false);
     }
   }
 
@@ -430,7 +555,7 @@ export default function SetupPage() {
       return;
     }
     if (!ciSysId.trim()) {
-      setCiError('ServiceNow CI Sys ID is required.');
+      setCiError('Select the matching ServiceNow CI record.');
       return;
     }
 
@@ -487,7 +612,7 @@ export default function SetupPage() {
       return;
     }
     if (!teamSysId.trim()) {
-      setTeamMemberError('ServiceNow User Sys ID is required.');
+      setTeamMemberError('Select the matching ServiceNow user.');
       return;
     }
 
@@ -912,6 +1037,30 @@ export default function SetupPage() {
                   />
                 )}
 
+                {currentStepAccessible && currentStep.key === 'notifications' && (
+                  <InlineNotificationStep
+                    notificationSettings={notificationSettings}
+                    slackNotificationsEnabled={slackNotificationsEnabled}
+                    emailNotificationsEnabled={emailNotificationsEnabled}
+                    slackWebhookUrl={slackWebhookUrl}
+                    slackDestination={slackDestination}
+                    emailRecipients={emailRecipients}
+                    notificationEventRules={notificationEventRules}
+                    notificationError={notificationError}
+                    notificationMessage={notificationMessage}
+                    notificationSaving={notificationSaving}
+                    notificationTestSending={notificationTestSending}
+                    setSlackNotificationsEnabled={setSlackNotificationsEnabled}
+                    setEmailNotificationsEnabled={setEmailNotificationsEnabled}
+                    setSlackWebhookUrl={setSlackWebhookUrl}
+                    setSlackDestination={setSlackDestination}
+                    setEmailRecipients={setEmailRecipients}
+                    setNotificationEventRules={setNotificationEventRules}
+                    onSubmit={handleNotificationSubmit}
+                    onTestEmail={handleNotificationTestEmail}
+                  />
+                )}
+
                 {currentStepAccessible && currentStep.key !== 'servicenow_connection' && !INLINE_STEP_KEYS.has(currentStep.key) && (
                   <GuidedExternalStep step={currentStep} onRefresh={() => loadSetupData(currentStep.key)} />
                 )}
@@ -1018,7 +1167,7 @@ export default function SetupPage() {
 
           {ready && optionalSteps.some((step) => !step.complete) && (
             <div className="alert alert-info mb-3">
-              {teamName} is ready. You can launch now and come back later for optional setup like schedules.
+              {teamName} is ready. You can launch now and come back later for optional setup like schedules and notifications.
             </div>
           )}
 
@@ -1332,11 +1481,123 @@ function InlineConfigurationItemStep({
   onDelete,
   onCancel,
 }) {
+	  const [serviceNowSearch, setServiceNowSearch] = useState(ciName || '');
+	  const [serviceNowResults, setServiceNowResults] = useState([]);
+	  const [serviceNowLookupLoading, setServiceNowLookupLoading] = useState(false);
+	  const [serviceNowLookupComplete, setServiceNowLookupComplete] = useState(false);
+	  const [serviceNowLookupError, setServiceNowLookupError] = useState('');
+	  const [selectedServiceNowLabel, setSelectedServiceNowLabel] = useState(ciSysId ? ciName : '');
+
+	  useEffect(() => {
+	    setServiceNowSearch(ciName || '');
+	    setSelectedServiceNowLabel(ciSysId ? ciName : '');
+	    setServiceNowLookupComplete(false);
+	    setServiceNowLookupError('');
+	  }, [ciName, ciSysId]);
+
+  useEffect(() => {
+	    if (serviceNowSearch.trim().length < 2 || selectedServiceNowLabel === serviceNowSearch) {
+	      setServiceNowResults([]);
+	      setServiceNowLookupLoading(false);
+	      setServiceNowLookupComplete(false);
+	      setServiceNowLookupError('');
+	      return undefined;
+	    }
+	    let active = true;
+	    setServiceNowLookupLoading(true);
+	    setServiceNowLookupError('');
+	    const timer = window.setTimeout(async () => {
+	      try {
+	        const results = await searchServiceNowConfigurationItems(serviceNowSearch.trim());
+	        if (active) {
+	          setServiceNowResults(results || []);
+	          setServiceNowLookupComplete(true);
+	        }
+	      } catch (err) {
+	        if (active) {
+	          setServiceNowResults([]);
+	          setServiceNowLookupComplete(true);
+	          setServiceNowLookupError(typeof err?.response?.data === 'string'
+	            ? err.response.data
+	            : 'ServiceNow lookup failed. Check the connection and permissions.');
+	        }
+	      } finally {
+        if (active) {
+          setServiceNowLookupLoading(false);
+        }
+      }
+    }, 300);
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [selectedServiceNowLabel, serviceNowSearch]);
+
+  const selectServiceNowCi = (result) => {
+    const label = result.displayName || '';
+    setCiName(label);
+    setCiDescription([result.detail, result.secondaryDetail].filter(Boolean).join(' / '));
+    setCiSysId(result.sysId || '');
+	    setServiceNowSearch(label);
+	    setSelectedServiceNowLabel(label);
+	    setServiceNowResults([]);
+	    setServiceNowLookupComplete(false);
+	    setServiceNowLookupError('');
+	  };
+
   return (
     <>
       {ciError && <div className="alert alert-danger">{ciError}</div>}
       <form className="row g-3 mb-4" onSubmit={onSubmit}>
-        <div className="col-md-4">
+        <div className="col-12">
+          <label className="form-label">Find ServiceNow CI</label>
+          <input
+            type="search"
+            className="form-control"
+            value={serviceNowSearch}
+            onChange={(event) => {
+	              setServiceNowSearch(event.target.value);
+	              setSelectedServiceNowLabel('');
+	              setCiSysId('');
+	              setServiceNowLookupComplete(false);
+	              setServiceNowLookupError('');
+	            }}
+            placeholder="Search by CI name, asset tag, or serial number"
+          />
+          <div className="form-text">
+            Select the matching ServiceNow record. InciTeam keeps the ServiceNow link behind the scenes.
+	          </div>
+	          {serviceNowLookupLoading && <div className="lookup-status">Searching ServiceNow...</div>}
+	          {serviceNowLookupError && <div className="lookup-status lookup-status--error">{serviceNowLookupError}</div>}
+	          {!serviceNowLookupLoading
+	            && !serviceNowLookupError
+	            && serviceNowLookupComplete
+	            && !selectedServiceNowLabel
+	            && serviceNowResults.length === 0 && (
+	              <div className="lookup-status lookup-status--warning">
+	                No matching ServiceNow CI found. Try a fuller CI name from ServiceNow.
+	              </div>
+	            )}
+	          {serviceNowResults.length > 0 && (
+            <div className="lookup-results">
+              {serviceNowResults.map((result) => (
+                <button
+                  key={result.sysId}
+                  type="button"
+                  className="lookup-result"
+                  onClick={() => selectServiceNowCi(result)}
+                >
+                  <strong>{result.displayName}</strong>
+                  <span>{[result.detail, result.secondaryDetail].filter(Boolean).join(' / ') || 'Configuration item'}</span>
+                </button>
+              ))}
+            </div>
+          )}
+          {selectedServiceNowLabel && (
+            <div className="linked-record-badge">Linked ServiceNow CI: {selectedServiceNowLabel}</div>
+          )}
+        </div>
+        <div className="col-md-5">
           <label className="form-label">Name</label>
           <input
             type="text"
@@ -1346,23 +1607,13 @@ function InlineConfigurationItemStep({
             required
           />
         </div>
-        <div className="col-md-4">
+        <div className="col-md-7">
           <label className="form-label">Description</label>
           <input
             type="text"
             className="form-control"
             value={ciDescription}
             onChange={(event) => setCiDescription(event.target.value)}
-          />
-        </div>
-        <div className="col-md-4">
-          <label className="form-label">ServiceNow CI Sys ID</label>
-          <input
-            type="text"
-            className="form-control"
-            value={ciSysId}
-            onChange={(event) => setCiSysId(event.target.value)}
-            required
           />
         </div>
         <div className="col-12 d-flex gap-2">
@@ -1384,7 +1635,7 @@ function InlineConfigurationItemStep({
               <th>ID</th>
               <th>Name</th>
               <th>Description</th>
-              <th>ServiceNow CI Sys ID</th>
+              <th>ServiceNow Link</th>
               <th style={{ width: '180px' }}>Actions</th>
             </tr>
           </thead>
@@ -1394,7 +1645,7 @@ function InlineConfigurationItemStep({
                 <td>{item.ci_id}</td>
                 <td>{item.name}</td>
                 <td>{item.description || '-'}</td>
-                <td>{item.serviceNowSysId || '-'}</td>
+                <td>{item.serviceNowSysId ? 'Linked' : 'Needs link'}</td>
                 <td className="d-flex gap-2">
                   <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => onEdit(item)}>
                     Edit
@@ -1445,6 +1696,99 @@ function InlineTeamMemberStep({
   onDelete,
   onCancel,
 }) {
+	  const [serviceNowSearch, setServiceNowSearch] = useState(teamEmail || '');
+	  const [serviceNowResults, setServiceNowResults] = useState([]);
+	  const [serviceNowLookupLoading, setServiceNowLookupLoading] = useState(false);
+	  const [serviceNowLookupComplete, setServiceNowLookupComplete] = useState(false);
+	  const [serviceNowLookupError, setServiceNowLookupError] = useState('');
+	  const [selectedServiceNowLabel, setSelectedServiceNowLabel] = useState(teamSysId
+    ? [teamFirstName, teamLastName].filter(Boolean).join(' ')
+    : '');
+
+	  useEffect(() => {
+	    if (!teamSysId && teamEmail) {
+	      setServiceNowSearch(teamEmail);
+	    }
+	    if (teamSysId) {
+	      setSelectedServiceNowLabel([teamFirstName, teamLastName].filter(Boolean).join(' '));
+	    } else {
+	      setSelectedServiceNowLabel('');
+	    }
+	    setServiceNowLookupComplete(false);
+	    setServiceNowLookupError('');
+	  }, [teamEmail, teamFirstName, teamLastName, teamSysId]);
+
+  useEffect(() => {
+	    if (serviceNowSearch.trim().length < 2 || selectedServiceNowLabel === serviceNowSearch) {
+	      setServiceNowResults([]);
+	      setServiceNowLookupLoading(false);
+	      setServiceNowLookupComplete(false);
+	      setServiceNowLookupError('');
+	      return undefined;
+	    }
+	    let active = true;
+	    setServiceNowLookupLoading(true);
+	    setServiceNowLookupError('');
+	    const timer = window.setTimeout(async () => {
+	      try {
+	        const results = await searchServiceNowUsers(serviceNowSearch.trim());
+	        if (active) {
+	          setServiceNowResults(results || []);
+	          setServiceNowLookupComplete(true);
+	        }
+	      } catch (err) {
+	        if (active) {
+	          setServiceNowResults([]);
+	          setServiceNowLookupComplete(true);
+	          setServiceNowLookupError(typeof err?.response?.data === 'string'
+	            ? err.response.data
+	            : 'ServiceNow lookup failed. Check the connection and permissions.');
+	        }
+	      } finally {
+        if (active) {
+          setServiceNowLookupLoading(false);
+        }
+      }
+    }, 300);
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [selectedServiceNowLabel, serviceNowSearch]);
+
+  useEffect(() => {
+    if (teamSysId || !teamEmail || serviceNowResults.length !== 1) {
+      return;
+    }
+    const onlyResult = serviceNowResults[0];
+    if ((onlyResult.email || '').trim().toLowerCase() === teamEmail.trim().toLowerCase()) {
+      selectServiceNowUser(onlyResult, true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [serviceNowResults, teamEmail, teamSysId]);
+
+  const selectServiceNowUser = (result, preserveSearch = false) => {
+    const label = result.displayName || result.email || '';
+    setTeamSysId(result.sysId || '');
+    setSelectedServiceNowLabel(label);
+    if (!preserveSearch) {
+      setServiceNowSearch(result.email || label);
+    }
+    if (result.email) {
+      setTeamEmail(result.email);
+    }
+    const parts = (result.displayName || '').trim().split(/\s+/);
+    if (!teamFirstName && parts[0]) {
+      setTeamFirstName(parts[0]);
+    }
+    if (!teamLastName && parts.length > 1) {
+      setTeamLastName(parts.slice(1).join(' '));
+	    }
+	    setServiceNowResults([]);
+	    setServiceNowLookupComplete(false);
+	    setServiceNowLookupError('');
+	  };
+
   return (
     <>
       {teamMemberError && <div className="alert alert-danger">{teamMemberError}</div>}
@@ -1465,7 +1809,7 @@ function InlineTeamMemberStep({
             ))}
           </select>
           <div className="form-text">
-            Pick a joined team user to prefill name and email, or leave this blank and enter everything manually.
+            Pick a joined team user to prefill name and email. InciTeam will search ServiceNow by email.
           </div>
         </div>
         <div className="col-md-3">
@@ -1494,7 +1838,14 @@ function InlineTeamMemberStep({
             type="email"
             className="form-control"
             value={teamEmail}
-            onChange={(event) => setTeamEmail(event.target.value)}
+            onChange={(event) => {
+              setTeamEmail(event.target.value);
+	              setTeamSysId('');
+	              setSelectedServiceNowLabel('');
+	              setServiceNowSearch(event.target.value);
+	              setServiceNowLookupComplete(false);
+	              setServiceNowLookupError('');
+	            }}
             required
           />
         </div>
@@ -1506,16 +1857,6 @@ function InlineTeamMemberStep({
             value={teamPhone}
             onChange={(event) => setTeamPhone(event.target.value)}
             placeholder="Optional"
-          />
-        </div>
-        <div className="col-md-4">
-          <label className="form-label">ServiceNow User Sys ID</label>
-          <input
-            type="text"
-            className="form-control"
-            value={teamSysId}
-            onChange={(event) => setTeamSysId(event.target.value)}
-            required
           />
         </div>
         <div className="col-md-4">
@@ -1533,6 +1874,54 @@ function InlineTeamMemberStep({
               </option>
             ))}
           </select>
+        </div>
+        <div className="col-12">
+          <label className="form-label">Find ServiceNow User</label>
+          <input
+            type="search"
+            className="form-control"
+            value={serviceNowSearch}
+            onChange={(event) => {
+	              setServiceNowSearch(event.target.value);
+	              setTeamSysId('');
+	              setSelectedServiceNowLabel('');
+	              setServiceNowLookupComplete(false);
+	              setServiceNowLookupError('');
+	            }}
+            placeholder="Search by email, name, or ServiceNow username"
+          />
+          <div className="form-text">
+            Select the matching ServiceNow user. InciTeam keeps the ServiceNow link behind the scenes.
+	          </div>
+	          {serviceNowLookupLoading && <div className="lookup-status">Searching ServiceNow...</div>}
+	          {serviceNowLookupError && <div className="lookup-status lookup-status--error">{serviceNowLookupError}</div>}
+	          {!serviceNowLookupLoading
+	            && !serviceNowLookupError
+	            && serviceNowLookupComplete
+	            && !selectedServiceNowLabel
+	            && serviceNowResults.length === 0 && (
+	              <div className="lookup-status lookup-status--warning">
+	                No matching ServiceNow user found. Try the user's email or ServiceNow username.
+	              </div>
+	            )}
+	          {serviceNowResults.length > 0 && (
+            <div className="lookup-results">
+              {serviceNowResults.map((result) => (
+                <button
+                  key={result.sysId}
+                  type="button"
+                  className="lookup-result"
+                  onClick={() => selectServiceNowUser(result)}
+                >
+                  <strong>{result.displayName}</strong>
+                  <span>{[result.email, result.userName].filter(Boolean).join(' / ') || 'ServiceNow user'}</span>
+                </button>
+              ))}
+            </div>
+          )}
+          {selectedServiceNowLabel && (
+            <div className="linked-record-badge">Linked ServiceNow user: {selectedServiceNowLabel}</div>
+          )}
         </div>
         <div className="col-12 d-flex gap-2">
           <button type="submit" className="btn btn-primary" disabled={teamMemberSaving}>
@@ -1556,7 +1945,7 @@ function InlineTeamMemberStep({
               <th>Email</th>
               <th>Phone</th>
               <th>Geo</th>
-              <th>ServiceNow User Sys ID</th>
+              <th>ServiceNow Link</th>
               <th style={{ width: '180px' }}>Actions</th>
             </tr>
           </thead>
@@ -1569,7 +1958,7 @@ function InlineTeamMemberStep({
                 <td>{member.email || '-'}</td>
                 <td>{member.phone || '-'}</td>
                 <td>{member.geo?.name || '-'}</td>
-                <td>{member.sys_id || '-'}</td>
+                <td>{member.sys_id ? 'Linked' : 'Needs link'}</td>
                 <td className="d-flex gap-2">
                   <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => onEdit(member)}>
                     Edit
@@ -1774,6 +2163,173 @@ function InlineCiUserMappingStep({
           </tbody>
         </table>
       </div>
+    </>
+  );
+}
+
+function InlineNotificationStep({
+  notificationSettings,
+  slackNotificationsEnabled,
+  emailNotificationsEnabled,
+  slackWebhookUrl,
+  slackDestination,
+  emailRecipients,
+  notificationEventRules,
+  notificationError,
+  notificationMessage,
+  notificationSaving,
+  notificationTestSending,
+  setSlackNotificationsEnabled,
+  setEmailNotificationsEnabled,
+  setSlackWebhookUrl,
+  setSlackDestination,
+  setEmailRecipients,
+  setNotificationEventRules,
+  onSubmit,
+  onTestEmail,
+}) {
+  const toggleNotificationEvent = (key) => {
+    setNotificationEventRules((current) => ({
+      ...current,
+      [key]: !current[key],
+    }));
+  };
+
+  return (
+    <>
+      <div className="alert alert-info">
+        Notifications are optional. Choose the channels and operational scenarios this team wants to hear about.
+      </div>
+      {notificationMessage && <div className="alert alert-success">{notificationMessage}</div>}
+      {notificationError && <div className="alert alert-danger">{notificationError}</div>}
+
+      <form className="row g-3" onSubmit={onSubmit}>
+        <div className="col-12 col-lg-6">
+          <div className={`notification-option-card ${slackNotificationsEnabled ? 'notification-option-card--active' : ''}`}>
+            <div className="form-check form-switch mb-3">
+              <input
+                className="form-check-input"
+                type="checkbox"
+                id="slackNotificationsEnabled"
+                checked={slackNotificationsEnabled}
+                onChange={(event) => setSlackNotificationsEnabled(event.target.checked)}
+              />
+              <label className="form-check-label fw-semibold" htmlFor="slackNotificationsEnabled">
+                Slack notifications
+              </label>
+            </div>
+
+            <label className="form-label">Slack Webhook URL</label>
+            <input
+              type="password"
+              className="form-control"
+              value={slackWebhookUrl}
+              onChange={(event) => setSlackWebhookUrl(event.target.value)}
+              disabled={!slackNotificationsEnabled}
+              placeholder={
+                notificationSettings?.slackWebhookConfigured
+                  ? 'Webhook already configured. Leave blank to keep it.'
+                  : 'https://hooks.slack.com/services/...'
+              }
+            />
+            <div className="form-text">
+              Create an incoming webhook in Slack. InciTeam stores it and never displays it again.
+            </div>
+
+            <label className="form-label mt-3">Channel or destination label</label>
+            <input
+              type="text"
+              className="form-control"
+              value={slackDestination}
+              onChange={(event) => setSlackDestination(event.target.value)}
+              disabled={!slackNotificationsEnabled}
+              placeholder="#incidents or @team-lead"
+            />
+            <div className="form-text">
+              Most Slack webhooks post to their configured channel; this label helps admins remember the target.
+            </div>
+          </div>
+        </div>
+
+        <div className="col-12 col-lg-6">
+          <div className={`notification-option-card ${emailNotificationsEnabled ? 'notification-option-card--active' : ''}`}>
+            <div className="form-check form-switch mb-3">
+              <input
+                className="form-check-input"
+                type="checkbox"
+                id="emailNotificationsEnabled"
+                checked={emailNotificationsEnabled}
+                onChange={(event) => setEmailNotificationsEnabled(event.target.checked)}
+              />
+              <label className="form-check-label fw-semibold" htmlFor="emailNotificationsEnabled">
+                Email notifications
+              </label>
+            </div>
+
+            <label className="form-label">Recipients</label>
+            <textarea
+              className="form-control"
+              rows="5"
+              value={emailRecipients}
+              onChange={(event) => setEmailRecipients(event.target.value)}
+              disabled={!emailNotificationsEnabled}
+              placeholder={'one.person@example.com\nteam-distribution@example.com'}
+            />
+            <div className="form-text">
+              Enter one or more email addresses. Production delivery can use AWS SES or your organization&apos;s mail provider.
+            </div>
+            {!notificationSettings?.emailProviderConfigured && emailNotificationsEnabled && (
+              <div className="alert alert-warning mt-3 mb-0">
+                Email delivery is not enabled yet. These recipients will be ready when the mail provider is connected.
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="col-12">
+          <div className="notification-rule-panel">
+            <div className="setup-subsection__eyebrow">Event Rules</div>
+            <h6 className="mb-3">Send notifications for</h6>
+            <div className="notification-rule-grid">
+              {NOTIFICATION_EVENT_OPTIONS.map((option) => (
+                <label
+                  key={option.key}
+                  className={`notification-rule-card ${
+                    notificationEventRules[option.key] ? 'notification-rule-card--active' : ''
+                  }`}
+                  htmlFor={option.key}
+                >
+                  <input
+                    className="form-check-input"
+                    type="checkbox"
+                    id={option.key}
+                    checked={Boolean(notificationEventRules[option.key])}
+                    onChange={() => toggleNotificationEvent(option.key)}
+                  />
+                  <span>
+                    <strong>{option.label}</strong>
+                    <small>{option.description}</small>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="col-12 d-flex gap-2">
+          <button type="submit" className="btn btn-primary" disabled={notificationSaving}>
+            {notificationSaving ? 'Saving Notifications...' : 'Save Notification Settings'}
+          </button>
+          <button
+            type="button"
+            className="btn btn-outline-primary"
+            disabled={!emailNotificationsEnabled || notificationSaving || notificationTestSending}
+            onClick={onTestEmail}
+          >
+            {notificationTestSending ? 'Sending Test...' : 'Send Test Email'}
+          </button>
+        </div>
+      </form>
     </>
   );
 }

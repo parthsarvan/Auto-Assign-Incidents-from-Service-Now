@@ -131,7 +131,7 @@ export default function AssignmentDiagnostics() {
                     <div className="border rounded p-3 bg-light diagnostics-suggestion-card">
                       <div><strong>Suggested Assignee:</strong> {incident.suggestion.assigneeName || '-'}</div>
                       <div><strong>Email:</strong> {incident.suggestion.assigneeEmail || '-'}</div>
-                      <div><strong>ServiceNow User Sys ID:</strong> {incident.suggestion.assigneeSysId || '-'}</div>
+                      <div><strong>ServiceNow Link:</strong> {incident.suggestion.assigneeSysId ? 'Linked' : 'Not linked'}</div>
                       <div><strong>Geo:</strong> {incident.suggestion.geo || '-'}</div>
                       <div><strong>Shift:</strong> {incident.suggestion.shift || '-'}</div>
                     </div>

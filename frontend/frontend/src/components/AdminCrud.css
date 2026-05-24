@@ -105,6 +105,63 @@
   color: #ffffff;
 }
 
+.lookup-status {
+  margin-top: 0.55rem;
+  color: #66758d;
+  font-weight: 700;
+}
+
+.lookup-status--warning {
+  color: #9a6700;
+}
+
+.lookup-status--error {
+  color: #b42318;
+}
+
+.lookup-results {
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 0.7rem;
+}
+
+.lookup-result {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  width: 100%;
+  padding: 0.8rem 0.95rem;
+  border: 1px solid #d8e1ec;
+  border-radius: 16px;
+  background: #ffffff;
+  color: #23364f;
+  text-align: left;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.lookup-result:hover,
+.lookup-result:focus {
+  border-color: #234bb5;
+  box-shadow: 0 10px 24px rgba(35, 75, 181, 0.14);
+  transform: translateY(-1px);
+}
+
+.lookup-result span {
+  color: #708099;
+  font-size: 0.93rem;
+}
+
+.linked-record-badge {
+  display: inline-flex;
+  margin-top: 0.7rem;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid #b9eccd;
+  border-radius: 999px;
+  background: #ebfbf0;
+  color: #2e7d4f;
+  font-weight: 800;
+}
+
 @media (max-width: 768px) {
   .admin-crud-page {
     padding-left: 0 !important;
