@@ -15,16 +15,23 @@ import com.example.backend.repository.TeamRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class ServiceNowLogService {
-    private final int retention;
+    private static final Logger log = LoggerFactory.getLogger(ServiceNowLogService.class);
+
+    private final int retentionDays;
     private final IncidentAssignmentService assignmentService;
     private final CurrentWorkspaceService currentWorkspaceService;
     private final ServiceNowRunLogRepository runLogRepository;
@@ -37,21 +44,23 @@ public class ServiceNowLogService {
             ServiceNowRunLogRepository runLogRepository,
             TeamRepository teamRepository,
             ObjectMapper objectMapper,
-            @Value("${servicenow.log.retention:100}") int retention) {
+            @Value("${servicenow.log.retention-days:30}") int retentionDays) {
         this.assignmentService = assignmentService;
         this.currentWorkspaceService = currentWorkspaceService;
         this.runLogRepository = runLogRepository;
         this.teamRepository = teamRepository;
         this.objectMapper = objectMapper;
-        this.retention = retention;
+        this.retentionDays = Math.max(retentionDays, 1);
     }
 
+    @Transactional
     public void recordStartup(Team team) {
         ServiceNowRunLog log = new ServiceNowRunLog(Instant.now(), "STARTUP", "OK", "ServiceNow poller started.");
         applyTeam(log, team);
         addLog(log);
     }
 
+    @Transactional
     public void recordPollSuccess(Team team, List<ServiceNowIncident> incidents, List<ServiceNowAssignmentResult> results) {
         ServiceNowRunLog log = new ServiceNowRunLog(Instant.now(), "POLL", "OK", "Fetched incidents from ServiceNow.");
         applyTeam(log, team);
@@ -68,6 +77,7 @@ public class ServiceNowLogService {
         addLog(log);
     }
 
+    @Transactional
     public void recordPollFailure(Team team, Exception ex) {
         ServiceNowRunLog log = new ServiceNowRunLog(Instant.now(), "POLL", "ERROR", ex.getMessage());
         applyTeam(log, team);
@@ -77,9 +87,17 @@ public class ServiceNowLogService {
 
     public List<ServiceNowRunLog> getLogs() {
         Team currentTeam = currentWorkspaceService.getCurrentTeam();
-        return runLogRepository.findTop100ByTeamOrderByTimestampDesc(currentTeam).stream()
+        return runLogRepository.findTop100ByTeamAndTimestampGreaterThanEqualOrderByTimestampDesc(
+                        currentTeam,
+                        retentionCutoff()).stream()
                 .map(this::toDto)
                 .toList();
+    }
+
+    @Scheduled(cron = "${servicenow.log.cleanup-cron:0 15 3 * * *}")
+    @Transactional
+    public void cleanupExpiredLogs() {
+        purgeExpiredLogs();
     }
 
     private ServiceNowIncidentSummary toSummary(ServiceNowIncident incident) {
@@ -174,13 +192,18 @@ public class ServiceNowLogService {
         entity.setAssignmentResultsJson(writeJson(log.getAssignmentResults()));
         entity.setAssignmentConfirmation(log.getAssignmentConfirmation());
         runLogRepository.save(entity);
+        purgeExpiredLogs();
+    }
 
-        List<ServiceNowRunLogEntity> teamLogs = runLogRepository.findTop100ByTeamOrderByTimestampDesc(team);
-        if (teamLogs.size() > retention) {
-            for (int i = retention; i < teamLogs.size(); i++) {
-                runLogRepository.delete(teamLogs.get(i));
-            }
+    private void purgeExpiredLogs() {
+        long deletedCount = runLogRepository.deleteByTimestampBefore(retentionCutoff());
+        if (deletedCount > 0) {
+            log.info("Deleted {} ServiceNow run logs older than {} days.", deletedCount, retentionDays);
         }
+    }
+
+    private Instant retentionCutoff() {
+        return Instant.now().minus(Duration.ofDays(retentionDays));
     }
 
     private ServiceNowRunLog toDto(ServiceNowRunLogEntity entity) {

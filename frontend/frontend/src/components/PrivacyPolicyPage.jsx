@@ -60,7 +60,7 @@ const policySections = [
     id: 'retention',
     title: 'Retention And Security',
     body: [
-      'InciTeam keeps account, setup, operational, and log data for as long as needed to provide the service, comply with legal obligations, resolve disputes, protect the product, and maintain audit history.',
+      'InciTeam keeps account and setup data for as long as needed to provide the service. Operational ServiceNow run logs are retained for up to 30 days, unless longer retention is needed to comply with legal obligations, resolve disputes, protect the product, or investigate support and security issues.',
       'Administrators should avoid entering unnecessary sensitive data into incident fields, labels, notes, or notification destinations.',
       'InciTeam uses reasonable administrative and technical safeguards, but no internet-connected service can guarantee absolute security.',
     ],
@@ -72,7 +72,7 @@ const policySections = [
       'Signed-in users can request account deletion from the Account page in the InciTeam web app.',
       'Organization administrators can delete user accounts from User Access or by deleting a linked team member record.',
       `You can also contact ${contactEmail} from the email address associated with your account if you need help with deletion.`,
-      'Deletion removes the login, team access, push notification tokens, and roster records linked to the account, including routing mappings, schedules, leaves, and breaks. Some operational logs may be retained where needed for security, audit history, legal obligations, or troubleshooting.',
+      'Deletion removes the login, team access, push notification tokens, and roster records linked to the account, including routing mappings, schedules, leaves, and breaks. Operational logs age out after 30 days unless longer retention is needed for security, legal obligations, or troubleshooting.',
     ],
   },
   {
