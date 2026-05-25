@@ -6,16 +6,16 @@ import './MarketingHomePage.css';
 
 const featureHighlights = [
   {
-    eyebrow: 'Organization and Team Management',
-    title: 'Model real organizations with multiple teams.',
+    eyebrow: 'Web Setup',
+    title: 'Build the operating model before automation starts.',
     description:
-      'Create an organization, add teams inside it, and manage each team’s ServiceNow setup, schedules, CI ownership, and incident routing independently.',
+      'Create organizations and teams, connect ServiceNow, configure watched assignment groups, and keep each team’s routing setup independent.',
   },
   {
-    eyebrow: 'Multi-Team User Access',
+    eyebrow: 'Access Control',
     title: 'Manage users across teams without duplicate accounts.',
     description:
-      'Invite users into the organization and assign them to one or more teams with the right access level. Org admins can move people across teams as responsibilities change.',
+      'Invite users into the organization, assign team roles, move people across teams, and support account deletion workflows when someone leaves.',
   },
   {
     eyebrow: 'CI Ownership Mapping',
@@ -24,46 +24,46 @@ const featureHighlights = [
       'Map each configuration item to the users who support it. Add multiple owners to one CI and arrange them in the exact order InciTeam should follow for round-robin assignment.',
   },
   {
-    eyebrow: 'Geo, Shift, and Schedule Coverage',
-    title: 'Build 24-hour coverage across teams and regions.',
+    eyebrow: 'Coverage Planning',
+    title: 'Build coverage across geos, shifts, schedules, leaves, and breaks.',
     description:
-      'Create geos, shifts, and user schedules so incidents route only to people actually scheduled for the active geo and shift.',
+      'Create geos, shifts, and schedules, then layer planned leave and short breaks so routing avoids people who are unavailable.',
   },
   {
     eyebrow: 'Roster View',
-    title: 'See who is on shift daily or weekly.',
+    title: 'See daily and weekly availability with clear status colors.',
     description:
-      'InciTeam automatically generates a roster from schedules, leaves, and breaks so teams can quickly understand current and upcoming coverage.',
+      'The roster shows green for available people, red for leave across the whole leave range, and yellow for break windows.',
   },
   {
-    eyebrow: 'Leaves, Breaks, and Handoff Awareness',
-    title: 'Keep work visible when someone is unavailable.',
+    eyebrow: 'Notifications',
+    title: 'Choose which operational events notify the team.',
     description:
-      'Record planned leaves and short breaks with date/time ranges. InciTeam avoids unavailable users during assignment and highlights active incidents sitting with someone who is away.',
+      'Teams can select alerts for assignment success, skipped assignment, unsupported CI, and ServiceNow poller failures, with email delivery through AWS SES SMTP.',
   },
   {
-    eyebrow: 'Smart Incident Assignment',
+    eyebrow: 'iOS Companion',
+    title: 'Stay close to operations from a native iOS app.',
+    description:
+      'The iOS app supports sign-in, roster and schedule views, summary health, logs, diagnostics, quick leave or break entries, account deletion, and APNs assignment alerts.',
+  },
+  {
+    eyebrow: 'Smart Assignment',
     title: 'Check ownership, availability, and critical workload before assigning.',
     description:
-      'Before assigning, InciTeam checks CI ownership, active geo, active shift, schedules, breaks, leaves, and whether the selected user is already handling P0/P1C work.',
+      'Before assigning, InciTeam checks CI ownership, active geo and shift, schedules, breaks, leaves, and whether the selected owner is already handling P0/P1C work.',
   },
   {
-    eyebrow: 'Round-Robin Workload Distribution',
+    eyebrow: 'Round-Robin Distribution',
     title: 'Distribute work fairly across mapped owners.',
     description:
-      'For each CI, InciTeam distributes incidents across mapped owners in configured order, reducing manual triage and preventing one person from becoming the default owner.',
+      'For each CI, InciTeam follows the configured owner order and rotates assignments so one person does not become the default owner.',
   },
   {
-    eyebrow: 'Automatic and Manual Polling',
-    title: 'Catch eligible incidents quickly.',
+    eyebrow: 'Polling and Logs',
+    title: 'Track every poll and retain recent operational history.',
     description:
-      'InciTeam polls ServiceNow automatically on a fixed schedule and also provides a manual Poll Now option when teams need an immediate refresh, helping protect SLA response windows.',
-  },
-  {
-    eyebrow: 'Operational Logs',
-    title: 'Understand what happened to every incident.',
-    description:
-      'Every poll, selection, skip, failure, and assignment is recorded so managers can see exactly what happened and why.',
+      'Automatic polling and manual Poll Now are recorded with assignment selections, results, skips, failures, and a 30-day log retention window.',
   },
   {
     eyebrow: 'Diagnostics and Summary',
@@ -71,6 +71,22 @@ const featureHighlights = [
     description:
       'Dry-run diagnostics explain assignment decisions, while Summary highlights connection health, latest poll results, validation risks, coverage gaps, and handoff items.',
   },
+];
+
+const notificationEvents = [
+  'Assignment completed',
+  'Eligible owners busy or unavailable',
+  'Unsupported CI incident',
+  'ServiceNow connection or poller issue',
+];
+
+const mobileFeatures = [
+  'Roster and schedule visibility',
+  'Latest poll and assignment logs',
+  'Manual poll now for authorized users',
+  'Quick break and leave entries',
+  'APNs incident assignment alerts',
+  'Account settings and deletion',
 ];
 
 export default function MarketingHomePage() {
@@ -88,6 +104,8 @@ export default function MarketingHomePage() {
         </div>
         <nav className="marketing-nav__links">
           <a href="#why">Features</a>
+          <a href="#operations">Operations</a>
+          <a href="#mobile">iOS</a>
           <a href="#workflow">How It Works</a>
           <Link to="/privacy">Privacy</Link>
         </nav>
@@ -96,22 +114,22 @@ export default function MarketingHomePage() {
       <main className="marketing-main">
         <section className="marketing-hero">
           <div className="marketing-hero__copy">
-            <div className="marketing-tag">Built for ServiceNow-connected incident operations</div>
+            <div className="marketing-tag">Web administration, mobile operations, and ServiceNow-aware routing</div>
             <h1>
-              Automate ServiceNow incident assignment with team-aware routing.
+              Automate ServiceNow assignment with team-aware coverage.
             </h1>
             <p>
-              InciTeam helps organizations create teams, map CIs to owners, manage schedules,
-              leaves, and breaks, then assign incidents through explainable round-robin logic.
+              InciTeam connects ServiceNow incidents to real team availability, CI ownership,
+              notification preferences, and a native iOS companion app for day-to-day operations.
             </p>
             <div className="marketing-proof">
               <div>
-                <strong>No manual triage</strong>
-                <span>Route incidents using CI ownership, active shift, leaves, breaks, and P0/P1C workload checks.</span>
+                <strong>Coverage-aware assignment</strong>
+                <span>Route incidents using CI ownership, active shift, schedules, leave, breaks, and P0/P1C workload checks.</span>
               </div>
               <div>
-                <strong>Built for teams</strong>
-                <span>Create organizations, manage teams, assign users across teams, and keep routing rules separate.</span>
+                <strong>Alerts where work happens</strong>
+                <span>Send email through AWS SES SMTP, support APNs assignment alerts, and keep Slack/email setup attached to each team.</span>
               </div>
             </div>
           </div>
@@ -138,7 +156,7 @@ export default function MarketingHomePage() {
                   'Active geo and shift checked',
                   'Leave and break checked',
                   'P0/P1C workload checked',
-                  'Assigned by round-robin',
+                  'Email and push alerts evaluated',
                 ].map((step, index) => (
                   <div className="marketing-decision-step" key={step}>
                     <span>{index + 1}</span>
@@ -150,20 +168,39 @@ export default function MarketingHomePage() {
                 <div>
                   <div className="marketing-console__label">Result</div>
                   <strong>Assigned to Ava King</strong>
-                  <span>Decision logged for review</span>
+                  <span>Decision logged for 30 days and pushed to iOS</span>
                 </div>
               </div>
             </div>
           </div>
         </section>
 
+        <section className="marketing-snapshot" aria-label="InciTeam platform snapshot">
+          <div className="marketing-snapshot__metric">
+            <strong>Web</strong>
+            <span>Setup, access, routing, diagnostics</span>
+          </div>
+          <div className="marketing-snapshot__metric">
+            <strong>iOS</strong>
+            <span>Roster, logs, quick actions, push</span>
+          </div>
+          <div className="marketing-snapshot__metric">
+            <strong>30 days</strong>
+            <span>ServiceNow run log retention</span>
+          </div>
+          <div className="marketing-snapshot__metric">
+            <strong>SES SMTP</strong>
+            <span>Email notifications with sandbox controls</span>
+          </div>
+        </section>
+
         <section className="marketing-section" id="why">
           <div className="marketing-section__heading">
             <div className="marketing-section__eyebrow">Key Features</div>
-            <h2>Everything teams need to understand coverage, automate assignment, and explain decisions.</h2>
+            <h2>Everything teams need to understand coverage, automate assignment, notify responders, and explain decisions.</h2>
             <p>
               InciTeam is designed to reduce manual coordination during incident operations by connecting ownership,
-              schedules, availability, and decision insight in one place.
+              schedules, availability, notifications, mobile response, and decision insight in one place.
             </p>
           </div>
           <div className="marketing-pillars">
@@ -177,10 +214,89 @@ export default function MarketingHomePage() {
           </div>
         </section>
 
+        <section className="marketing-section marketing-section--operations" id="operations">
+          <div className="marketing-section__heading">
+            <div className="marketing-section__eyebrow">Operational Controls</div>
+            <h2>Alerts, logs, privacy, and routing controls are part of the product surface.</h2>
+            <p>
+              Setup does not stop at ServiceNow credentials. Teams can choose the events they care about,
+              test email delivery, inspect assignment history, and keep user data lifecycle controls visible.
+            </p>
+          </div>
+          <div className="marketing-operations">
+            <article className="marketing-operation">
+              <div className="marketing-operation__label">Notification Rules</div>
+              <h3>Selectable scenarios per team</h3>
+              <ul>
+                {notificationEvents.map((event) => (
+                  <li key={event}>{event}</li>
+                ))}
+              </ul>
+            </article>
+            <article className="marketing-operation">
+              <div className="marketing-operation__label">Delivery Channels</div>
+              <h3>Email, iOS push, and team channel setup</h3>
+              <p>
+                Email delivery uses AWS SES SMTP configuration and sandbox recipient checks. The iOS app
+                registers APNs device tokens for assignment alerts, while team notification setup keeps
+                Slack and email preferences in one place.
+              </p>
+            </article>
+            <article className="marketing-operation">
+              <div className="marketing-operation__label">Operational Evidence</div>
+              <h3>Recent logs without unlimited data growth</h3>
+              <p>
+                ServiceNow run logs keep poll outcomes, selected assignees, skipped incidents, failures,
+                and assignment confirmations for the recent 30-day operations window.
+              </p>
+            </article>
+          </div>
+        </section>
+
+        <section className="marketing-section marketing-section--mobile" id="mobile">
+          <div className="marketing-mobile">
+            <div className="marketing-mobile__copy">
+              <div className="marketing-section__eyebrow">Native iOS Companion</div>
+              <h2>Keep the web app as command center and use iOS for live operations.</h2>
+              <p>
+                The iOS app uses the same backend and account system, giving responders and managers a
+                focused mobile surface after setup is complete in the web app.
+              </p>
+              <div className="marketing-mobile__grid">
+                {mobileFeatures.map((feature) => (
+                  <span key={feature}>{feature}</span>
+                ))}
+              </div>
+            </div>
+            <div className="marketing-phone" aria-label="InciTeam iOS app preview">
+              <div className="marketing-phone__frame">
+                <div className="marketing-phone__status" />
+                <img src="/inciteam-ios-icon.png" alt="InciTeam iOS app icon" />
+                <div className="marketing-phone__title">InciTeam</div>
+                <div className="marketing-phone__subtitle">Demo Team A</div>
+                <div className="marketing-phone__list">
+                  <div>
+                    <strong>Roster</strong>
+                    <span>AMR / General active</span>
+                  </div>
+                  <div>
+                    <strong>Latest Poll</strong>
+                    <span>1 assigned, 0 failed</span>
+                  </div>
+                  <div>
+                    <strong>Push Alert</strong>
+                    <span>INC0010042 assigned</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <section className="marketing-section marketing-section--workflow" id="workflow">
           <div className="marketing-section__heading">
             <div className="marketing-section__eyebrow">How It Works</div>
-            <h2>Launch the organization, connect ServiceNow, invite managers, and scale team by team.</h2>
+            <h2>Launch the organization, connect ServiceNow, configure notifications, and operate from web or iOS.</h2>
           </div>
           <div className="marketing-workflow">
             <div className="marketing-workflow__step">
@@ -195,13 +311,13 @@ export default function MarketingHomePage() {
             </div>
             <div className="marketing-workflow__step">
               <span>03</span>
-              <h3>Invite managers and members</h3>
-              <p>Admins can share team access early, letting managers help complete setup and onboard their people in parallel.</p>
+              <h3>Build coverage and routing</h3>
+              <p>Add geos, shifts, schedules, CI ownership, and leave or break records so assignment follows real availability.</p>
             </div>
             <div className="marketing-workflow__step">
               <span>04</span>
-              <h3>Operate with clarity</h3>
-              <p>Use coverage, logs, diagnostics, mappings, leaves, and breaks from one unified operational surface.</p>
+              <h3>Operate with alerts and evidence</h3>
+              <p>Use web and iOS for rosters, summaries, logs, diagnostics, notifications, and manual poll control.</p>
             </div>
           </div>
         </section>
@@ -209,7 +325,7 @@ export default function MarketingHomePage() {
         <section className="marketing-cta">
           <div>
             <div className="marketing-section__eyebrow">Ready To Launch</div>
-            <h2>Open the product, sign in, and build the incident workspace around your real teams.</h2>
+            <h2>Open the product, sign in, and run ServiceNow assignment around your real teams.</h2>
           </div>
           <div className="marketing-cta__actions">
             <Link className="btn btn-primary btn-lg" to={primaryPath} {...authLinkProps}>

@@ -164,6 +164,36 @@
   font-size: 0.94rem;
 }
 
+.marketing-snapshot {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.85rem;
+  margin: 0 0 2.6rem;
+}
+
+.marketing-snapshot__metric {
+  min-height: 100%;
+  padding: 1rem 1.1rem;
+  border: 1px solid rgba(191, 208, 228, 0.72);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 18px 44px rgba(15, 31, 55, 0.07);
+}
+
+.marketing-snapshot__metric strong {
+  display: block;
+  margin-bottom: 0.32rem;
+  color: var(--incteam-primary-deep);
+  font-size: 1.16rem;
+}
+
+.marketing-snapshot__metric span {
+  display: block;
+  color: var(--incteam-muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
 .marketing-hero__panel {
   padding: 1rem;
   background:
@@ -328,6 +358,208 @@
   line-height: 1.75;
 }
 
+.marketing-section--operations,
+.marketing-section--mobile {
+  padding: 2rem;
+  border: 1px solid rgba(191, 208, 228, 0.72);
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 24px 60px rgba(15, 31, 55, 0.08);
+}
+
+.marketing-section--operations {
+  border-color: rgba(63, 145, 97, 0.34);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(244, 251, 247, 0.9));
+}
+
+.marketing-operations {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.marketing-operation {
+  min-height: 100%;
+  padding: 1.35rem;
+  border: 1px solid rgba(191, 208, 228, 0.64);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.marketing-operation__label {
+  display: inline-flex;
+  margin-bottom: 0.75rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  background: rgba(63, 145, 97, 0.12);
+  color: #236942;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.marketing-operation h3 {
+  margin: 0 0 0.72rem;
+  color: var(--incteam-primary-deep);
+  font-size: 1.22rem;
+}
+
+.marketing-operation p {
+  margin: 0;
+  color: var(--incteam-muted);
+  line-height: 1.7;
+}
+
+.marketing-operation ul {
+  display: grid;
+  gap: 0.62rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.marketing-operation li {
+  position: relative;
+  padding-left: 1.35rem;
+  color: var(--incteam-muted);
+  line-height: 1.45;
+}
+
+.marketing-operation li::before {
+  content: '';
+  position: absolute;
+  top: 0.48rem;
+  left: 0;
+  width: 0.58rem;
+  height: 0.58rem;
+  border-radius: 999px;
+  background: #3f9161;
+}
+
+.marketing-section--mobile {
+  overflow: hidden;
+  background:
+    linear-gradient(135deg, rgba(247, 250, 255, 0.96), rgba(255, 255, 255, 0.9));
+}
+
+.marketing-mobile {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 0.48fr);
+  gap: 1.5rem;
+  align-items: center;
+}
+
+.marketing-mobile__copy h2 {
+  margin: 0.45rem 0 0.85rem;
+  max-width: 720px;
+  font-size: clamp(2rem, 3.6vw, 3.15rem);
+  line-height: 1.02;
+}
+
+.marketing-mobile__copy p {
+  max-width: 650px;
+  margin-bottom: 1.1rem;
+  color: var(--incteam-muted);
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+.marketing-mobile__grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.62rem;
+}
+
+.marketing-mobile__grid span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.2rem;
+  padding: 0.42rem 0.78rem;
+  border: 1px solid rgba(191, 208, 228, 0.7);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--incteam-text);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.marketing-phone {
+  display: flex;
+  justify-content: center;
+}
+
+.marketing-phone__frame {
+  width: min(100%, 290px);
+  padding: 1rem;
+  border: 10px solid #13264c;
+  border-radius: 34px;
+  background: linear-gradient(180deg, #f9fbff, #eef4fb);
+  box-shadow: 0 28px 56px rgba(15, 31, 55, 0.2);
+}
+
+.marketing-phone__status {
+  width: 4.1rem;
+  height: 0.35rem;
+  margin: 0 auto 1rem;
+  border-radius: 999px;
+  background: #13264c;
+}
+
+.marketing-phone img {
+  display: block;
+  width: 4.8rem;
+  height: 4.8rem;
+  margin: 0 auto 0.8rem;
+  border-radius: 22px;
+  box-shadow: 0 14px 28px rgba(15, 31, 55, 0.16);
+}
+
+.marketing-phone__title,
+.marketing-phone__subtitle {
+  text-align: center;
+}
+
+.marketing-phone__title {
+  color: var(--incteam-primary-deep);
+  font-size: 1.45rem;
+  font-weight: 900;
+}
+
+.marketing-phone__subtitle {
+  margin-top: 0.18rem;
+  color: var(--incteam-muted);
+  font-weight: 700;
+}
+
+.marketing-phone__list {
+  display: grid;
+  gap: 0.7rem;
+  margin-top: 1rem;
+}
+
+.marketing-phone__list div {
+  padding: 0.78rem 0.85rem;
+  border: 1px solid rgba(191, 208, 228, 0.7);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.marketing-phone__list strong,
+.marketing-phone__list span {
+  display: block;
+}
+
+.marketing-phone__list strong {
+  color: var(--incteam-primary-deep);
+  font-size: 0.92rem;
+}
+
+.marketing-phone__list span {
+  margin-top: 0.18rem;
+  color: var(--incteam-muted);
+  font-size: 0.84rem;
+}
+
 .marketing-section--workflow {
   margin-top: 3rem;
 }
@@ -387,12 +619,25 @@
 @media (max-width: 1120px) {
   .marketing-hero,
   .marketing-pillars,
+  .marketing-operations,
   .marketing-workflow {
     grid-template-columns: 1fr;
   }
 
+  .marketing-snapshot {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .marketing-proof {
     grid-template-columns: 1fr;
+  }
+
+  .marketing-mobile {
+    grid-template-columns: 1fr;
+  }
+
+  .marketing-phone {
+    justify-content: flex-start;
   }
 }
 
@@ -422,6 +667,8 @@
 
   .marketing-hero__copy,
   .marketing-hero__panel,
+  .marketing-section--operations,
+  .marketing-section--mobile,
   .marketing-cta {
     padding: 1.35rem;
   }
@@ -473,6 +720,8 @@
   .marketing-hero__copy,
   .marketing-hero__panel,
   .marketing-pillar,
+  .marketing-section--operations,
+  .marketing-section--mobile,
   .marketing-cta,
   .marketing-workflow__step {
     border-radius: 22px;
@@ -480,6 +729,8 @@
 
   .marketing-hero__copy,
   .marketing-hero__panel,
+  .marketing-section--operations,
+  .marketing-section--mobile,
   .marketing-cta {
     padding: 1rem;
   }
@@ -508,8 +759,24 @@
   }
 
   .marketing-pillars,
+  .marketing-snapshot,
+  .marketing-operations,
   .marketing-workflow {
     gap: 0.8rem;
+  }
+
+  .marketing-snapshot {
+    grid-template-columns: 1fr;
+    margin-bottom: 2rem;
+  }
+
+  .marketing-mobile__copy h2 {
+    font-size: clamp(1.8rem, 8vw, 2.45rem);
+  }
+
+  .marketing-phone__frame {
+    width: 100%;
+    max-width: 290px;
   }
 
   .marketing-proof {
