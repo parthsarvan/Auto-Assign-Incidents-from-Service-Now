@@ -4,6 +4,7 @@ import com.example.backend.dto.IncidentPushPayload;
 import com.example.backend.dto.ServiceNowAssignmentResult;
 import com.example.backend.dto.ServiceNowIncident;
 import com.example.backend.dto.ServiceNowReference;
+import com.example.backend.entity.MobileDeviceToken;
 import com.example.backend.entity.Team;
 import com.example.backend.entity.TeamNotificationSettings;
 import com.example.backend.entity.User;
@@ -27,6 +28,7 @@ public class IncidentAssignmentNotificationService {
     private final UserRepository userRepository;
     private final MobileDeviceTokenRepository tokenRepository;
     private final ApplePushNotificationService pushNotificationService;
+    private final FirebasePushNotificationService firebasePushNotificationService;
     private final TeamNotificationSettingsRepository notificationSettingsRepository;
     private final EmailNotificationSender emailNotificationSender;
 
@@ -34,11 +36,13 @@ public class IncidentAssignmentNotificationService {
             UserRepository userRepository,
             MobileDeviceTokenRepository tokenRepository,
             ApplePushNotificationService pushNotificationService,
+            FirebasePushNotificationService firebasePushNotificationService,
             TeamNotificationSettingsRepository notificationSettingsRepository,
             EmailNotificationSender emailNotificationSender) {
         this.userRepository = userRepository;
         this.tokenRepository = tokenRepository;
         this.pushNotificationService = pushNotificationService;
+        this.firebasePushNotificationService = firebasePushNotificationService;
         this.notificationSettingsRepository = notificationSettingsRepository;
         this.emailNotificationSender = emailNotificationSender;
     }
@@ -104,13 +108,22 @@ public class IncidentAssignmentNotificationService {
                         Objects.toString(result.getIncidentNumber(), "").toLowerCase(Locale.ROOT));
                 IncidentPushPayload payload = buildPayload(result, incident);
                 tokenRepository.findAllByUserAndActiveTrue(user)
-                        .forEach(token -> pushNotificationService.sendIncidentAssigned(token, payload));
+                        .forEach(token -> sendPushNotification(token, payload));
             } catch (Exception ex) {
                 logger.warn(
                         "Failed to dispatch assignment notification for incident {}: {}",
                         result.getIncidentNumber(),
                         ex.getMessage());
             }
+        }
+    }
+
+    private void sendPushNotification(MobileDeviceToken token, IncidentPushPayload payload) {
+        String platform = token.getPlatform() == null ? "" : token.getPlatform().trim().toLowerCase(Locale.ROOT);
+        if ("android".equals(platform)) {
+            firebasePushNotificationService.sendIncidentAssigned(token, payload);
+        } else {
+            pushNotificationService.sendIncidentAssigned(token, payload);
         }
     }
 

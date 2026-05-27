@@ -64,7 +64,7 @@ public class MobileDeviceTokenService {
         if (value == null) {
             return "";
         }
-        return value.trim().replaceAll("\\s+", "").toLowerCase(Locale.ROOT);
+        return value.trim().replaceAll("\\s+", "");
     }
 
     private String normalizeChoice(String value, String fallback) {

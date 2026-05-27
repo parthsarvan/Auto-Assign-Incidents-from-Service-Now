@@ -10,8 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface ServiceNowRunLogRepository extends JpaRepository<ServiceNowRunLogEntity, Long> {
-    List<ServiceNowRunLogEntity> findTop100ByTeamOrderByTimestampDesc(Team team);
-    List<ServiceNowRunLogEntity> findTop100ByTeamAndTimestampGreaterThanEqualOrderByTimestampDesc(
+    List<ServiceNowRunLogEntity> findByTeamAndTimestampGreaterThanEqualOrderByTimestampDesc(
             Team team,
             Instant timestamp);
 

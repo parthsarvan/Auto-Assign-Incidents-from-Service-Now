@@ -87,7 +87,7 @@ public class ServiceNowLogService {
 
     public List<ServiceNowRunLog> getLogs() {
         Team currentTeam = currentWorkspaceService.getCurrentTeam();
-        return runLogRepository.findTop100ByTeamAndTimestampGreaterThanEqualOrderByTimestampDesc(
+        return runLogRepository.findByTeamAndTimestampGreaterThanEqualOrderByTimestampDesc(
                         currentTeam,
                         retentionCutoff()).stream()
                 .map(this::toDto)

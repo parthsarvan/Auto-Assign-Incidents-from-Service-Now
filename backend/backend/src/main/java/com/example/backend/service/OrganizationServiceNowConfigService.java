@@ -71,10 +71,11 @@ public class OrganizationServiceNowConfigService {
             throw new IllegalArgumentException("At least one ServiceNow assignment group is required for this team.");
         }
 
-        validateConnection(new ServiceNowConnectionSettings(instanceUrl, username, password));
-
         Organization organization = getCurrentOrganization();
         Team team = getCurrentTeam();
+        validateAssignmentGroupOwnership(team, assignmentGroups);
+        validateConnection(new ServiceNowConnectionSettings(instanceUrl, username, password));
+
         organization.setServiceNowInstanceUrl(instanceUrl);
         organization.setServiceNowUsername(username);
         organization.setServiceNowPassword(password);
@@ -204,6 +205,34 @@ public class OrganizationServiceNowConfigService {
         return normalizeAssignmentGroups(List.of(resolvedTeam.getServiceNowAssignmentGroups().split("[\\n,]+")));
     }
 
+    public List<String> findAssignmentGroupConflicts(Team team, List<String> assignmentGroups) {
+        Team resolvedTeam = resolveTeam(team);
+        if (resolvedTeam == null || resolvedTeam.getOrganization() == null) {
+            return List.of();
+        }
+        Organization organization = resolveOrganizationForTeam(resolvedTeam);
+        Set<String> requestedKeys = assignmentGroups.stream()
+                .map(this::assignmentGroupKey)
+                .filter(value -> !value.isBlank())
+                .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
+        if (requestedKeys.isEmpty()) {
+            return List.of();
+        }
+
+        List<String> conflicts = new ArrayList<>();
+        for (Team otherTeam : teamRepository.findAllByOrganizationOrderByNameAsc(organization)) {
+            if (otherTeam.getTeam_id() == null || otherTeam.getTeam_id().equals(resolvedTeam.getTeam_id())) {
+                continue;
+            }
+            for (String otherGroup : getAssignmentGroupsForTeam(otherTeam)) {
+                if (requestedKeys.contains(assignmentGroupKey(otherGroup))) {
+                    conflicts.add(String.format("%s is already monitored by %s", otherGroup, otherTeam.getName()));
+                }
+            }
+        }
+        return conflicts;
+    }
+
     private Team resolveTeam(Team team) {
         if (team == null || team.getTeam_id() == null) {
             return null;
@@ -219,6 +248,16 @@ public class OrganizationServiceNowConfigService {
                 .orElse(team.getOrganization());
     }
 
+    private void validateAssignmentGroupOwnership(Team team, List<String> assignmentGroups) {
+        List<String> conflicts = findAssignmentGroupConflicts(team, assignmentGroups);
+        if (!conflicts.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "Each ServiceNow assignment group can be monitored by only one team in an organization. "
+                            + String.join("; ", conflicts)
+                            + ".");
+        }
+    }
+
     private List<String> normalizeAssignmentGroups(List<String> values) {
         if (values == null || values.isEmpty()) {
             return List.of();
@@ -231,5 +270,9 @@ public class OrganizationServiceNowConfigService {
             }
         }
         return new ArrayList<>(normalized);
+    }
+
+    private String assignmentGroupKey(String value) {
+        return normalizeCompactText(value).toLowerCase(Locale.ROOT);
     }
 }
