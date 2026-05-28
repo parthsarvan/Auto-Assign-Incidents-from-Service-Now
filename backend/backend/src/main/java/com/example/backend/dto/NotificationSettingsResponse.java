@@ -5,6 +5,7 @@ public class NotificationSettingsResponse {
     private boolean emailEnabled;
     private boolean slackWebhookConfigured;
     private boolean emailProviderConfigured;
+    private boolean emailSandboxMode;
     private String slackDestination;
     private String emailRecipients;
     private boolean notifyAssignmentSuccess;
@@ -20,6 +21,7 @@ public class NotificationSettingsResponse {
             boolean emailEnabled,
             boolean slackWebhookConfigured,
             boolean emailProviderConfigured,
+            boolean emailSandboxMode,
             String slackDestination,
             String emailRecipients,
             boolean notifyAssignmentSuccess,
@@ -30,6 +32,7 @@ public class NotificationSettingsResponse {
         this.emailEnabled = emailEnabled;
         this.slackWebhookConfigured = slackWebhookConfigured;
         this.emailProviderConfigured = emailProviderConfigured;
+        this.emailSandboxMode = emailSandboxMode;
         this.slackDestination = slackDestination;
         this.emailRecipients = emailRecipients;
         this.notifyAssignmentSuccess = notifyAssignmentSuccess;
@@ -68,6 +71,14 @@ public class NotificationSettingsResponse {
 
     public void setEmailProviderConfigured(boolean emailProviderConfigured) {
         this.emailProviderConfigured = emailProviderConfigured;
+    }
+
+    public boolean isEmailSandboxMode() {
+        return emailSandboxMode;
+    }
+
+    public void setEmailSandboxMode(boolean emailSandboxMode) {
+        this.emailSandboxMode = emailSandboxMode;
     }
 
     public String getSlackDestination() {

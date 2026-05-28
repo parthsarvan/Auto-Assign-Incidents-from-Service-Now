@@ -38,6 +38,10 @@ public class EmailNotificationSender {
         return properties.hasRequiredSettings() && mailSenderProvider.getIfAvailable() != null;
     }
 
+    public boolean isSandboxMode() {
+        return properties.isSandboxMode();
+    }
+
     public EmailSendResult sendTextEmail(Collection<String> recipients, String subject, String body) {
         List<String> normalizedRecipients = normalizeRecipients(recipients);
         if (normalizedRecipients.isEmpty()) {

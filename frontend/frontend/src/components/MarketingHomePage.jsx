@@ -190,7 +190,7 @@ export default function MarketingHomePage() {
           </div>
           <div className="marketing-snapshot__metric">
             <strong>SES SMTP</strong>
-            <span>Email notifications with sandbox controls</span>
+            <span>Production email notifications</span>
           </div>
         </section>
 
@@ -237,9 +237,9 @@ export default function MarketingHomePage() {
               <div className="marketing-operation__label">Delivery Channels</div>
               <h3>Email, iOS push, and team channel setup</h3>
               <p>
-                Email delivery uses AWS SES SMTP configuration and sandbox recipient checks. The iOS app
-                registers APNs device tokens for assignment alerts, while team notification setup keeps
-                Slack and email preferences in one place.
+                Email delivery uses AWS SES SMTP configuration with production recipient support. The iOS app
+                registers APNs device tokens for assignment alerts, while team notification setup keeps Slack
+                and email preferences in one place.
               </p>
             </article>
             <article className="marketing-operation">

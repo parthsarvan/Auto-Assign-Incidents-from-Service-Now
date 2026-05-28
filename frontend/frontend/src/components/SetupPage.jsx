@@ -2188,6 +2188,9 @@ function InlineNotificationStep({
   onSubmit,
   onTestEmail,
 }) {
+  const emailProviderConfigured = Boolean(notificationSettings?.emailProviderConfigured);
+  const emailSandboxMode = Boolean(notificationSettings?.emailSandboxMode);
+
   const toggleNotificationEvent = (key) => {
     setNotificationEventRules((current) => ({
       ...current,
@@ -2276,9 +2279,19 @@ function InlineNotificationStep({
               placeholder={'one.person@example.com\nteam-distribution@example.com'}
             />
             <div className="form-text">
-              Enter one or more email addresses. Production delivery can use AWS SES or your organization&apos;s mail provider.
+              Enter one or more email addresses. Separate addresses with commas, semicolons, spaces, or new lines.
             </div>
-            {!notificationSettings?.emailProviderConfigured && emailNotificationsEnabled && (
+            {emailProviderConfigured && emailNotificationsEnabled && !emailSandboxMode && (
+              <div className="alert alert-success mt-3 mb-0">
+                Email delivery is in production mode. AWS SES can send to any valid recipient address.
+              </div>
+            )}
+            {emailProviderConfigured && emailNotificationsEnabled && emailSandboxMode && (
+              <div className="alert alert-warning mt-3 mb-0">
+                Email delivery is still in SES sandbox mode. Only verified recipient addresses can receive mail.
+              </div>
+            )}
+            {!emailProviderConfigured && emailNotificationsEnabled && (
               <div className="alert alert-warning mt-3 mb-0">
                 Email delivery is not enabled yet. These recipients will be ready when the mail provider is connected.
               </div>
@@ -2323,7 +2336,7 @@ function InlineNotificationStep({
           <button
             type="button"
             className="btn btn-outline-primary"
-            disabled={!emailNotificationsEnabled || notificationSaving || notificationTestSending}
+            disabled={!emailNotificationsEnabled || !emailProviderConfigured || notificationSaving || notificationTestSending}
             onClick={onTestEmail}
           >
             {notificationTestSending ? 'Sending Test...' : 'Send Test Email'}

@@ -34,6 +34,7 @@ public class NotificationSettingsService {
                         false,
                         false,
                         emailNotificationSender.isProviderConfigured(),
+                        emailNotificationSender.isSandboxMode(),
                         null,
                         null,
                         true,
@@ -135,7 +136,7 @@ public class NotificationSettingsService {
 
                 Team: %s
 
-                If you received this while AWS SES is in sandbox mode, the recipient address is verified.
+                Email delivery is configured for this team.
                 """.formatted(team.getName());
         EmailNotificationSender.EmailSendResult result =
                 emailNotificationSender.sendTextEmail(recipients, subject, body);
@@ -158,6 +159,7 @@ public class NotificationSettingsService {
                 settings.isEmailEnabled(),
                 StringUtils.hasText(settings.getSlackWebhookUrl()),
                 emailNotificationSender.isProviderConfigured(),
+                emailNotificationSender.isSandboxMode(),
                 settings.getSlackDestination(),
                 settings.getEmailRecipients(),
                 settings.isNotifyAssignmentSuccess(),

@@ -11,6 +11,7 @@ DerivedData/
 ios/**/build/
 
 frontend/frontend/build/
+frontend/frontend/build_release_*.tar.gz
 backend/backend/target/
 
 /copyright_deposit/
