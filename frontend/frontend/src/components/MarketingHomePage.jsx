@@ -48,6 +48,12 @@ const featureHighlights = [
       'The iOS app supports sign-in, roster and schedule views, summary health, logs, diagnostics, quick leave or break entries, account deletion, and APNs assignment alerts.',
   },
   {
+    eyebrow: 'Android Companion',
+    title: 'Bring the same operations surface to Android devices.',
+    description:
+      'The Android app supports the home hub, roster, schedules, CI views, ownership mapping, ServiceNow logs, summary health, and FCM assignment alerts.',
+  },
+  {
     eyebrow: 'Smart Assignment',
     title: 'Check ownership, availability, and critical workload before assigning.',
     description:
@@ -80,13 +86,62 @@ const notificationEvents = [
   'ServiceNow connection or poller issue',
 ];
 
-const mobileFeatures = [
-  'Roster and schedule visibility',
-  'Latest poll and assignment logs',
-  'Manual poll now for authorized users',
-  'Quick break and leave entries',
-  'APNs incident assignment alerts',
-  'Account settings and deletion',
+const iosScreenshots = [
+  { src: '/marketing/mobile/ios-home.png', label: 'Home', alt: 'InciTeam iOS home screen' },
+  { src: '/marketing/mobile/ios-roster.png', label: 'Roster', alt: 'InciTeam iOS roster screen' },
+  { src: '/marketing/mobile/ios-schedule.png', label: 'Schedule', alt: 'InciTeam iOS schedule screen' },
+  { src: '/marketing/mobile/ios-team-members.png', label: 'Team Members', alt: 'InciTeam iOS team members screen' },
+  { src: '/marketing/mobile/ios-ci.png', label: 'Configuration Items', alt: 'InciTeam iOS configuration items screen' },
+  { src: '/marketing/mobile/ios-ci-mapping.png', label: 'CI Mapping', alt: 'InciTeam iOS CI user mapping screen' },
+  { src: '/marketing/mobile/ios-logs.png', label: 'Logs', alt: 'InciTeam iOS ServiceNow logs screen' },
+  { src: '/marketing/mobile/ios-account.png', label: 'Account', alt: 'InciTeam iOS account screen' },
+  { src: '/marketing/mobile/ios-summary.png', label: 'Summary', alt: 'InciTeam iOS operations summary screen' },
+];
+
+const androidScreenshots = [
+  { src: '/marketing/mobile/android-home.png', label: 'Home', alt: 'InciTeam Android home screen' },
+  { src: '/marketing/mobile/android-roster.png', label: 'Roster', alt: 'InciTeam Android roster screen' },
+  { src: '/marketing/mobile/android-schedule.png', label: 'Schedule', alt: 'InciTeam Android schedule screen' },
+  { src: '/marketing/mobile/android-team-members.png', label: 'Team Members', alt: 'InciTeam Android team members screen' },
+  { src: '/marketing/mobile/android-ci.png', label: 'Configuration Items', alt: 'InciTeam Android configuration items screen' },
+  { src: '/marketing/mobile/android-ci-mapping.png', label: 'CI Mapping', alt: 'InciTeam Android CI user mapping screen' },
+  { src: '/marketing/mobile/android-logs.png', label: 'Logs', alt: 'InciTeam Android ServiceNow logs screen' },
+  { src: '/marketing/mobile/android-account.png', label: 'Account', alt: 'InciTeam Android account screen' },
+  { src: '/marketing/mobile/android-summary.png', label: 'Summary', alt: 'InciTeam Android operations summary screen' },
+];
+
+const mobileShowcases = [
+  {
+    id: 'ios',
+    eyebrow: 'Native iOS App',
+    title: 'iOS keeps managers close to the live operation.',
+    description:
+      'The iOS companion uses the same InciTeam account after setup is complete on web, with a focused native surface for roster health, schedules, logs, summaries, and account controls.',
+    features: [
+      'Roster and schedule-aware availability',
+      'CI ownership and mapping views',
+      'Latest poll and assignment logs',
+      'Quick leave, break, and account actions',
+      'APNs incident assignment alerts',
+    ],
+    screenshots: iosScreenshots,
+  },
+  {
+    id: 'android',
+    eyebrow: 'Native Android App',
+    title: 'Android brings the same companion workflow to the field.',
+    description:
+      'The Android app mirrors the operational surface teams need after setup: the home hub, roster windows, schedules, CI records, mapping order, ServiceNow logs, and health summary.',
+    features: [
+      'Current team home hub',
+      'Day and week roster windows',
+      'Schedule and CI management views',
+      'Team member and account controls',
+      'ServiceNow log evidence',
+      'FCM incident assignment alerts',
+    ],
+    screenshots: androidScreenshots,
+  },
 ];
 
 export default function MarketingHomePage() {
@@ -105,7 +160,7 @@ export default function MarketingHomePage() {
         <nav className="marketing-nav__links">
           <a href="#why">Features</a>
           <a href="#operations">Operations</a>
-          <a href="#mobile">iOS</a>
+          <a href="#mobile">Mobile Apps</a>
           <a href="#workflow">How It Works</a>
           <Link to="/privacy">Privacy</Link>
         </nav>
@@ -120,7 +175,7 @@ export default function MarketingHomePage() {
             </h1>
             <p>
               InciTeam connects ServiceNow incidents to real team availability, CI ownership,
-              notification preferences, and a native iOS companion app for day-to-day operations.
+              notification preferences, and native iOS and Android companion apps for day-to-day operations.
             </p>
             <div className="marketing-proof">
               <div>
@@ -129,7 +184,7 @@ export default function MarketingHomePage() {
               </div>
               <div>
                 <strong>Alerts where work happens</strong>
-                <span>Send email through AWS SES SMTP, support APNs assignment alerts, and keep Slack/email setup attached to each team.</span>
+                <span>Send email through AWS SES SMTP, support APNs and FCM assignment alerts, and keep Slack/email setup attached to each team.</span>
               </div>
             </div>
           </div>
@@ -168,7 +223,7 @@ export default function MarketingHomePage() {
                 <div>
                   <div className="marketing-console__label">Result</div>
                   <strong>Assigned to Ava King</strong>
-                  <span>Decision logged for 30 days and pushed to iOS</span>
+                  <span>Decision logged for 30 days and pushed to mobile</span>
                 </div>
               </div>
             </div>
@@ -181,7 +236,7 @@ export default function MarketingHomePage() {
             <span>Setup, access, routing, diagnostics</span>
           </div>
           <div className="marketing-snapshot__metric">
-            <strong>iOS</strong>
+            <strong>iOS + Android</strong>
             <span>Roster, logs, quick actions, push</span>
           </div>
           <div className="marketing-snapshot__metric">
@@ -235,11 +290,11 @@ export default function MarketingHomePage() {
             </article>
             <article className="marketing-operation">
               <div className="marketing-operation__label">Delivery Channels</div>
-              <h3>Email, iOS push, and team channel setup</h3>
+              <h3>Email, mobile push, and team channel setup</h3>
               <p>
-                Email delivery uses AWS SES SMTP configuration with production recipient support. The iOS app
-                registers APNs device tokens for assignment alerts, while team notification setup keeps Slack
-                and email preferences in one place.
+                Email delivery uses AWS SES SMTP configuration with production recipient support. The mobile
+                apps register APNs and FCM device tokens for assignment alerts, while team notification setup
+                keeps Slack and email preferences in one place.
               </p>
             </article>
             <article className="marketing-operation">
@@ -254,49 +309,70 @@ export default function MarketingHomePage() {
         </section>
 
         <section className="marketing-section marketing-section--mobile" id="mobile">
-          <div className="marketing-mobile">
-            <div className="marketing-mobile__copy">
-              <div className="marketing-section__eyebrow">Native iOS Companion</div>
-              <h2>Keep the web app as command center and use iOS for live operations.</h2>
-              <p>
-                The iOS app uses the same backend and account system, giving responders and managers a
-                focused mobile surface after setup is complete in the web app.
-              </p>
-              <div className="marketing-mobile__grid">
-                {mobileFeatures.map((feature) => (
-                  <span key={feature}>{feature}</span>
-                ))}
-              </div>
-            </div>
-            <div className="marketing-phone" aria-label="InciTeam iOS app preview">
-              <div className="marketing-phone__frame">
-                <div className="marketing-phone__status" />
-                <img src="/inciteam-ios-icon.png" alt="InciTeam iOS app icon" />
-                <div className="marketing-phone__title">InciTeam</div>
-                <div className="marketing-phone__subtitle">Demo Team A</div>
-                <div className="marketing-phone__list">
-                  <div>
-                    <strong>Roster</strong>
-                    <span>AMR / General active</span>
-                  </div>
-                  <div>
-                    <strong>Latest Poll</strong>
-                    <span>1 assigned, 0 failed</span>
-                  </div>
-                  <div>
-                    <strong>Push Alert</strong>
-                    <span>INC0010042 assigned</span>
+          <div className="marketing-section__heading marketing-section__heading--mobile">
+            <div className="marketing-section__eyebrow">Native Mobile Companions</div>
+            <h2>Keep web as command center and use iOS or Android for live operations.</h2>
+            <p>
+              Setup still belongs in the web app. The mobile apps stay purpose-built for after setup:
+              roster visibility, schedule-aware availability, ServiceNow logs, summaries, quick actions,
+              and assignment alerts.
+            </p>
+          </div>
+
+          <div className="marketing-mobile-platforms">
+            {mobileShowcases.map((platform) => (
+              <article
+                className={`marketing-mobile-platform marketing-mobile-platform--${platform.id}`}
+                key={platform.id}
+              >
+                <div className="marketing-mobile-platform__copy">
+                  <div className="marketing-section__eyebrow">{platform.eyebrow}</div>
+                  <h3>{platform.title}</h3>
+                  <p>{platform.description}</p>
+                  <div className="marketing-mobile__grid">
+                    {platform.features.map((feature) => (
+                      <span key={feature}>{feature}</span>
+                    ))}
                   </div>
                 </div>
-              </div>
-            </div>
+
+                <div className="marketing-screenwall" aria-label={`InciTeam ${platform.eyebrow} screenshots`}>
+                  <figure className="marketing-screenwall__hero">
+                    <div className="marketing-screenwall__device">
+                      <img
+                        src={platform.screenshots[0].src}
+                        alt={platform.screenshots[0].alt}
+                        loading="lazy"
+                      />
+                    </div>
+                    <figcaption>{platform.screenshots[0].label}</figcaption>
+                  </figure>
+
+                  <div className="marketing-screenwall__tiles">
+                    {platform.screenshots.slice(1).map((screenshot, index) => (
+                      <figure
+                        className="marketing-screen-tile"
+                        key={screenshot.src}
+                        style={{
+                          '--shot-lift': `${(index % 3) * 0.45}rem`,
+                          '--shot-tilt': index % 2 === 0 ? '-1.1deg' : '1.1deg',
+                        }}
+                      >
+                        <img src={screenshot.src} alt={screenshot.alt} loading="lazy" />
+                        <figcaption>{screenshot.label}</figcaption>
+                      </figure>
+                    ))}
+                  </div>
+                </div>
+              </article>
+            ))}
           </div>
         </section>
 
         <section className="marketing-section marketing-section--workflow" id="workflow">
           <div className="marketing-section__heading">
             <div className="marketing-section__eyebrow">How It Works</div>
-            <h2>Launch the organization, connect ServiceNow, configure notifications, and operate from web or iOS.</h2>
+            <h2>Launch the organization, connect ServiceNow, configure notifications, and operate from web, iOS, or Android.</h2>
           </div>
           <div className="marketing-workflow">
             <div className="marketing-workflow__step">
@@ -317,7 +393,7 @@ export default function MarketingHomePage() {
             <div className="marketing-workflow__step">
               <span>04</span>
               <h3>Operate with alerts and evidence</h3>
-              <p>Use web and iOS for rosters, summaries, logs, diagnostics, notifications, and manual poll control.</p>
+              <p>Use web, iOS, and Android for rosters, summaries, logs, diagnostics, notifications, and manual poll control.</p>
             </div>
           </div>
         </section>
