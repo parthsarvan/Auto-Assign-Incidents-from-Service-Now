@@ -18,7 +18,6 @@ import com.example.backend.repository.UserRepository;
 
 @RestController
 @RequestMapping("/api/users")
-@CrossOrigin(origins = "http://localhost:3000")
 public class UserAdminController {
 
     private final UserRepository userRepository;

@@ -203,13 +203,6 @@
   margin-bottom: 1.8rem;
 }
 
-.marketing-section__intro--center {
-  max-width: 820px;
-  margin-right: auto;
-  margin-left: auto;
-  text-align: center;
-}
-
 .marketing-section h2,
 .marketing-cta h2 {
   margin: 0;
@@ -228,22 +221,16 @@
 }
 
 .marketing-problem__grid,
-.marketing-platform-grid,
-.marketing-use-case-grid,
 .marketing-workflow__grid {
   display: grid;
   gap: 1rem;
 }
 
-.marketing-problem__grid,
-.marketing-platform-grid,
-.marketing-use-case-grid {
+.marketing-problem__grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .marketing-problem-card,
-.marketing-platform-card,
-.marketing-use-case,
 .marketing-workflow-step {
   border: 1px solid #dce5f0;
   border-radius: 0.5rem;
@@ -273,21 +260,12 @@
 }
 
 .marketing-problem-card p,
-.marketing-platform-card p,
-.marketing-use-case p,
 .marketing-workflow-step p {
   margin: 0.8rem 0 0;
   color: #68788d;
   line-height: 1.65;
 }
 
-.marketing-platform-card {
-  min-height: 18rem;
-  padding: 1.45rem;
-}
-
-.marketing-platform-card span,
-.marketing-use-case span,
 .marketing-mobile-platform__copy span {
   display: inline-flex;
   margin-bottom: 0.9rem;
@@ -300,8 +278,6 @@
   text-transform: uppercase;
 }
 
-.marketing-platform-card h3,
-.marketing-use-case h3,
 .marketing-workflow-step h3,
 .marketing-mobile-platform__copy h3 {
   margin: 0;
@@ -309,11 +285,6 @@
   font-size: 1.28rem;
   font-weight: 850;
   line-height: 1.15;
-}
-
-.marketing-use-case {
-  min-height: 17rem;
-  padding: 1.4rem;
 }
 
 .marketing-mobile {
@@ -434,6 +405,92 @@
   font-weight: 850;
 }
 
+.marketing-founder {
+  display: grid;
+  grid-template-columns: minmax(0, 0.88fr) minmax(0, 1.12fr);
+  gap: 2rem;
+  align-items: start;
+}
+
+.marketing-founder__story p:not(.marketing-kicker),
+.marketing-founder__points p {
+  margin: 1rem 0 0;
+  color: #5c6f86;
+  font-size: 1.05rem;
+  line-height: 1.7;
+}
+
+.marketing-founder__identity {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1.4rem;
+  padding: 0.9rem;
+  border: 1px solid #dce5f0;
+  border-radius: 0.75rem;
+  background: #ffffff;
+  box-shadow: 0 14px 34px rgba(15, 31, 55, 0.05);
+}
+
+.marketing-founder__identity img {
+  width: 5.8rem;
+  height: 5.8rem;
+  flex: 0 0 auto;
+  border-radius: 0.6rem;
+  object-fit: cover;
+  object-position: center 28%;
+}
+
+.marketing-founder__identity strong,
+.marketing-founder__identity span {
+  display: block;
+}
+
+.marketing-founder__identity strong {
+  color: #10233d;
+  font-size: 1.1rem;
+  line-height: 1.2;
+}
+
+.marketing-founder__identity span {
+  margin-top: 0.25rem;
+  color: #5c6f86;
+  font-size: 0.95rem;
+  line-height: 1.35;
+}
+
+.marketing-founder__points {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.marketing-founder__points div {
+  padding: 1.2rem;
+  border: 1px solid #dce5f0;
+  border-radius: 0.5rem;
+  background: #ffffff;
+  box-shadow: 0 14px 34px rgba(15, 31, 55, 0.05);
+}
+
+.marketing-founder__points span {
+  display: block;
+  margin-bottom: 0.8rem;
+  color: #1859d1;
+  font-size: 0.82rem;
+  font-weight: 850;
+}
+
+.marketing-founder__points strong {
+  display: block;
+  color: #10233d;
+  font-size: 1.18rem;
+  line-height: 1.2;
+}
+
+.marketing-founder__points p {
+  font-size: 0.98rem;
+}
+
 .marketing-cta {
   display: flex;
   align-items: center;
@@ -480,7 +537,8 @@
     flex-wrap: wrap;
   }
 
-  .marketing-mobile-platform {
+  .marketing-mobile-platform,
+  .marketing-founder {
     grid-template-columns: 1fr;
   }
 
@@ -515,9 +573,7 @@
     font-size: 2.25rem;
   }
 
-  .marketing-problem__grid,
-  .marketing-platform-grid,
-  .marketing-use-case-grid {
+  .marketing-problem__grid {
     grid-template-columns: 1fr;
   }
 

@@ -6,6 +6,7 @@ import io.jsonwebtoken.io.Decoders;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 import java.security.Key;
 import java.util.Date;
@@ -25,8 +26,19 @@ public class JwtUtils {
 
     @PostConstruct
     public void init() {
+        if (!StringUtils.hasText(jwtSecretBase64)) {
+            throw new IllegalStateException("JWT_SECRET must be set to a Base64-encoded HMAC secret.");
+        }
         // Decode the Base64 into raw bytes, then create an HMAC-SHA512 key
-        byte[] keyBytes = Decoders.BASE64.decode(jwtSecretBase64);
+        byte[] keyBytes;
+        try {
+            keyBytes = Decoders.BASE64.decode(jwtSecretBase64);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalStateException("JWT_SECRET must be valid Base64.", e);
+        }
+        if (keyBytes.length < 64) {
+            throw new IllegalStateException("JWT_SECRET must decode to at least 64 bytes for HS512.");
+        }
         this.signingKey = Keys.hmacShaKeyFor(keyBytes);
     }
 

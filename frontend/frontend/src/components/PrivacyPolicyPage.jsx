@@ -151,7 +151,7 @@ export default function PrivacyPolicyPage() {
           <Link to="/privacy">Privacy Policy</Link>
         </div>
         <div>Copyright © 2026 Parth Sarvan. All Rights Reserved.</div>
-        <div>U.S. Trademark Application Serial No. 99808275.</div>
+        <div>U.S. Trademark Application Serial No. 99808275 pending.</div>
         <div>U.S. Copyright Case No. 1-15157770821 pending.</div>
       </footer>
     </div>

@@ -22,48 +22,6 @@ const manualTriageProblems = [
   },
 ];
 
-const platformHighlights = [
-  {
-    eyebrow: 'Admin Command Center',
-    title: 'Design the operating model once.',
-    description:
-      'Create organizations, teams, geos, shifts, schedules, CI ownership, notification rules, and ServiceNow connections from the web app.',
-  },
-  {
-    eyebrow: 'Assignment Intelligence',
-    title: 'Let routing follow real availability.',
-    description:
-      'InciTeam checks ownership, coverage, leave, breaks, active shift, and critical workload before choosing who should receive an incident.',
-  },
-  {
-    eyebrow: 'Operational Evidence',
-    title: 'Explain every decision after the moment passes.',
-    description:
-      'Poll logs, skipped reasons, assignment outcomes, diagnostics, and summary health make incident operations auditable for recent history.',
-  },
-];
-
-const useCases = [
-  {
-    role: 'Incident Managers',
-    title: 'Move fast when the queue gets noisy.',
-    description:
-      'See whether the team is covered, validate setup, trigger authorized manual polls, and inspect outcomes without chasing spreadsheets.',
-  },
-  {
-    role: 'Team Admins',
-    title: 'Keep ServiceNow routing aligned with the team.',
-    description:
-      'Manage CI owners, schedules, leaves, breaks, and team access so assignment rules reflect the real support model.',
-  },
-  {
-    role: 'Responders',
-    title: 'Know what changed and why you were selected.',
-    description:
-      'Use mobile views for roster status, logs, assignment results, summaries, and account controls after setup is complete.',
-  },
-];
-
 const workflowSteps = [
   {
     step: '01',
@@ -169,8 +127,8 @@ export default function MarketingHomePage() {
         <nav className="marketing-nav__links" aria-label="Marketing navigation">
           <a href="#problem">Problem</a>
           <a href="#workflow">Workflow</a>
-          <a href="#platform">Platform</a>
           <a href="#mobile">Mobile</a>
+          <a href="#founder">Founder</a>
           <Link to="/privacy">Privacy</Link>
         </nav>
         <div className="marketing-nav__actions">
@@ -256,44 +214,8 @@ export default function MarketingHomePage() {
           </div>
         </section>
 
-        <section className="marketing-section marketing-solution" id="platform">
-          <div className="marketing-section__intro marketing-section__intro--center">
-            <p className="marketing-kicker">The InciTeam Platform</p>
-            <h2>One operating layer for setup, assignment, evidence, and response.</h2>
-            <p>
-              Keep the web app as the command center. Give responders focused mobile views. Let ServiceNow
-              assignment decisions follow the actual team model.
-            </p>
-          </div>
-          <div className="marketing-platform-grid">
-            {platformHighlights.map((highlight) => (
-              <article className="marketing-platform-card" key={highlight.title}>
-                <span>{highlight.eyebrow}</span>
-                <h3>{highlight.title}</h3>
-                <p>{highlight.description}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="marketing-section marketing-use-cases">
-          <div className="marketing-section__intro">
-            <p className="marketing-kicker">Use Cases</p>
-            <h2>Built for the people who feel incident pressure first.</h2>
-          </div>
-          <div className="marketing-use-case-grid">
-            {useCases.map((useCase) => (
-              <article className="marketing-use-case" key={useCase.role}>
-                <span>{useCase.role}</span>
-                <h3>{useCase.title}</h3>
-                <p>{useCase.description}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-
         <section className="marketing-section marketing-mobile" id="mobile">
-          <div className="marketing-section__intro marketing-section__intro--center">
+          <div className="marketing-section__intro">
             <p className="marketing-kicker">Native Mobile Companions</p>
             <h2>Operations context that fits in your hand.</h2>
             <p>
@@ -335,6 +257,46 @@ export default function MarketingHomePage() {
           </div>
         </section>
 
+        <section className="marketing-section marketing-founder" id="founder">
+          <div className="marketing-founder__story">
+            <p className="marketing-kicker">Founder</p>
+            <h2>Built from real incident work.</h2>
+            <div className="marketing-founder__identity">
+              <img src="/marketing/founder-parth.jpg" alt="Parth Sarvan, founder of InciTeam" loading="lazy" />
+              <div>
+                <strong>Parth Sarvan</strong>
+                <span>Founder and Software Engineer</span>
+              </div>
+            </div>
+            <p>
+              InciTeam was founded by Parth Sarvan, a software engineer who has seen how manual
+              ServiceNow triage can slow teams down when the queue gets noisy.
+            </p>
+            <p>
+              The product was built around a simple belief: after teams set up ownership, schedules,
+              and notification rules once, incident assignment should not depend on one person watching
+              the queue all day.
+            </p>
+          </div>
+          <div className="marketing-founder__points" aria-label="Founder focus areas">
+            <div>
+              <span>01</span>
+              <strong>Reduce manual triage mistakes</strong>
+              <p>Wrong-owner assignments, leave conflicts, and overloaded responders should be caught before an incident is routed.</p>
+            </div>
+            <div>
+              <span>02</span>
+              <strong>Keep setup practical</strong>
+              <p>InciTeam keeps administration on the web and gives mobile apps focused operational views after setup is complete.</p>
+            </div>
+            <div>
+              <span>03</span>
+              <strong>Make the outcome visible</strong>
+              <p>Polling, assignment choices, skipped reasons, and notifications stay visible so teams can understand what happened.</p>
+            </div>
+          </div>
+        </section>
+
         <section className="marketing-cta">
           <div>
             <p className="marketing-kicker">Ready To Launch</p>
@@ -357,7 +319,7 @@ export default function MarketingHomePage() {
           <Link to="/privacy">Privacy Policy</Link>
         </div>
         <div>Copyright © 2026 Parth Sarvan. All Rights Reserved.</div>
-        <div>U.S. Trademark Application Serial No. 99808275.</div>
+        <div>U.S. Trademark Application Serial No. 99808275 pending.</div>
         <div>U.S. Copyright Case No. 1-15157770821 pending.</div>
       </footer>
     </div>

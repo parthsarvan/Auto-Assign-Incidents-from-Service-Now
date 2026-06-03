@@ -16,6 +16,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -35,6 +36,9 @@ public class SecurityConfig {
 
     @Autowired
     private JwtAuthFilter jwtAuthFilter;
+
+    @Autowired
+    private ApiRequestSizeLimitFilter apiRequestSizeLimitFilter;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -67,7 +71,29 @@ public class SecurityConfig {
               })
           )
 
-          // 5) Register our custom JwtAuthFilter before the UsernamePasswordAuthenticationFilter
+          .headers(headers -> headers
+              .httpStrictTransportSecurity(hsts -> hsts
+                  .includeSubDomains(true)
+                  .preload(true)
+                  .maxAgeInSeconds(31536000)
+              )
+              .frameOptions(frameOptions -> frameOptions.deny())
+              .contentTypeOptions(contentTypeOptions -> {})
+              .referrerPolicy(referrer -> referrer
+                  .policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN)
+              )
+              .contentSecurityPolicy(csp -> csp
+                  .policyDirectives("default-src 'none'; frame-ancestors 'none'; base-uri 'none'")
+              )
+              .permissionsPolicyHeader(permissions -> permissions
+                  .policy("camera=(), geolocation=(), microphone=(), payment=(), usb=()")
+              )
+          )
+
+          // 5) Reject oversized API requests before auth/controller processing.
+          .addFilterBefore(apiRequestSizeLimitFilter, UsernamePasswordAuthenticationFilter.class)
+
+          // 6) Register our custom JwtAuthFilter before the UsernamePasswordAuthenticationFilter
           .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
@@ -90,6 +116,8 @@ public class SecurityConfig {
         config.setAllowedOrigins(parseCsv(allowedOrigins));
         config.setAllowedMethods(parseCsv(allowedMethods));
         config.setAllowedHeaders(parseCsv(allowedHeaders));
+        config.setExposedHeaders(List.of("Retry-After"));
+        config.setMaxAge(3600L);
         config.setAllowCredentials(true);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);

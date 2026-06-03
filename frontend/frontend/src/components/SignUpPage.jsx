@@ -2,6 +2,28 @@ import React, { useMemo, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { discoverOrganization, signUp } from '../services/auth';
 
+const PASSWORD_MIN_LENGTH = 12;
+const PASSWORD_MAX_LENGTH = 128;
+
+function getPasswordPolicyError(password) {
+  if (password.length < PASSWORD_MIN_LENGTH || password.length > PASSWORD_MAX_LENGTH) {
+    return `Password must be ${PASSWORD_MIN_LENGTH}-${PASSWORD_MAX_LENGTH} characters.`;
+  }
+
+  const classes = [
+    /[A-Z]/.test(password),
+    /[a-z]/.test(password),
+    /\d/.test(password),
+    /[^A-Za-z0-9]/.test(password),
+  ].filter(Boolean).length;
+
+  if (classes < 3) {
+    return 'Password must include at least three of: uppercase letters, lowercase letters, numbers, and symbols.';
+  }
+
+  return '';
+}
+
 export default function SignUpPage() {
   const [step, setStep] = useState(1);
   const [organizationName, setOrganizationName] = useState('');
@@ -56,6 +78,13 @@ export default function SignUpPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+    const passwordError = getPasswordPolicyError(password);
+    if (passwordError) {
+      setError(passwordError);
+      return;
+    }
+
     setCreatingAccount(true);
 
     try {
@@ -78,7 +107,9 @@ export default function SignUpPage() {
         },
       }), 1500);
     } catch (err) {
-      if (err.response?.status === 409) {
+      if (err.response?.status === 429) {
+        setError('Too many attempts. Please wait before trying again.');
+      } else if (err.response?.status === 409) {
         setError(String(err.response.data));
       } else if (err.response?.data) {
         setError(String(err.response.data));
@@ -118,6 +149,8 @@ export default function SignUpPage() {
                 value={organizationName}
                 onChange={(e) => setOrganizationName(e.target.value)}
                 placeholder="e.g. Apple"
+                autoComplete="organization"
+                maxLength={120}
                 required
               />
             </div>
@@ -131,6 +164,8 @@ export default function SignUpPage() {
                 value={workEmail}
                 onChange={(e) => setWorkEmail(e.target.value)}
                 placeholder="e.g. abc@apple.com"
+                autoComplete="email"
+                maxLength={254}
                 required
               />
               <div className="form-text">
@@ -181,6 +216,8 @@ export default function SignUpPage() {
                 className="form-control"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
+                autoComplete="username"
+                maxLength={64}
                 required
               />
             </div>
@@ -194,6 +231,8 @@ export default function SignUpPage() {
                   className="form-control"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
+                  autoComplete="given-name"
+                  maxLength={80}
                   required
                 />
               </div>
@@ -205,6 +244,8 @@ export default function SignUpPage() {
                   className="form-control"
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
+                  autoComplete="family-name"
+                  maxLength={80}
                   required
                 />
               </div>
@@ -217,6 +258,7 @@ export default function SignUpPage() {
                 id="confirmedWorkEmail"
                 className="form-control"
                 value={workEmail}
+                autoComplete="email"
                 readOnly
                 disabled
               />
@@ -230,8 +272,14 @@ export default function SignUpPage() {
                 className="form-control"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                autoComplete="new-password"
+                minLength={PASSWORD_MIN_LENGTH}
+                maxLength={PASSWORD_MAX_LENGTH}
                 required
               />
+              <div className="form-text">
+                Use {PASSWORD_MIN_LENGTH}-{PASSWORD_MAX_LENGTH} characters with at least three of uppercase, lowercase, numbers, and symbols.
+              </div>
             </div>
 
             {organizationExists ? (
@@ -244,6 +292,8 @@ export default function SignUpPage() {
                   value={inviteCode}
                   onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
                   placeholder="e.g. TEAM-AB12CD34"
+                  autoComplete="off"
+                  maxLength={80}
                   required
                 />
                 <div className="form-text">
@@ -260,6 +310,8 @@ export default function SignUpPage() {
                   value={teamName}
                   onChange={(e) => setTeamName(e.target.value)}
                   placeholder="e.g. Platform Support"
+                  autoComplete="organization-title"
+                  maxLength={120}
                   required
                 />
               </div>

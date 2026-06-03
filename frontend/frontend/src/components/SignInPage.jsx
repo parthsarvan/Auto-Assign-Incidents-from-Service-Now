@@ -43,10 +43,10 @@ export default function SignInPage() {
       if (err.response?.status === 400) {
         setError(String(err.response.data));
       } else
-      if (err.response && err.response.status === 404) {
-        setError('User not found. Please sign up first.');
-      } else if (err.response && err.response.status === 401) {
+      if (err.response && err.response.status === 401) {
         setError('Invalid credentials. Please try again.');
+      } else if (err.response && err.response.status === 429) {
+        setError('Too many attempts. Please wait before trying again.');
       } else {
         setError('An error occurred. Please try again later.');
       }
@@ -71,6 +71,8 @@ export default function SignInPage() {
               className="form-control"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
+              autoComplete="username"
+              maxLength={64}
               required
             />
           </div>
@@ -82,6 +84,8 @@ export default function SignInPage() {
               className="form-control"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
+              maxLength={128}
               required
             />
           </div>
